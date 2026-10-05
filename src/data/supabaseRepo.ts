@@ -46,6 +46,9 @@ export class SupabaseRepo implements Repo {
   }
   async signInWithEmail(email: string): Promise<void> {
     const { error } = await this.client.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin + import.meta.env.BASE_URL } });
+    if (error?.code === "over_email_send_rate_limit") {
+      throw new Error("För många inloggningsmejl på kort tid. Vänta en timme och försök igen, eller använd länken i det senaste mejlet.");
+    }
     if (error) throw new Error(error.message);
   }
   async signOut(): Promise<void> {
