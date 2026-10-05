@@ -65,7 +65,7 @@ Formspråket hämtar färger från byggnadsvårdens material – kalkputs, linol
 | Organisationer, kontakthistorik (privat), anskaffningsflöde, hämtningar, checklistor, lagerplatser, RLS | `supabase/migrations/20261006000000_m2_infloede_lager.sql` |
 | Avsluta hämtning i en transaktion: kvittering, status, händelse, lagerplats, anskaffning (AC-03) | `complete_pickup` i migrationen |
 | Offline-kö för fångst, bilder, checklistor och avslut + läscache för hämtningar (AC-02) | `src/data/outbox.ts`, `src/data/offlineSupabaseRepo.ts` |
-| Samla: Objekt · Människor · Inköp (pipeline) · Hämtningar | `src/pages/samla/` |
+| Saker: Objekt · Inköp (pipeline) · Hämtningar · Annonser | `src/pages/saker/` |
 | Personkort med roller, samtycke, privata uppgifter, kontakthistorik och diktering (AC-09) | `src/pages/PersonPage.tsx` |
 | Planera hämtning och hämtning på plats med navigering, checklista, foton och kvittering | `src/pages/NewPickupPage.tsx`, `src/pages/PickupPage.tsx` |
 | Lagerträd, lagerplats med QR-kod och utskrivbara etiketter | `src/pages/StoragePage.tsx`, `StorageLocationPage.tsx`, `LabelsPage.tsx` |
@@ -78,7 +78,7 @@ QR-koderna innehåller en länk till lagerplatsen, så telefonens vanliga kamera
 | --- | --- |
 | Partier med fördelning (INV-11 kontrolleras vid commit), nytt liv, demontering, observationer, beslut, kartlager, PostGIS | `supabase/migrations/20261007000000_m3_nytt_liv_journal.sql` |
 | `record_usage` och `store_allocation`: nytt liv för hela objekt eller delar av partier, en händelse i objekt-, zon- och platsjournal (AC-04, AC-05, AC-06) | migrationen |
-| Vretakartan: egna grundbilder och överlägg, zoner och byggnader, nålar för nytt liv och observationer, "Här" med GPS, rita och flytta hörn, area – helt offline | `src/geo/VretaMap.tsx`, `src/pages/VretaPage.tsx` |
+| Vretakartan (Platser → På Vreta): egna grundbilder och överlägg, zoner och byggnader, nålar för nytt liv och observationer, "Här" med GPS, rita och flytta hörn, area – helt offline | `src/geo/VretaMap.tsx`, `src/pages/platser/OnSitePlaces.tsx` |
 | Lägg till kartlager med hörnfil eller tre stödpunkter | `src/pages/MapLayerPage.tsx`, `src/geo/geo.ts` |
 | Nytt liv-formulär, partiets fördelning och demontering på objektsidan | `src/ui/UsageForm.tsx`, `src/pages/ObjectPage.tsx` |
 | Platsjournal med filter, zonsida, observationer och beslut | `src/pages/JournalPage.tsx`, `src/pages/ZonePage.tsx`, `src/ui/JournalForms.tsx` |
@@ -91,7 +91,7 @@ Kartfilerna visar fastighetens läge och ska aldrig ligga i repot.
 python3.12 scripts/prepare-basemap.py baskarta.pdf ut/    # GeoPDF eller GeoTIFF → ut/baskarta.png + ut/baskarta.json
 ```
 
-Ladda sedan upp båda filerna under **Vreta → Lager → Lägg till kartlager → Jag har en hörnfil**. Skriptet läser kartans inbäddade georeferens (t.ex. SWEREF 99 18 00), räknar om till Web Mercator och klipper vid kartramen. Ritningar utan georeferens placeras i appen med tre stödpunkter mot grundbilden.
+Ladda sedan upp båda filerna under **Platser → Lager → Lägg till kartlager → Jag har en hörnfil**. Skriptet läser kartans inbäddade georeferens (t.ex. SWEREF 99 18 00), räknar om till Web Mercator och klipper vid kartramen. Ritningar utan georeferens placeras i appen med tre stödpunkter mot grundbilden.
 
 Databastesterna kräver PostGIS: `apt-get install postgresql-16-postgis-3`.
 
@@ -112,6 +112,21 @@ Databastesterna kräver PostGIS: `apt-get install postgresql-16-postgis-3`.
 **Webbläsaragenten:** knappen *Låt agent publicera* kopierar en instruktion och sparar bilderna. Klistra in den i Claude i Chrome, som fyller i kanalens formulär i din inloggade webbläsare. Inloggning, betalning och sista publiceringsklicket gör du alltid själv (INV-04). Klistra sedan in annonslänken i studion. En MCP-server med `get_listing_package` och `mark_channel_posted` (9.4) är nästa steg.
 
 **Tack** skrivs från mallar i båda lägena, med samma integritetsfilter. Story Agent på servern får nu också bidrag och samtycke per inlägg, och dess text kontrolleras på samma sätt.
+
+## Saker · Människor · Platser
+
+Navigeringen följer vad saker är: **Saker** hanteras, **Människor** hanterar dem och har relationer, **Platser** är där det sker.
+
+| Del | Var |
+| --- | --- |
+| Nedre fältet: Idag · Saker · + · Människor · Platser (Fråga via den runda knappen); fliken är markerad även på detaljsidorna | `src/ui/AppShell.tsx` |
+| Saker: objekt, inköp, hämtningar, annonser | `src/pages/SakerPage.tsx`, `src/pages/saker/` |
+| Människor: personer med roller, samtycke, bidrag (nu med projekt) | `src/pages/ManniskorPage.tsx`, `src/pages/manniskor/` |
+| Platser på Vreta: karta, zoner och byggnader samt förvaring, projekt och observationer | `src/pages/PlatserPage.tsx`, `src/pages/platser/OnSitePlaces.tsx` |
+| Projekt: nytt liv och bidrag samlade per projektnamn | `src/pages/ProjectsPage.tsx`, `src/domain/places.ts` |
+| Platser utanför Vreta: orterna där saker hämtas, köps och lämnas | `src/pages/platser/ExternalPlaces.tsx` |
+
+Gamla adresser (`/samla`, `/vreta`) skickas vidare till de nya.
 
 ## Vad M5 innehåller (kunskap och härdning)
 

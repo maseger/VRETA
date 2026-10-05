@@ -65,7 +65,7 @@ export function PersonPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <Link to="/samla?vy=manniskor" className="text-sm font-semibold text-falu">← Människor</Link>
+      <Link to="/manniskor" className="text-sm font-semibold text-falu">← Människor</Link>
       <header className="mb-6 mt-2 flex items-start gap-4">
         <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-linolja-pale font-serif text-3xl font-semibold text-linolja">{person.name.charAt(0)}</span>
         <div className="min-w-0 flex-1">
@@ -237,6 +237,7 @@ function Contributions({ personId, firstName, contributions, reciprocity, object
   const [description, setDescription] = useState("");
   const [hours, setHours] = useState("");
   const [objectId, setObjectId] = useState("");
+  const [project, setProject] = useState("");
   const [visibility, setVisibility] = useState<Visibility>("shareable");
   const [back, setBack] = useState("");
   return (
@@ -250,7 +251,7 @@ function Contributions({ personId, firstName, contributions, reciprocity, object
                 <li key={c.id} className="px-3 py-2.5">
                   <p className="font-medium">{c.description}</p>
                   <p className="text-sm text-sot-3">
-                    {[CONTRIBUTION_LABEL[c.kind], c.hours ? `${c.hours} h` : "", formatDate(c.occurred_at)].filter(Boolean).join(" · ")}
+                    {[CONTRIBUTION_LABEL[c.kind], c.project, c.hours ? `${c.hours} h` : "", formatDate(c.occurred_at)].filter(Boolean).join(" · ")}
                     {c.thanked_at ? <span className="ml-2 text-linolja">Tackad</span> : null}
                   </p>
                 </li>
@@ -260,8 +261,8 @@ function Contributions({ personId, firstName, contributions, reciprocity, object
           {canWrite && (
             <form id="bidrag" className="card space-y-3 p-4" onSubmit={async (e) => {
               e.preventDefault();
-              await repo.addContribution({ person_id: personId, kind, description: description.trim(), hours: hours ? Number(hours) : null, object_id: objectId || null, zone_id: null, project: "", visibility });
-              setDescription(""); setHours(""); setObjectId("");
+              await repo.addContribution({ person_id: personId, kind, description: description.trim(), hours: hours ? Number(hours) : null, object_id: objectId || null, zone_id: null, project: project.trim(), visibility });
+              setDescription(""); setHours(""); setObjectId(""); setProject("");
               await refresh();
               toast("Bidraget är registrerat");
             }}>
@@ -277,6 +278,7 @@ function Contributions({ personId, firstName, contributions, reciprocity, object
                   <option value="">Inget objekt</option>
                   {objects.map((o) => <option key={o.id} value={o.id}>{o.title}</option>)}
                 </select>
+                <input className="input" value={project} onChange={(e) => setProject(e.target.value)} placeholder="Projekt (valfritt), t.ex. Orangeriet" aria-label="Projekt" />
                 <select className="input" value={visibility} onChange={(e) => setVisibility(e.target.value as Visibility)} aria-label="Synlighet">
                   <option value="shareable">Får berättas</option>
                   <option value="internal">Bara internt</option>

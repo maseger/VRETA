@@ -1,5 +1,5 @@
 import { Suspense, lazy } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useApp } from "./app/AppContext";
 import { AppShell } from "./ui/AppShell";
 import { LogoMark } from "./ui/Logo";
@@ -19,13 +19,15 @@ const StoragePage = lazy(() => import("./pages/StoragePage").then((m) => ({ defa
 const ObjectPage = lazy(() => import("./pages/ObjectPage").then((m) => ({ default: m.ObjectPage })));
 const ProposalPage = lazy(() => import("./pages/ProposalPage").then((m) => ({ default: m.ProposalPage })));
 const ReviewListPage = lazy(() => import("./pages/ReviewListPage").then((m) => ({ default: m.ReviewListPage })));
-const SamlaPage = lazy(() => import("./pages/SamlaPage").then((m) => ({ default: m.SamlaPage })));
+const SakerPage = lazy(() => import("./pages/SakerPage").then((m) => ({ default: m.SakerPage })));
+const ManniskorPage = lazy(() => import("./pages/ManniskorPage").then((m) => ({ default: m.ManniskorPage })));
+const PlatserPage = lazy(() => import("./pages/PlatserPage").then((m) => ({ default: m.PlatserPage })));
+const ProjectsPage = lazy(() => import("./pages/ProjectsPage").then((m) => ({ default: m.ProjectsPage })));
 const SettingsPage = lazy(() => import("./pages/SettingsPage").then((m) => ({ default: m.SettingsPage })));
 const StoryStudioPage = lazy(() => import("./pages/StoryStudioPage").then((m) => ({ default: m.StoryStudioPage })));
 const ListingStudioPage = lazy(() => import("./pages/ListingStudioPage").then((m) => ({ default: m.ListingStudioPage })));
 const NewListingPage = lazy(() => import("./pages/NewListingPage").then((m) => ({ default: m.NewListingPage })));
 const ThanksPage = lazy(() => import("./pages/ThanksPage").then((m) => ({ default: m.ThanksPage })));
-const VretaPage = lazy(() => import("./pages/VretaPage").then((m) => ({ default: m.VretaPage })));
 const MapLayerPage = lazy(() => import("./pages/MapLayerPage").then((m) => ({ default: m.MapLayerPage })));
 
 export default function App() {
@@ -43,14 +45,20 @@ export default function App() {
       <Suspense fallback={<LogoMark className="mx-auto mt-20 h-10 w-10 animate-pulse" />}>
       <Routes>
         <Route path="/" element={<TodayPage />} />
-        <Route path="/samla" element={<SamlaPage />} />
+        <Route path="/saker" element={<SakerPage />} />
+        <Route path="/manniskor" element={<ManniskorPage />} />
+        <Route path="/platser" element={<PlatserPage />} />
+        <Route path="/platser/projekt" element={<ProjectsPage />} />
+        <Route path="/platser/kartlager/ny" element={<MapLayerPage />} />
+        {/* Äldre adresser från när Samla rymde både saker och människor */}
+        <Route path="/samla" element={<OldSamla />} />
+        <Route path="/vreta" element={<Navigate to="/platser" replace />} />
+        <Route path="/vreta/kartlager/ny" element={<Navigate to="/platser/kartlager/ny" replace />} />
         <Route path="/fanga" element={<CapturePage />} />
         <Route path="/granska" element={<ReviewListPage />} />
         <Route path="/granska/:id" element={<ProposalPage />} />
         <Route path="/objekt/:id" element={<ObjectPage />} />
         <Route path="/objekt/:id/beratta" element={<StoryStudioPage />} />
-        <Route path="/vreta" element={<VretaPage />} />
-        <Route path="/vreta/kartlager/ny" element={<MapLayerPage />} />
         <Route path="/journal" element={<JournalPage />} />
         <Route path="/zon/:id" element={<ZonePage />} />
         <Route path="/person/:id" element={<PersonPage />} />
@@ -69,4 +77,9 @@ export default function App() {
       </Suspense>
     </AppShell>
   );
+}
+
+function OldSamla() {
+  const vy = new URLSearchParams(useLocation().search).get("vy");
+  return <Navigate to={vy === "manniskor" ? "/manniskor" : vy ? `/saker?vy=${vy}` : "/saker"} replace />;
 }

@@ -1,23 +1,25 @@
-import { Archive, BookOpen, ChevronRight, Crosshair, Layers, Pencil, Plus, Undo2, X } from "lucide-react";
+import { Archive, ChevronRight, Crosshair, Eye, Hammer, Layers, Pencil, Plus, Undo2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useApp, useData } from "../app/AppContext";
-import type { MapLayer } from "../domain/types";
-import { areaM2, centroid, closeRing, formatArea, zoneAt, type LngLat, type PolygonGeom } from "../geo/geo";
-import { VretaMap, type MapPin, type MapPolygon } from "../geo/VretaMap";
-import { PageHeader, Section } from "../ui/bits";
+import { useApp, useData } from "../../app/AppContext";
+import { groupProjects } from "../../domain/places";
+import type { MapLayer } from "../../domain/types";
+import { areaM2, centroid, closeRing, formatArea, zoneAt, type LngLat, type PolygonGeom } from "../../geo/geo";
+import { VretaMap, type MapPin, type MapPolygon } from "../../geo/VretaMap";
+import { Section } from "../../ui/bits";
 
 type Mode = { kind: "view" } | { kind: "draw" } | { kind: "edit"; target: MapPolygon; vertices: LngLat[] };
 
-export function VretaPage() {
-  const { repo, site, profile, refresh, toast } = useApp();
+/** Platser på Vreta: kartan, zoner och byggnader – och det som sker där: förvaring, projekt och observationer. */
+export function OnSitePlaces() {
+  const { repo, profile, refresh, toast } = useApp();
   const navigate = useNavigate();
   const canWrite = profile?.role !== "viewer";
   const { data } = useData(async (r) => {
-    const [zones, structures, layers, usage, observations, objects] = await Promise.all([
-      r.zones(), r.structures(), r.mapLayers(), r.allUsageEvents(), r.observations(), r.objects(),
+    const [zones, structures, layers, usage, observations, objects, contributions] = await Promise.all([
+      r.zones(), r.structures(), r.mapLayers(), r.allUsageEvents(), r.observations(), r.objects(), r.contributions(),
     ]);
-    return { zones, structures, layers, usage, observations, objects };
+    return { zones, structures, layers, usage, observations, objects, contributions };
   });
 
   // Bildlager som blob-URL:er (fungerar offline när bilden är cachad)
@@ -143,16 +145,30 @@ export function VretaPage() {
 
   return (
     <div>
-      <PageHeader kicker="Platsen" title={site?.name ?? "Vreta"}>
-        <Link to="/journal" className="btn-secondary"><BookOpen size={18} aria-hidden="true" /> Journal</Link>
-      </PageHeader>
+      {/* Det som sker på platserna: saker förvaras, projekt genomförs, observationer görs */}
+      <ul className="mb-4 grid grid-cols-3 gap-2 sm:gap-3">
+        {[
+          { to: "/lager", icon: Archive, title: "Förvaring", text: "Lagerplatser, QR-etiketter och vad som ligger var", n: `${data?.objects.filter((o) => o.status === "stored").length ?? 0} saker i lager` },
+          { to: "/platser/projekt", icon: Hammer, title: "Projekt", text: "Byggen, planteringar och annat som tar saker i bruk", n: `${data ? groupProjects(data.usage, data.contributions).length : 0} projekt` },
+          { to: "/journal?filter=obs", icon: Eye, title: "Observationer", text: "Djur, växter, väder och annat som syns på platsen", n: `${data?.observations.length ?? 0} observationer` },
+        ].map(({ to, icon: Icon, title, text, n }) => (
+          <li key={to}>
+            <Link to={to} className="card flex h-full flex-col gap-1 p-3 hover:bg-kalk-2/60 sm:gap-2 sm:p-4">
+              <Icon size={24} strokeWidth={1.5} className="text-falu" aria-hidden="true" />
+              <span className="truncate font-serif text-[15px] font-semibold sm:text-lg">{title}</span>
+              <span className="hidden flex-1 text-sm text-sot-3 sm:block">{text}</span>
+              <span className="mt-auto text-[12px] font-semibold text-sot-2">{n}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
 
       <div className="card relative mb-3 overflow-hidden">
         {bases.length === 0 && data && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-kalk-2/90 p-6 text-center">
             <p className="font-serif text-lg font-semibold">Vretakartan saknar grundbild</p>
             <p className="max-w-sm text-sm text-sot-3">Lägg in fastighetskartan eller en baskarta som grundbild. Den sparas i appen och fungerar utan nät.</p>
-            {canWrite && <Link to="/vreta/kartlager/ny" className="btn-primary"><Plus size={18} aria-hidden="true" /> Lägg till grundbild</Link>}
+            {canWrite && <Link to="/platser/kartlager/ny" className="btn-primary"><Plus size={18} aria-hidden="true" /> Lägg till grundbild</Link>}
           </div>
         )}
         <VretaMap
@@ -195,7 +211,7 @@ export function VretaPage() {
                 {!!shownOverlays[o.id] && <input type="range" min={0.1} max={1} step={0.05} value={shownOverlays[o.id]} onChange={(e) => setShownOverlays((s) => ({ ...s, [o.id]: Number(e.target.value) }))} className="ml-6 w-40 accent-[#8C2F1D]" aria-label={`Genomskinlighet för ${o.name}`} />}
               </div>
             ))}
-            {canWrite && <Link to="/vreta/kartlager/ny" className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-falu"><Plus size={16} aria-hidden="true" /> Lägg till kartlager</Link>}
+            {canWrite && <Link to="/platser/kartlager/ny" className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-falu"><Plus size={16} aria-hidden="true" /> Lägg till kartlager</Link>}
           </div>
           <div>
             <p className="kicker mb-2">Visa</p>
@@ -258,12 +274,7 @@ export function VretaPage() {
         </div>
       )}
 
-      <Link to="/lager" className="card mb-8 mt-6 flex items-center gap-4 p-5 hover:bg-kalk-2/60">
-        <Archive size={28} strokeWidth={1.5} className="shrink-0 text-falu" aria-hidden="true" />
-        <span className="flex-1"><span className="block font-serif text-lg font-semibold">Lager</span><span className="text-sm text-sot-3">Lagerplatser, QR-etiketter och vad som ligger var</span></span>
-        <ChevronRight size={18} className="text-sot-3" aria-hidden="true" />
-      </Link>
-
+      <div className="h-4" />
       <Section title="Zoner">
         <ul className="card divide-y divide-dashed divide-lera-light">
           {data?.zones.map((z) => (

@@ -94,7 +94,7 @@ export function MapLayerPage() {
       await repo.addMapLayer({ kind, name: name.trim() || file.name, taken_on: date || null, image: await rasterizeIfSvg(file), corners, source_crs: method === "fil" ? srcCrs : "stödpunkter", opacity: kind === "base" ? 1 : 0.7 });
       await refresh();
       toast(kind === "base" ? "Grundbilden är tillagd" : "Överlägget är tillagt");
-      navigate("/vreta");
+      navigate("/platser");
     } catch (e) {
       setError((e as Error).message);
       setBusy(false);
@@ -110,7 +110,7 @@ export function MapLayerPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <Link to="/vreta" className="text-sm font-semibold text-falu">← Vretakartan</Link>
+      <Link to="/platser" className="text-sm font-semibold text-falu">← Vretakartan</Link>
       <PageHeader kicker="Vretakartan" title="Lägg till kartlager" />
 
       <div className="card mb-5 grid gap-4 p-4 sm:grid-cols-2">

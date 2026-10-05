@@ -60,7 +60,7 @@ export function PickupPage() {
 
   return (
     <div className="mx-auto max-w-xl">
-      <Link to="/samla?vy=hamtningar" className="text-sm font-semibold text-falu">← Hämtningar</Link>
+      <Link to="/saker?vy=hamtningar" className="text-sm font-semibold text-falu">← Hämtningar</Link>
       <header className="mb-5 mt-2">
         <div className="mb-2 flex items-center gap-2"><Truck size={18} className="text-falu" aria-hidden="true" /><span className="stamp border-sot-2 text-sot-2">{PICKUP_STATUS_LABEL[pickup.status]}</span></div>
         <h1>{pickup.title}</h1>

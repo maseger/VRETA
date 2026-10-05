@@ -371,17 +371,22 @@ Gränssnittet är byggt för tumme och fält på mobilen och för överblick på
 
 ### 7.1 Navigation
 
-**Mobil (nedre fält):** Idag · Samla · **+** · Vreta · Fråga
+**Mobil (nedre fält):** Idag · Saker · **+** · Människor · Platser. Fråga nås från den runda knappen som finns på alla skärmar.
+
+Saker, människor och platser är tre olika delar som är beroende av varandra: **saker** är det som hanteras, **människor** hanterar dem och har relationer med varandra och med Vreta, och **platser** är där det sker fysiskt. Detaljsidorna hör till sin del (objekt och hämtningar till Saker, personkort till Människor, lager, zoner och journal till Platser).
 
 | Flik | Innehåll |
 | --- | --- |
 | Idag | Nästa steg: att granska, hämtningar, förfallna uppgifter, intressenter som väntar svar, berättelseförslag |
-| Samla | Objekt och partier (lista/rutnät), filter på status, kategori, plats; växla till Personer och Annonser |
+| Saker | Objekt och partier (lista/rutnät) med filter på status och plats; sakernas väg in och ut: inköp, hämtningar och annonser |
 | + | Global fångst, alltid tillgänglig |
-| Vreta | Karta, zoner, byggnader, lager, journal, (P1) projekt |
+| Människor | Personer med roller, samtycke, kontakthistorik, bidrag och ömsesidighet |
+| Platser | **På Vreta:** karta, zoner och byggnader, och det som sker där – förvaring (lager), projekt (byggen, planteringar) och observationer (djur, växter m.m.) med journal. **Utanför:** orterna där saker hämtas, köps och lämnas, härledda från människornas och organisationernas ort |
 | Fråga | Chatboten Fråga Vreta: sök, frågor och uppdrag i text eller tal (se 11.6) |
 
-**Dator:** vänsterkolumn med samma fem plus Människor, Marknadsplats, Berätta, Journal och Inställningar. Listor och detaljer visas sida vid sida.
+**Dator:** vänsterkolumn med Idag, Saker, Människor, Platser och Fråga samt Fånga och Inställningar. Listor och detaljer visas sida vid sida.
+
+Projekt är i R1 ett namn på nytt liv och bidrag; Platser → Projekt samlar dem per namn tills Project blir en egen entitet (P1). Platser utanför Vreta har ingen egen entitet i R1 – orten anges på kommunnivå (INV-12).
 
 ### 7.2 Designprinciper
 

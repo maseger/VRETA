@@ -34,7 +34,7 @@ export function ZonePage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <Link to="/vreta" className="text-sm font-semibold text-falu">← Vreta</Link>
+      <Link to="/platser" className="text-sm font-semibold text-falu">← Platser</Link>
       <PageHeader kicker={`Zon${zone.geom ? ` · ${formatArea(areaM2(zone.geom))}` : ""}`} title={zone.name} />
       {zone.notes && <p className="-mt-3 mb-6 text-sot-3">{zone.notes}</p>}
 

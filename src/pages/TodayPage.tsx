@@ -68,7 +68,7 @@ export function TodayPage() {
       )}
 
       {!!data?.upcoming.length && (
-        <Section title="Hämtningar" action={<Link to="/samla?vy=hamtningar" className="text-sm font-semibold text-falu">Alla</Link>}>
+        <Section title="Hämtningar" action={<Link to="/saker?vy=hamtningar" className="text-sm font-semibold text-falu">Alla</Link>}>
           <ul className="card divide-y divide-dashed divide-lera-light">
             {data.upcoming.map((p) => (
               <li key={p.id}>
@@ -106,7 +106,7 @@ export function TodayPage() {
       )}
 
       {!!data?.waiting.length && (
-        <Section title="Väntar på svar" action={<Link to="/samla?vy=annonser" className="text-sm font-semibold text-falu">Annonser</Link>}>
+        <Section title="Väntar på svar" action={<Link to="/saker?vy=annonser" className="text-sm font-semibold text-falu">Annonser</Link>}>
           <ul className="card divide-y divide-dashed divide-lera-light">
             {data.waiting.map(({ lead, listing, person }) => (
               <li key={lead.id}>
@@ -211,7 +211,7 @@ export function TodayPage() {
         </Section>
       )}
 
-      <Section title="Senaste fynden" action={<Link to="/samla" className="text-sm font-semibold text-falu">Visa alla</Link>}>
+      <Section title="Senaste fynden" action={<Link to="/saker" className="text-sm font-semibold text-falu">Visa alla</Link>}>
         {data?.recent.length ? (
           <ul className="card divide-y divide-dashed divide-lera-light">
             {data.recent.map(({ object, cover }) => (
