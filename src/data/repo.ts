@@ -5,7 +5,7 @@ import type {
   ReceiptStatus, StorageLocation,
   BatchAllocation, Decision, EventLink, MapLayer, Observation, UsageEvent, UsageType,
   ChannelPost, ContentConsent, Contribution, Disposal, DisposalType, Lead, LeadStatus, Listing, ListingStatus, PublishMode,
-  ReciprocityEntry,
+  ReciprocityEntry, AskThread,
 } from "../domain/types";
 import type { PointGeom, PolygonGeom } from "../geo/geo";
 import type { StoryRows } from "../../supabase/functions/_shared/storyContext";
@@ -168,6 +168,22 @@ export interface Repo {
   addReciprocity(personId: string, description: string): Promise<void>;
   contentConsents(contentId: string): Promise<ContentConsent[]>;
   setContentConsent(input: Pick<ContentConsent, "content_id" | "person_id" | "name_ok" | "image_ok" | "contribution_ok" | "how">): Promise<void>;
+
+  // ---- M5: uppgifter, Fråga Vreta, export
+  createTask(input: Pick<Task, "title" | "due" | "entity_type" | "entity_id">): Promise<Task>;
+  completeTask(id: string): Promise<void>;
+  askThreads(): Promise<AskThread[]>;
+  saveAskThread(thread: Pick<AskThread, "id" | "title" | "messages">): Promise<void>;
+  deleteAskThread(id: string): Promise<void>;
+  /** Originalfilen (med EXIF) – bara för export till ägaren. */
+  mediaOriginal(media: Media): Promise<Blob | null>;
+  allMedia(): Promise<Media[]>;
+  allAllocations(): Promise<BatchAllocation[]>;
+  allStoryNotes(): Promise<StoryNote[]>;
+  allContent(): Promise<ContentItem[]>;
+
+  /** AI-förbrukning denna månad per funktion (bara Supabase, bara ägaren). */
+  aiUsage?(): Promise<{ function: string; input_tokens: number; output_tokens: number; calls: number }[]>;
 
   /** Antal ändringar som väntar på att synkas (bara Supabase). */
   pendingSync?(): Promise<number>;

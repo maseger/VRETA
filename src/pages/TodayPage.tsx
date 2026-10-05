@@ -1,6 +1,8 @@
-import { ArrowRight, CalendarClock, Heart, Inbox, Megaphone, MessageSquare, Tag, Truck } from "lucide-react";
+import { AlarmClock, ArrowRight, Archive, CalendarClock, Heart, Inbox, Megaphone, MessageSquare, Tag, Truck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useApp, useData } from "../app/AppContext";
+import { repoStore } from "../services/askVreta";
+import { longestInStock } from "../../supabase/functions/_shared/knowledge";
 import { EmptyState, MediaImage, Section, StatusStamp, formatDate } from "../ui/bits";
 
 function greeting() {
@@ -10,6 +12,7 @@ function greeting() {
 
 export function TodayPage() {
   const { profile, site } = useApp();
+  const role = profile?.role ?? "viewer";
   const { data } = useData(async (repo) => {
     const [proposals, offline, tasks, objects, pickups, followUps, people, leads, listings, contributions] = await Promise.all([
       repo.proposals(), repo.capturesWithoutProposal(), repo.tasks(), repo.objects(), repo.pickups(), repo.followUps(), repo.persons(),
@@ -28,8 +31,13 @@ export function TodayPage() {
     const upcoming = pickups.filter((p) => p.status !== "completed" && p.status !== "cancelled").slice(0, 4);
     const today = new Date().toISOString().slice(0, 10);
     const due = followUps.filter((f) => f.follow_up! <= new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10)).map((f) => ({ f, person: people.find((p) => p.id === f.person_id) }));
-    return { today, upcoming, due, waiting, toThank, proposals, offline, tasks, recent: objects.slice(0, 6).map((o, i) => ({ object: o, cover: covers[i] })), stories: storyCandidates.slice(0, 3) };
-  });
+    // Legat i lager över ett år (S1): samma verktyg som chatboten använder
+    const old = ((await longestInStock(repoStore(repo, role, today), 20)).facts as { title: string; since: string; months: number }[])
+      .filter((x) => x.months >= 12).map((x) => ({ ...x, object: objects.find((o) => o.title === x.title) })).filter((x) => x.object).slice(0, 5);
+    const overdue = tasks.filter((t) => t.due && t.due < today);
+    const later = tasks.filter((t) => !t.due || t.due >= today);
+    return { today, upcoming, due, waiting, toThank, old, overdue, later, proposals, offline, tasks, recent: objects.slice(0, 6).map((o, i) => ({ object: o, cover: covers[i] })), stories: storyCandidates.slice(0, 3) };
+  }, [role]);
 
   const today = new Date().toLocaleDateString("sv-SE", { weekday: "long", day: "numeric", month: "long" });
   const toReview = (data?.proposals.length ?? 0) + (data?.offline.length ?? 0);
@@ -81,6 +89,22 @@ export function TodayPage() {
         </Section>
       )}
 
+      {!!data?.overdue.length && (
+        <Section title="Försenat">
+          <ul className="card divide-y divide-dashed divide-lera-light border-falu/40">
+            {data.overdue.map((t) => (
+              <li key={t.id}>
+                <Link to={t.entity_type === "listing" ? `/annons/${t.entity_id}` : t.entity_id ? `/objekt/${t.entity_id}` : "#"} className="flex items-center gap-3 px-4 py-3 hover:bg-kalk-2/60">
+                  <AlarmClock size={18} className="text-falu" aria-hidden="true" />
+                  <span className="flex-1 font-medium">{t.title}</span>
+                  <span className="text-sm font-semibold text-falu">sedan {formatDate(t.due)}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
       {!!data?.waiting.length && (
         <Section title="Väntar på svar" action={<Link to="/samla?vy=annonser" className="text-sm font-semibold text-falu">Annonser</Link>}>
           <ul className="card divide-y divide-dashed divide-lera-light">
@@ -117,9 +141,9 @@ export function TodayPage() {
       )}
 
       <Section title="Att göra">
-        {data?.tasks.length ? (
+        {data?.later.length ? (
           <ul className="card divide-y divide-dashed divide-lera-light">
-            {data.tasks.map((t) => (
+            {data.later.map((t) => (
               <li key={t.id}>
                 <Link to={t.entity_type === "listing" ? `/annons/${t.entity_id}` : t.entity_id ? `/objekt/${t.entity_id}` : "#"} className="flex items-center gap-3 px-4 py-3 hover:bg-kalk-2/60">
                   <CalendarClock size={18} className="text-falu" aria-hidden="true" />
@@ -129,8 +153,10 @@ export function TodayPage() {
               </li>
             ))}
           </ul>
+        ) : data?.overdue.length ? (
+          <p className="text-sot-3">Inget mer planerat.</p>
         ) : (
-          <EmptyState title="Inget som brådskar">Uppgifter skapas när du fångar fynd med en tidsgräns.</EmptyState>
+          <EmptyState title="Inget som brådskar">Uppgifter skapas när du fångar fynd med en tidsgräns, eller när du ber Fråga Vreta om det.</EmptyState>
         )}
       </Section>
 
@@ -143,6 +169,22 @@ export function TodayPage() {
                   <Heart size={18} className="text-falu" aria-hidden="true" />
                   <span className="flex-1 font-medium">{person!.name}</span>
                   <span className="text-sm text-sot-3">{count} {count === 1 ? "bidrag" : "bidrag"}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
+      {!!data?.old.length && (
+        <Section title="Legat i lager över ett år">
+          <ul className="card divide-y divide-dashed divide-lera-light">
+            {data.old.map((x) => (
+              <li key={x.object!.id}>
+                <Link to={`/objekt/${x.object!.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-kalk-2/60">
+                  <Archive size={18} className="text-sot-3" aria-hidden="true" />
+                  <span className="flex-1 font-medium">{x.title}</span>
+                  <span className="text-sm text-sot-3">sedan {formatDate(x.since)} – använda, lägga ut eller skänka?</span>
                 </Link>
               </li>
             ))}

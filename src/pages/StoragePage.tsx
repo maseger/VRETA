@@ -47,7 +47,7 @@ export function StoragePage() {
         <form className="card grid gap-3 p-4 sm:grid-cols-2" onSubmit={async (e) => { e.preventDefault(); await repo.createStorageLocation({ name: name.trim(), parent_id: parent || null, structure_id: null, notes: "" }); setName(""); await refresh(); }}>
           <h2 className="sm:col-span-2">Ny lagerplats</h2>
           <input className="input" placeholder="T.ex. Hylla 4 eller Låda 7" value={name} onChange={(e) => setName(e.target.value)} required aria-label="Namn" />
-          <LocationSelect locations={data.locations} value={parent} onChange={setParent} />
+          <LocationSelect locations={data.locations} value={parent} onChange={setParent} label="Placeras i" />
           <p className="text-[12px] text-sot-3 sm:col-span-2">Lämna ”Välj lagerplats” tomt för en ny byggnad eller zon högst upp.</p>
           <button className="btn-primary sm:col-span-2"><Plus size={18} aria-hidden="true" /> Lägg till</button>
         </form>

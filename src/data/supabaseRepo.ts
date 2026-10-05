@@ -3,7 +3,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type {
   BatchAllocation, Decision, EventLink, MapLayer, Observation, UsageEvent,
-  ChannelPost, ContentConsent, Contribution, Disposal, Lead, LeadStatus, Listing, ListingStatus, PublishMode, ReciprocityEntry,
+  AskThread, ChannelPost, ContentConsent, Contribution, Disposal, Lead, LeadStatus, Listing, ListingStatus, PublishMode, ReciprocityEntry,
   AcquisitionStatus, ChecklistItem, ChecklistTemplate, Interaction, Organization, Pickup, PickupItem, PickupStatus,
   StorageLocation,
   Acquisition, AuditEntry, Capture, CaptureInput, ContentItem, EventRec, Media, ObjectStatus, Person, Profile,
@@ -243,6 +243,7 @@ export class SupabaseRepo implements Repo {
       "organizations", "organization_private", "interactions", "storage_locations", "checklist_templates", "pickups", "pickup_private", "pickup_items", "checklist_items",
       "map_layers", "batch_allocations", "usage_events", "observations", "decisions",
       "listings", "channel_posts", "leads", "disposals", "disposal_private", "contributions", "reciprocity_entries", "content_consents",
+      "ask_threads",
     ];
     const out: Record<string, unknown[]> = {};
     for (const t of tables) out[t] = check(await this.client.from(t).select("*")) as unknown[];
@@ -501,5 +502,53 @@ export class SupabaseRepo implements Repo {
   }
   async setContentConsent(input: Pick<ContentConsent, "content_id" | "person_id" | "name_ok" | "image_ok" | "contribution_ok" | "how">): Promise<void> {
     check(await this.client.from("content_consents").upsert({ ...input, site_id: await this.siteId() }, { onConflict: "content_id,person_id" }));
+  }
+
+  // ------------------------------------------------------------ M5: uppgifter, trådar, export
+  async createTask(input: Pick<Task, "title" | "due" | "entity_type" | "entity_id">): Promise<Task> {
+    return check(await this.client.from("tasks").insert({ ...input, entity_id: input.entity_id || null, site_id: await this.siteId() }).select().single()) as Task;
+  }
+  async completeTask(id: string): Promise<void> {
+    check(await this.client.from("tasks").update({ status: "done" }).eq("id", id));
+  }
+  async askThreads(): Promise<AskThread[]> {
+    return check(await this.client.from("ask_threads").select("*").order("updated_at", { ascending: false })) as AskThread[];
+  }
+  async saveAskThread(thread: Pick<AskThread, "id" | "title" | "messages">): Promise<void> {
+    check(await this.client.from("ask_threads").upsert({ ...thread, site_id: await this.siteId() }));
+  }
+  async deleteAskThread(id: string): Promise<void> {
+    check(await this.client.from("ask_threads").delete().eq("id", id));
+  }
+  async mediaOriginal(media: Media): Promise<Blob | null> {
+    const { data } = await this.client.storage.from("media-original").download(media.original_path);
+    return data ?? null;
+  }
+  async allAllocations(): Promise<BatchAllocation[]> {
+    return check(await this.client.from("batch_allocations").select("*")) as BatchAllocation[];
+  }
+  async allStoryNotes(): Promise<StoryNote[]> {
+    return check(await this.client.from("story_notes").select("*").is("archived_at", null)) as StoryNote[];
+  }
+  async allContent(): Promise<ContentItem[]> {
+    return check(await this.client.from("content_items").select("*")) as ContentItem[];
+  }
+  async allMedia(): Promise<Media[]> {
+    return check(await this.client.from("media").select("*").is("archived_at", null)) as Media[];
+  }
+  async aiUsage(): Promise<{ function: string; input_tokens: number; output_tokens: number; calls: number }[]> {
+    const from = new Date();
+    from.setDate(1);
+    from.setHours(0, 0, 0, 0);
+    const rows = check(await this.client.from("ai_usage").select("function, input_tokens, output_tokens").gte("created_at", from.toISOString())) as { function: string; input_tokens: number; output_tokens: number }[];
+    const by = new Map<string, { function: string; input_tokens: number; output_tokens: number; calls: number }>();
+    for (const r of rows) {
+      const e = by.get(r.function) ?? { function: r.function, input_tokens: 0, output_tokens: 0, calls: 0 };
+      e.input_tokens += r.input_tokens;
+      e.output_tokens += r.output_tokens;
+      e.calls++;
+      by.set(r.function, e);
+    }
+    return [...by.values()];
   }
 }

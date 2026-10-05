@@ -7,6 +7,7 @@ import { createClient } from "@supabase/supabase-js";
 import { AgentRefusedError, runMarketplaceAgent } from "../_shared/agents.ts";
 import { adapter, type ChannelAdapter } from "../_shared/channels.ts";
 import { corsHeaders, json } from "../_shared/http.ts";
+import { logUsage, overCap, siteOf } from "../_shared/usage.ts";
 import { assertClean, buildPackage, guardListing, priceLabel, suggestPrice, type ListingPackage } from "../_shared/listingPackage.ts";
 
 const anthropic = new Anthropic();
@@ -21,6 +22,8 @@ Deno.serve(async (req: Request) => {
   if (!auth.user) return json({ error: "unauthorized" }, 401);
   const { data: canWrite } = await supabase.rpc("can_write");
   if (!canWrite) return json({ error: "forbidden" }, 403);
+  const member = await siteOf(supabase);
+  if (member && (await overCap(supabase, member.site_id))) return json({ error: "cap_reached" }, 429);
 
   const { listing_id, channels } = (await req.json()) as { listing_id: string; channels: string[] };
   const { data: listing } = await supabase.from("listings").select("*").eq("id", listing_id).single();
@@ -83,7 +86,7 @@ Deno.serve(async (req: Request) => {
   let packages: ListingPackage[] = templates;
   let source: "claude" | "mall" = "mall";
   try {
-    const drafted = await runMarketplaceAgent(anthropic, { context: ctx, price_label: priceLabel(ctx), channels: adapters });
+    const drafted = await runMarketplaceAgent(anthropic, { context: ctx, price_label: priceLabel(ctx), channels: adapters }, (model, usage) => member ? logUsage(supabase, member.site_id, "marketplace-agent", model, usage) : undefined);
     packages = templates.map((t) => {
       const d = drafted.find((x) => x.channel === t.channel);
       if (!d) return t;

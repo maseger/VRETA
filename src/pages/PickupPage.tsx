@@ -7,6 +7,7 @@ import type { Media, ReceiptStatus } from "../domain/types";
 import { prepareImage } from "../services/images";
 import { EmptyState, MediaImage, formatDate } from "../ui/bits";
 import { LocationSelect } from "../ui/location";
+import { HandsfreeChecklist } from "../ui/HandsfreeChecklist";
 
 /** Hämtning ute på plats (S6): checklista, foton, kvittering per objekt och avslut. Fungerar offline. */
 export function PickupPage() {
@@ -82,6 +83,13 @@ export function PickupPage() {
       {checklist.length > 0 && (
         <section className="mb-6">
           <h2 className="mb-2">Checklista</h2>
+          {canWrite && !done && (
+            <HandsfreeChecklist items={checklist} isDone={(c) => checks[c.id] ?? c.done} onCheck={async (c) => {
+              setChecks((x) => ({ ...x, [c.id]: true }));
+              await repo.toggleChecklistItem(c, true);
+              await refresh();
+            }} />
+          )}
           <ul className="card divide-y divide-dashed divide-lera-light">
             {checklist.map((c) => (
               <li key={c.id}>

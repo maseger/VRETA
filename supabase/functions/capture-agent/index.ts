@@ -4,6 +4,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 import { AgentRefusedError, runCaptureAgent, type CaptureImage } from "../_shared/agents.ts";
 import { corsHeaders, json } from "../_shared/http.ts";
+import { logUsage, overCap, siteOf } from "../_shared/usage.ts";
 
 const anthropic = new Anthropic(); // läser ANTHROPIC_API_KEY från funktionens hemligheter
 
@@ -18,6 +19,8 @@ Deno.serve(async (req: Request) => {
 
   const { data: canWrite } = await supabase.rpc("can_write");
   if (!canWrite) return json({ error: "forbidden" }, 403);
+  const member = await siteOf(supabase);
+  if (member && (await overCap(supabase, member.site_id))) return json({ error: "cap_reached" }, 429);
 
   const body = (await req.json()) as { text?: string; kind?: string; images?: CaptureImage[] };
   const images = (body.images ?? []).slice(0, 6);
@@ -28,7 +31,7 @@ Deno.serve(async (req: Request) => {
       kind: body.kind ?? "find",
       images,
       today: new Date().toISOString().slice(0, 10),
-    });
+    }, (model, usage) => member ? logUsage(supabase, member.site_id, "capture-agent", model, usage) : undefined);
     return json({ proposal });
   } catch (err) {
     if (err instanceof AgentRefusedError) return json({ error: "refused" }, 422);

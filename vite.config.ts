@@ -23,6 +23,17 @@ export default defineConfig({
     }),
   ],
   worker: { format: "es" },
+  build: {
+    rollupOptions: {
+      output: {
+        // Bibliotek i egna filer: de ändras sällan och cachas mellan versioner
+        manualChunks: {
+          react: ["react", "react-dom", "react-router-dom"],
+          supabase: ["@supabase/supabase-js"],
+        },
+      },
+    },
+  },
   test: {
     environment: "node",
     setupFiles: ["src/test/setup.ts"],

@@ -132,11 +132,41 @@ export async function seedDemo(repo: LocalRepo, withImages = true): Promise<void
     safety_note: "Kakelugnen är tung och tas isär i delar – minst två personer.",
   });
 
-  // Ett nytt fynd som väntar på granskning
+  // Mässingshandtagen är godkända och ligger i Låda 7 (AC-13: "Var är mässingshandtagen?")
   const capId = crypto.randomUUID();
   const media = withImages ? [await addImage(repo, "handtag", "capture", capId)] : [];
   const cap = await repo.saveCapture(capId, { text: "Fyra mässingshandtag från Anders, 50 kr styck, hämtas före 15 november", kind: "find", media_ids: media.map((m) => m.id) });
-  await repo.attachProposal(cap.id, fromHeuristics(parseCaptureText(cap.input.text), await repo.persons()));
+  const hProp = await repo.attachProposal(cap.id, fromHeuristics(parseCaptureText(cap.input.text), await repo.persons()));
+  const handtagId = await repo.approveProposal({
+    proposal_id: hProp.id, partial: false,
+    object: { title: "Mässingshandtag", category: "Beslag och smide", description: "Fönsterhandtag i mässing, putsade", material: "Mässing", dimensions: "", quantity: 4, unit: "st", condition: 4, field_meta: {} },
+    person: anders ? { name: "Anders", locality: "Ockelbo", existing_person_id: anders.id } : null,
+    acquisition: { type: "purchase", price: 200, deadline: null }, task: null, why: "Passar gjutjärnsfönstren i orangeriet", media_ids: media.map((m) => m.id),
+  });
+  for (const id of [handtagId]) for (const st of ["agreed", "received", "settled"] as const) await repo.setAcquisitionStatus((await repo.acquisitionsFor(id))[0].id, st);
+  await repo.changeStatus(handtagId, "collected");
+  const lada7 = (await repo.storageLocations()).find((l) => l.name === "Låda 7");
+  if (lada7) await repo.storeObject(handtagId, lada7.id);
+
+  // En radiator som legat i lager över ett år (Idag och "Vad har legat i lager längst?")
+  const radCap = await repo.saveCapture(crypto.randomUUID(), { text: "Två gjutjärnsradiatorer från Göran i Hofors, 800 kr", kind: "find", media_ids: [] });
+  const radProp = await repo.attachProposal(radCap.id, fromHeuristics(parseCaptureText(radCap.input.text), await repo.persons()));
+  const radId = await repo.approveProposal({
+    proposal_id: radProp.id, partial: false,
+    object: { title: "Gjutjärnsradiatorer", category: "Byggnadsdelar", description: "Sektionsradiatorer, tio sektioner", material: "Gjutjärn", dimensions: "", quantity: 2, unit: "st", condition: 3, field_meta: {} },
+    person: { name: "Göran", locality: "Hofors", existing_person_id: null },
+    acquisition: { type: "purchase", price: 800, deadline: null }, task: null, why: "", media_ids: [],
+  });
+  for (const st of ["agreed", "received", "settled"] as const) await repo.setAcquisitionStatus((await repo.acquisitionsFor(radId))[0].id, st);
+  await repo.changeStatus(radId, "collected");
+  const hylla1 = (await repo.storageLocations()).find((l) => l.name === "Hylla 1");
+  if (hylla1) await repo.storeObject(radId, hylla1.id);
+  const rad = await repo.object(radId);
+  if (rad) await repo.rawPut("objects", { ...rad, created_at: "2025-06-14T09:00:00.000Z", updated_at: "2025-06-14T09:00:00.000Z" });
+
+  // Ett nytt fynd som väntar på granskning
+  const dorrCap = await repo.saveCapture(crypto.randomUUID(), { text: "Tre ekdörrar gratis från Lena i Storvik, hämtas före december", kind: "find", media_ids: [] });
+  await repo.attachProposal(dorrCap.id, fromHeuristics(parseCaptureText(dorrCap.input.text), await repo.persons()));
 
   // M4: 30 tegel sålda via Blocket (AC-04: 250 i bruk, 120 i lager, 30 sålda)
   if (tegel) {

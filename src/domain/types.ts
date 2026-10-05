@@ -513,3 +513,27 @@ export interface ContentConsent {
   created_at: string;
   created_by: string;
 }
+
+// ---------------------------------------------------------------- M5: Fråga Vreta
+
+export interface AskMessage {
+  role: "user" | "assistant";
+  text: string;
+  cards?: import("../../supabase/functions/_shared/knowledge").SourceCard[];
+  action?: import("../../supabase/functions/_shared/knowledge").PendingAction;
+  action_state?: "pending" | "done" | "cancelled";
+  /** Allmänt råd från modellens kunskap – inte fakta om Vreta. */
+  general?: boolean;
+  at: string;
+}
+
+/** Samtalstråd med chatboten. Alltid privat för den som skapat den (11.6). */
+export interface AskThread {
+  id: string;
+  site_id: string;
+  title: string;
+  messages: AskMessage[];
+  created_at: string;
+  created_by: string;
+  updated_at: string;
+}

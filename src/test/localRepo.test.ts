@@ -15,22 +15,22 @@ beforeEach(async () => {
 describe("lokalt datalager", () => {
   it("skapar objekt, person, anskaffning, händelse och audit från ett förslag (AC-01)", async () => {
     const [prop] = await repo.proposals();
-    expect(prop.content.person?.existing_person_id).toBeTruthy(); // matchar Anders från tidigare fynd
+    expect(prop.content.person?.existing_person_id).toBeTruthy(); // matchar Lena från tidigare fynd
     const id = await repo.approveProposal({
       proposal_id: prop.id, partial: false,
-      object: { title: "Mässingshandtag", category: "Beslag och smide", description: "", material: "Mässing", dimensions: "", quantity: 4, unit: "st", condition: 4, field_meta: {} },
-      person: { name: "Anders", locality: "", existing_person_id: prop.content.person!.existing_person_id },
-      acquisition: { type: "purchase", price: 200, deadline: "2026-11-15" },
-      task: { title: "Hämta mässingshandtag", due: "2026-11-15" },
+      object: { title: "Ekdörrar", category: "Fönster och dörrar", description: "", material: "Ek", dimensions: "", quantity: 3, unit: "st", condition: 4, field_meta: {} },
+      person: { name: "Lena", locality: "", existing_person_id: prop.content.person!.existing_person_id },
+      acquisition: { type: "purchase", price: 300, deadline: "2026-12-01" },
+      task: { title: "Hämta ekdörrarna", due: "2026-12-01" },
       why: "", media_ids: [],
     });
     const obj = await repo.object(id);
-    expect(obj).toMatchObject({ title: "Mässingshandtag", is_batch: true, status: "discovered" });
-    expect((await repo.acquisitionsFor(id))[0].price).toBe(200);
+    expect(obj).toMatchObject({ title: "Ekdörrar", is_batch: true, status: "discovered" });
+    expect((await repo.acquisitionsFor(id))[0].price).toBe(300);
     expect((await repo.eventsFor("object", id)).map((e) => e.event_type)).toContain("object.discovered");
     expect((await repo.audit()).some((a) => a.action === "create_from_proposal" && a.entity_id === id)).toBe(true);
     expect(await repo.proposals()).toHaveLength(0);
-    expect((await repo.persons()).filter((p) => p.name === "Anders")).toHaveLength(1);
+    expect((await repo.persons()).filter((p) => p.name === "Lena")).toHaveLength(1);
   });
 
   it("följer tillståndsmaskinen och kräver plats för i bruk", async () => {
@@ -93,8 +93,8 @@ describe("M2: inflöde och lager", () => {
     const [prop] = await repo.proposals();
     await repo.approveProposal({
       proposal_id: prop.id, partial: false,
-      object: { title: "Mässingshandtag", category: "Beslag och smide", description: "", material: "", dimensions: "", quantity: 4, unit: "st", condition: null, field_meta: {} },
-      person: null, acquisition: { type: "purchase", price: 200, deadline: null }, task: null, why: "", media_ids: [],
+      object: { title: "Ekdörrar", category: "Fönster och dörrar", description: "", material: "", dimensions: "", quantity: 3, unit: "st", condition: null, field_meta: {} },
+      person: null, acquisition: { type: "purchase", price: 300, deadline: null }, task: null, why: "", media_ids: [],
     });
     const acq = (await repo.allAcquisitions()).find((a) => a.status === "lead")!;
     await expect(repo.setAcquisitionStatus(acq.id, "settled")).rejects.toThrow(/Otillåten/);

@@ -15,3 +15,10 @@ $PSQL -c "create database vreta_test"
 $PSQL -d vreta_test -f "$ROOT/supabase/tests/supabase_stubs.sql"
 for f in "$ROOT"/supabase/migrations/*.sql; do $PSQL -d vreta_test -f "$f"; done
 for t in "$ROOT"/supabase/tests/m*_rls_test.sql; do $PSQL -d vreta_test -f "$t"; done
+# Med RESTORE_TEST=1: säkerhetskopiera testdatabasen och läs tillbaka den (NFR-008)
+if [ "${RESTORE_TEST:-}" = "1" ]; then
+  BK="$(mktemp -d)"; chmod 777 "$BK"
+  SUPABASE_DB_URL="postgresql://postgres@/vreta_test?host=/tmp&port=55432" SKIP_STORAGE=1 "$ROOT/scripts/backup.sh" "$BK"
+  "$ROOT/scripts/restore-test.sh" "$(ls -d "$BK"/*/ | head -1)"
+  rm -rf "$BK"
+fi

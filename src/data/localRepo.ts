@@ -4,7 +4,7 @@ import { openDB, type IDBPDatabase } from "idb";
 import { ACQUISITION_TRANSITIONS, LEAD_TRANSITIONS, LISTING_TRANSITIONS, PICKUP_TRANSITIONS, assertTransition } from "../domain/stateMachine";
 import type {
   BatchAllocation, Decision, MapLayer, Observation, UsageEvent,
-  ChannelPost, ContentConsent, Contribution, Disposal, DisposalType, Lead, LeadStatus, Listing, ListingStatus, PublishMode, ReciprocityEntry,
+  ChannelPost, ContentConsent, Contribution, Disposal, DisposalType, Lead, LeadStatus, Listing, ListingStatus, PublishMode, ReciprocityEntry, AskThread,
   AcquisitionStatus, ChecklistItem, ChecklistTemplate, Interaction, Organization, Pickup, PickupItem, PickupStatus,
   StorageLocation,
   Acquisition, AuditEntry, Capture, CaptureInput, ContentItem, EventLink, EventRec, Media, ObjectStatus, Person,
@@ -25,6 +25,8 @@ const STORES = [
   "map_layers", "batch_allocations", "usage_events", "observations", "decisions",
   // M4
   "listings", "channel_posts", "leads", "disposals", "disposal_private", "contributions", "reciprocity_entries", "content_consents",
+  // M5
+  "ask_threads",
 ] as const;
 
 const KEY_PATHS: Partial<Record<string, string | null>> = {
@@ -59,7 +61,7 @@ export class LocalRepo implements Repo {
   private dbp: Promise<IDBPDatabase>;
 
   constructor(dbName = "vreta-demo") {
-    this.dbp = openDB(dbName, 4, {
+    this.dbp = openDB(dbName, 5, {
       upgrade(db) {
         for (const s of STORES) {
           if (db.objectStoreNames.contains(s)) continue;
@@ -467,7 +469,10 @@ export class LocalRepo implements Repo {
   async exportAll(): Promise<Record<string, unknown[]>> {
     await this.requireOwner();
     const out: Record<string, unknown[]> = {};
+    const me = await this.me();
     for (const s of STORES) if (s !== "blobs" && s !== "meta") out[s] = await this.all(s);
+    // Trådar med chatboten är privata även för ägaren (11.6)
+    out.ask_threads = (out.ask_threads as AskThread[]).filter((t) => t.created_by === me.id);
     return out;
   }
 
@@ -1079,6 +1084,51 @@ export class LocalRepo implements Repo {
     const next: ContentConsent = { ...(existing ?? { id: uuid(), site_id: await this.siteId(), created_at: now(), created_by: me.id }), ...input };
     await this.put("content_consents", next);
     await this.audit_(me, "content_consent", "person", input.person_id, existing ?? null, next);
+  }
+
+  // ------------------------------------------------------------ M5: uppgifter, trådar, export
+  async createTask(input: Pick<Task, "title" | "due" | "entity_type" | "entity_id">): Promise<Task> {
+    const me = await this.requireWriter();
+    const t: Task = { ...(await this.base(me)), ...input, status: "open" };
+    await this.put("tasks", t);
+    await this.audit_(me, "task_created", "task", t.id, null, input);
+    return t;
+  }
+  async completeTask(id: string): Promise<void> {
+    await this.requireWriter();
+    const t = await this.get<Task>("tasks", id);
+    if (t) await this.put("tasks", { ...t, status: "done", updated_at: now() });
+  }
+  async askThreads(): Promise<AskThread[]> {
+    const me = await this.me();
+    return (await this.all<AskThread>("ask_threads")).filter((t) => t.created_by === me.id).sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+  }
+  async saveAskThread(thread: Pick<AskThread, "id" | "title" | "messages">): Promise<void> {
+    const me = await this.me();
+    const existing = await this.get<AskThread>("ask_threads", thread.id);
+    if (existing && existing.created_by !== me.id) throw new PermissionError("Tråden är någon annans");
+    await this.put("ask_threads", { ...(existing ?? { site_id: await this.siteId(), created_at: now(), created_by: me.id }), ...thread, updated_at: now() } satisfies AskThread);
+  }
+  async deleteAskThread(id: string): Promise<void> {
+    const me = await this.me();
+    const t = await this.get<AskThread>("ask_threads", id);
+    if (t && t.created_by === me.id) await (await this.dbp).delete("ask_threads", id);
+  }
+  async mediaOriginal(media: Media): Promise<Blob | null> {
+    await this.requireOwner();
+    return (await this.get<Blob>("blobs", `media-original/${media.original_path}`)) ?? null;
+  }
+  async allAllocations(): Promise<BatchAllocation[]> {
+    return this.all<BatchAllocation>("batch_allocations");
+  }
+  async allStoryNotes(): Promise<StoryNote[]> {
+    return (await this.all<StoryNote>("story_notes")).filter((n) => !n.archived_at);
+  }
+  async allContent(): Promise<ContentItem[]> {
+    return this.all<ContentItem>("content_items");
+  }
+  async allMedia(): Promise<Media[]> {
+    return (await this.all<Media>("media")).filter((m) => !m.archived_at);
   }
 
   /** Används av demodata och tester. */

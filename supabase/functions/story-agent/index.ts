@@ -5,6 +5,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 import { AgentRefusedError, runStoryAgent } from "../_shared/agents.ts";
 import { corsHeaders, json } from "../_shared/http.ts";
+import { logUsage, overCap, siteOf } from "../_shared/usage.ts";
 import { guardStoryContext } from "../_shared/privacyGuard.ts";
 import { buildRawStoryContext } from "../_shared/storyContext.ts";
 import { scrubText } from "../_shared/listingPackage.ts";
@@ -28,6 +29,8 @@ Deno.serve(async (req: Request) => {
   if (!auth.user) return json({ error: "unauthorized" }, 401);
   const { data: canWrite } = await supabase.rpc("can_write");
   if (!canWrite) return json({ error: "forbidden" }, 403);
+  const member = await siteOf(supabase);
+  if (member && (await overCap(supabase, member.site_id))) return json({ error: "cap_reached" }, 429);
 
   const { object_id, goal, channels, content_id } = (await req.json()) as { object_id: string; goal: string; channels: string[]; content_id?: string };
 
@@ -69,7 +72,7 @@ Deno.serve(async (req: Request) => {
   if (!guard.allowed || !guard.context) return json({ error: "not_publishable", warnings: guard.warnings }, 400);
 
   try {
-    const drafted = await runStoryAgent(anthropic, { context: guard.context, goal, channels });
+    const drafted = await runStoryAgent(anthropic, { context: guard.context, goal, channels }, (model, usage) => member ? logUsage(supabase, member.site_id, "story-agent", model, usage) : undefined);
     // Sista kontroll: namn utan samtycke och personers hemorter får aldrig stå i texten (AC-11)
     const hidden = raw.people.filter((_, i) => !guard.context!.people[i]?.name).map((p) => p.name);
     const places = raw.people.map((p) => p.locality).filter(Boolean);

@@ -35,9 +35,9 @@ export function flattenTree(all: StorageLocation[]): { loc: StorageLocation; dep
   return out;
 }
 
-export function LocationSelect({ locations, value, onChange, id }: { locations: StorageLocation[]; value: string; onChange: (v: string) => void; id?: string }) {
+export function LocationSelect({ locations, value, onChange, id, label = "Lagerplats" }: { locations: StorageLocation[]; value: string; onChange: (v: string) => void; id?: string; label?: string }) {
   return (
-    <select id={id} className="input" value={value} onChange={(e) => onChange(e.target.value)}>
+    <select id={id} aria-label={id ? undefined : label} className="input" value={value} onChange={(e) => onChange(e.target.value)}>
       <option value="">Välj lagerplats</option>
       {flattenTree(locations).map(({ loc, depth }) => (
         <option key={loc.id} value={loc.id}>

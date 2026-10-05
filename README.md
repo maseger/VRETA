@@ -38,7 +38,7 @@ scripts/test-db.sh # migrationer + RLS mot en tillfällig PostgreSQL (kräver po
 
 1. Skapa ett Supabase-projekt och kör migrationerna i `supabase/migrations/` (`supabase db push`).
 2. Lägg Claude-nyckeln som hemlighet: `supabase secrets set ANTHROPIC_API_KEY=...`
-3. Driftsätt funktionerna: `supabase functions deploy capture-agent story-agent marketplace-agent`
+3. Driftsätt funktionerna: `supabase functions deploy capture-agent story-agent marketplace-agent ask-vreta`
 4. Kopiera `.env.example` till `.env.local` och fyll i projektets URL och anon-nyckel.
 5. Logga in med e-postlänk – första inloggningen skapar platsen och gör dig till ägare.
 
@@ -112,4 +112,25 @@ Databastesterna kräver PostGIS: `apt-get install postgresql-16-postgis-3`.
 **Webbläsaragenten:** knappen *Låt agent publicera* kopierar en instruktion och sparar bilderna. Klistra in den i Claude i Chrome, som fyller i kanalens formulär i din inloggade webbläsare. Inloggning, betalning och sista publiceringsklicket gör du alltid själv (INV-04). Klistra sedan in annonslänken i studion. En MCP-server med `get_listing_package` och `mark_channel_posted` (9.4) är nästa steg.
 
 **Tack** skrivs från mallar i båda lägena, med samma integritetsfilter. Story Agent på servern får nu också bidrag och samtycke per inlägg, och dess text kontrolleras på samma sätt.
+
+## Vad M5 innehåller (kunskap och härdning)
+
+| Del | Var |
+| --- | --- |
+| Kunskapsverktygen: hitta, lager per person, bidrag och tack, intressenter, idag, längst i lager, köpt och sålt, zoner, perioder, fritext – och åtgärder som bara föreslås | `supabase/functions/_shared/knowledge.ts` |
+| Fråga Vreta med Claude och verktyg; verktygen läser med användarens inloggning så att radnivåsäkerheten filtrerar innan något når modellen | `supabase/functions/ask-vreta/`, `_shared/knowledgeStore.ts` |
+| Chatten: källkort, "Allmänt råd" skilt från fakta om Vreta, bekräftelse av åtgärder, privata trådar, vet vilken skärm du kom från (AC-13, AC-14, AC-25) | `src/pages/AskPage.tsx`, `src/services/askVreta.ts` |
+| Röstläge med uppläsning och "ja/nej/stopp"; röstkommandon som "Lägg tegelpartiet på pall A" flyttar först efter "ja" (AC-22) | `src/services/speech.ts`, `src/pages/AskPage.tsx` |
+| Handsfree-checklista vid hämtning (AC-21) | `src/ui/HandsfreeChecklist.tsx` |
+| Idag prioriterar: granska, hämtningar, försenat, intressenter, uppföljning, att tacka, legat i lager över ett år | `src/pages/TodayPage.tsx` |
+| Export som ZIP: alla tabeller som JSON och CSV, originalbilder och kartor (AC-16) | `src/services/exportArchive.ts` |
+| Egen backup och återställningstest (NFR-008) | `scripts/backup.sh`, `scripts/restore-test.sh`, `RESTORE_TEST=1 scripts/test-db.sh` |
+| Fulltextsök på svenska, index, privata trådar, AI-förbrukning per funktion med månadstak (NFR-014) | `supabase/migrations/20261009000000_m5_kunskap_hardning.sql` |
+| Tillgänglighet: hoppa-till-innehåll-länk, aria-live, etiketter; axe (WCAG 2.2 AA) utan anmärkningar på kärnflödena | `src/ui/AppShell.tsx` m.fl. |
+| Prestanda: alla sidor utom Idag laddas vid behov; startpaketet gick från 725 kB till 168 kB | `src/App.tsx`, `vite.config.ts` |
+| Fälttestprotokoll för en vecka | `docs/falttest.md` |
+
+**Röst:** uppläsning och taligenkänning använder webbläsarens inbyggda tjänster (svenska). En egen taltjänst med VRETA:s ordlista (FR-064, NFR-016) är nästa steg och kräver ett val av leverantör (ADR-003).
+
+**Månadstak för AI:** `update sites set ai_monthly_token_cap = 2000000;` – när taket är nått svarar Fråga Vreta med den lokala tolkningen i stället.
 
