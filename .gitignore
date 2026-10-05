@@ -1,0 +1,12 @@
+# Kartunderlag och media visar fastighetens läge – checkas aldrig in
+vreta-karta/
+*.tif
+*.tiff
+*.pdf
+*.dwg
+*.dxf
+media/
+.env
+.env.*
+node_modules/
+dist/
