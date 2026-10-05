@@ -58,11 +58,13 @@ export function VretaPage() {
   const [newName, setNewName] = useState("");
 
   const base: MapLayer | undefined = bases.find((b) => b.id === baseId) ?? bases[bases.length - 1];
+  // Överlägg visas från början med sin sparade genomskinlighet; 0 betyder avslaget
+  const overlayOpacity = (o: MapLayer) => shownOverlays[o.id] ?? o.opacity;
 
   const images = useMemo(() => {
     const list = [];
     if (base && urls[base.id]) list.push({ id: base.id, url: urls[base.id], corners: base.corners as LngLat[], opacity: 1 });
-    for (const o of overlays) if (shownOverlays[o.id] && urls[o.id]) list.push({ id: o.id, url: urls[o.id], corners: o.corners as LngLat[], opacity: shownOverlays[o.id] });
+    for (const o of overlays) if (overlayOpacity(o) && urls[o.id]) list.push({ id: o.id, url: urls[o.id], corners: o.corners as LngLat[], opacity: overlayOpacity(o) });
     return list;
   }, [base, overlays, shownOverlays, urls]);
 
@@ -189,10 +191,10 @@ export function VretaPage() {
             {overlays.map((o) => (
               <div key={o.id} className="py-1 text-sm">
                 <label className="flex items-center gap-2">
-                  <input type="checkbox" className="accent-[#8C2F1D]" checked={!!shownOverlays[o.id]} onChange={(e) => setShownOverlays((s) => ({ ...s, [o.id]: e.target.checked ? 0.7 : 0 }))} />
+                  <input type="checkbox" className="accent-[#8C2F1D]" checked={!!overlayOpacity(o)} onChange={(e) => setShownOverlays((s) => ({ ...s, [o.id]: e.target.checked ? o.opacity || 0.7 : 0 }))} />
                   {o.name}
                 </label>
-                {!!shownOverlays[o.id] && <input type="range" min={0.1} max={1} step={0.05} value={shownOverlays[o.id]} onChange={(e) => setShownOverlays((s) => ({ ...s, [o.id]: Number(e.target.value) }))} className="ml-6 w-40 accent-[#8C2F1D]" aria-label={`Genomskinlighet för ${o.name}`} />}
+                {!!overlayOpacity(o) && <input type="range" min={0.1} max={1} step={0.05} value={overlayOpacity(o)} onChange={(e) => setShownOverlays((s) => ({ ...s, [o.id]: Number(e.target.value) }))} className="ml-6 w-40 accent-[#8C2F1D]" aria-label={`Genomskinlighet för ${o.name}`} />}
               </div>
             ))}
             {canWrite && <Link to="/vreta/kartlager/ny" className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-falu"><Plus size={16} aria-hidden="true" /> Lägg till kartlager</Link>}
