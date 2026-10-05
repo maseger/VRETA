@@ -51,6 +51,17 @@ export class SupabaseRepo implements Repo {
     }
     if (error) throw new Error(error.message);
   }
+  async signInWithPassword(email: string, password: string): Promise<void> {
+    const { error } = await this.client.auth.signInWithPassword({ email, password });
+    if (error?.code === "invalid_credentials") throw new Error("Fel e-post eller lösenord.");
+    if (error) throw new Error(error.message);
+  }
+  async changePassword(password: string): Promise<void> {
+    const { error } = await this.client.auth.updateUser({ password });
+    if (error?.code === "weak_password") throw new Error("Lösenordet är för svagt. Välj minst 8 tecken.");
+    if (error?.code === "same_password") throw new Error("Det nya lösenordet måste skilja sig från det gamla.");
+    if (error) throw new Error(error.message);
+  }
   async signOut(): Promise<void> {
     await this.client.auth.signOut();
     this.siteIdCache = null;
