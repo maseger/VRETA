@@ -45,7 +45,7 @@ export class SupabaseRepo implements Repo {
     return { id: data.user.id, name: rows[0].name || data.user.email || "", role: rows[0].role };
   }
   async signInWithEmail(email: string): Promise<void> {
-    const { error } = await this.client.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } });
+    const { error } = await this.client.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin + import.meta.env.BASE_URL } });
     if (error) throw new Error(error.message);
   }
   async signOut(): Promise<void> {
