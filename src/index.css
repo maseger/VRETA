@@ -1,0 +1,52 @@
+@import "@fontsource-variable/fraunces";
+@import "@fontsource-variable/source-sans-3";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-kalk font-sans text-sot antialiased;
+    /* Kalkputsens struktur: svag brusbild ovanpå grundtonen */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.3 0 0 0 0 0.22 0 0 0 0.07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  h1, h2, h3 {
+    @apply font-serif text-sot;
+    font-variation-settings: "SOFT" 50, "WONK" 0;
+  }
+  h1 { @apply text-3xl font-semibold tracking-tight; }
+  h2 { @apply text-xl font-semibold; }
+  h3 { @apply text-lg font-medium; }
+  :focus-visible { @apply outline-none ring-2 ring-falu/60 ring-offset-2 ring-offset-kalk; }
+}
+
+@layer components {
+  .kicker { @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-sot-3; }
+  .card { @apply rounded-md border border-lera-light bg-[#FBF8F1] shadow-papper; }
+  .rule { @apply border-t border-dashed border-lera; }
+
+  .btn { @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-md px-4 text-[15px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn-primary { @apply btn bg-falu text-kalk shadow-papper hover:bg-falu-dark; }
+  .btn-secondary { @apply btn border border-sot/25 bg-transparent text-sot hover:bg-kalk-2; }
+  .btn-ghost { @apply btn px-3 text-sot-2 hover:bg-kalk-2; }
+  .btn-moss { @apply btn bg-linolja text-kalk hover:bg-linolja/90; }
+
+  /* Statusmärke i stil med en stämpel eller emaljskylt */
+  .stamp { @apply inline-flex items-center gap-1 rounded-sm border-[1.5px] px-1.5 py-0.5 text-[10.5px] font-bold uppercase leading-none tracking-[0.14em]; }
+
+  .field-label { @apply mb-1 block text-[13px] font-semibold text-sot-2; }
+  .input { @apply w-full rounded-md border border-lera bg-[#FDFBF6] px-3 py-2.5 text-[15px] text-sot placeholder:text-sot-3/60 focus:border-falu focus:outline-none focus:ring-2 focus:ring-falu/20; }
+  /* AI-förslag: streckad ockrakant tills användaren godkänt (designprincip 3) */
+  .suggested { @apply border-dashed border-ockra bg-ockra-light/15; }
+
+  .chip { @apply inline-flex min-h-[36px] items-center gap-1.5 rounded-full border border-sot/20 px-3.5 text-sm font-medium text-sot-2 transition-colors hover:bg-kalk-2; }
+  .chip-on { @apply border-sot bg-sot text-kalk hover:bg-sot; }
+}
+
+.scroll-snap-x { scroll-snap-type: x mandatory; }
+.scroll-snap-x > * { scroll-snap-align: start; }
+.pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 0px); }
