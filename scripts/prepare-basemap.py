@@ -9,6 +9,7 @@ Kräver GDAL med Python-bindningar (installeras av .claude/hooks/session-start.s
 Kör med python3.12 om systemets python3 saknar osgeo:
 
     python3.12 scripts/prepare-basemap.py baskarta.pdf ut/ --dpi 300 --max-px 6000
+    python3.12 scripts/prepare-basemap.py karta.tif ut/ --ram-crs EPSG:3011   # ram i SWEREF 99 18 00
 
 Kartfilerna visar fastighetens läge – lägg dem aldrig i repot.
 """
@@ -34,6 +35,8 @@ def main() -> None:
     ap.add_argument("--max-px", type=int, default=6000, help="Största sida i pixlar (standard 6000)")
     ap.add_argument("--name", help="Filnamn utan ändelse (standard: källans namn)")
     ap.add_argument("--hela-bladet", action="store_true", help="Behåll teckenförklaring och marginaler (klipp inte vid kartramen)")
+    ap.add_argument("--ram-fran", help="Hämta kartramen från en annan fil med samma blad (t.ex. baskartan)")
+    ap.add_argument("--ram-crs", help="Koordinatsystem för kartramen om det skiljer sig från bildens, t.ex. EPSG:3011 (SWEREF 99 18 00)")
     args = ap.parse_args()
 
     os.makedirs(args.outdir, exist_ok=True)
@@ -49,12 +52,38 @@ def main() -> None:
     # GeoPDF från kommuner har ofta en kartram (NEATLINE) – klipp bort teckenförklaring och marginaler
     warp_opts = dict(dstSRS="EPSG:3857", resampleAlg="bilinear", dstAlpha=True)
     neatline = src.GetMetadataItem("NEATLINE")
+    if args.ram_fran:
+        neatline = gdal.Open(args.ram_fran).GetMetadataItem("NEATLINE")
+        if not neatline:
+            sys.exit(f"{args.ram_fran} saknar kartram (NEATLINE).")
     if neatline and not args.hela_bladet:
         from osgeo import ogr
         geom = ogr.CreateGeometryFromWkt(neatline)
+        if args.ram_crs:
+            ram_srs = osr.SpatialReference()
+            ram_srs.SetFromUserInput(args.ram_crs)
+            ram_srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+            srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+            geom.Transform(osr.CoordinateTransformation(ram_srs, srs))
+        # Kartramen kan ha följt med från en tidigare omprojicering och ligga i ett annat
+        # koordinatsystem än bilden; klipp bara om den faktiskt överlappar bilden.
         minx, maxx, miny, maxy = geom.GetEnvelope()
-        warp_opts.update(outputBounds=(minx, miny, maxx, maxy), outputBoundsSRS=src.GetProjection())
-        print("Klipper vid kartramen (NEATLINE)")
+        gt = src.GetGeoTransform()
+        xs = sorted([gt[0], gt[0] + gt[1] * src.RasterXSize])
+        ys = sorted([gt[3], gt[3] + gt[5] * src.RasterYSize])
+        if minx < xs[1] and maxx > xs[0] and miny < ys[1] and maxy > ys[0]:
+            # Klipp längs själva ramen (inte dess omskrivna rektangel), via en tillfällig vektorfil
+            cut = f"/vsimem/{name}_ram.geojson"
+            ds = ogr.GetDriverByName("GeoJSON").CreateDataSource(cut)
+            lyr = ds.CreateLayer("ram", srs=srs, geom_type=ogr.wkbPolygon)
+            feat = ogr.Feature(lyr.GetLayerDefn())
+            feat.SetGeometry(geom)
+            lyr.CreateFeature(feat)
+            ds = None
+            warp_opts.update(cutlineDSName=cut, cropToCutline=True)
+            print("Klipper vid kartramen (NEATLINE)")
+        else:
+            print("Kartramen ligger utanför bilden – klipper inte. Ange --ram-crs om ramen har ett annat koordinatsystem.")
     warped = f"/vsimem/{name}_3857.tif"
     gdal.Warp(warped, src, **warp_opts)
     w = gdal.Open(warped)
