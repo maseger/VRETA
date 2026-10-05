@@ -1,4 +1,4 @@
-import { ArrowRight, CalendarClock, Inbox, Megaphone, MessageSquare, Truck } from "lucide-react";
+import { ArrowRight, CalendarClock, Heart, Inbox, Megaphone, MessageSquare, Tag, Truck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useApp, useData } from "../app/AppContext";
 import { EmptyState, MediaImage, Section, StatusStamp, formatDate } from "../ui/bits";
@@ -11,9 +11,14 @@ function greeting() {
 export function TodayPage() {
   const { profile, site } = useApp();
   const { data } = useData(async (repo) => {
-    const [proposals, offline, tasks, objects, pickups, followUps, people] = await Promise.all([
+    const [proposals, offline, tasks, objects, pickups, followUps, people, leads, listings, contributions] = await Promise.all([
       repo.proposals(), repo.capturesWithoutProposal(), repo.tasks(), repo.objects(), repo.pickups(), repo.followUps(), repo.persons(),
+      repo.leads(), repo.listings(), repo.contributions(),
     ]);
+    // Intressenter som väntar på svar (FR-045) och människor som inte tackats (4.8)
+    const waiting = leads.filter((l) => l.status === "new").map((l) => ({ lead: l, listing: listings.find((x) => x.id === l.listing_id), person: people.find((p) => p.id === l.person_id) })).filter((x) => x.listing);
+    const thankIds = [...new Set(contributions.filter((c) => !c.thanked_at).map((c) => c.person_id))];
+    const toThank = thankIds.map((pid) => ({ person: people.find((p) => p.id === pid), count: contributions.filter((c) => c.person_id === pid && !c.thanked_at).length })).filter((x) => x.person);
     const storyCandidates = [];
     for (const o of objects.slice(0, 12)) {
       const [content, notes, media] = await Promise.all([repo.contentFor("object", o.id), repo.storyNotesFor("object", o.id), repo.mediaFor("object", o.id)]);
@@ -23,7 +28,7 @@ export function TodayPage() {
     const upcoming = pickups.filter((p) => p.status !== "completed" && p.status !== "cancelled").slice(0, 4);
     const today = new Date().toISOString().slice(0, 10);
     const due = followUps.filter((f) => f.follow_up! <= new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10)).map((f) => ({ f, person: people.find((p) => p.id === f.person_id) }));
-    return { today, upcoming, due, proposals, offline, tasks, recent: objects.slice(0, 6).map((o, i) => ({ object: o, cover: covers[i] })), stories: storyCandidates.slice(0, 3) };
+    return { today, upcoming, due, waiting, toThank, proposals, offline, tasks, recent: objects.slice(0, 6).map((o, i) => ({ object: o, cover: covers[i] })), stories: storyCandidates.slice(0, 3) };
   });
 
   const today = new Date().toLocaleDateString("sv-SE", { weekday: "long", day: "numeric", month: "long" });
@@ -76,6 +81,25 @@ export function TodayPage() {
         </Section>
       )}
 
+      {!!data?.waiting.length && (
+        <Section title="Väntar på svar" action={<Link to="/samla?vy=annonser" className="text-sm font-semibold text-falu">Annonser</Link>}>
+          <ul className="card divide-y divide-dashed divide-lera-light">
+            {data.waiting.map(({ lead, listing, person }) => (
+              <li key={lead.id}>
+                <Link to={`/annons/${listing!.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-kalk-2/60">
+                  <Tag size={18} className="text-falu" aria-hidden="true" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-medium">{person?.name ?? "Intressent"} · {listing!.title}</span>
+                    {lead.message && <span className="block truncate text-sm text-sot-3">”{lead.message}”</span>}
+                  </span>
+                  <span className="text-sm text-sot-3">nr {lead.queue_position}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
       {!!data?.due.length && (
         <Section title="Följ upp">
           <ul className="card divide-y divide-dashed divide-lera-light">
@@ -97,7 +121,7 @@ export function TodayPage() {
           <ul className="card divide-y divide-dashed divide-lera-light">
             {data.tasks.map((t) => (
               <li key={t.id}>
-                <Link to={t.entity_id ? `/objekt/${t.entity_id}` : "#"} className="flex items-center gap-3 px-4 py-3 hover:bg-kalk-2/60">
+                <Link to={t.entity_type === "listing" ? `/annons/${t.entity_id}` : t.entity_id ? `/objekt/${t.entity_id}` : "#"} className="flex items-center gap-3 px-4 py-3 hover:bg-kalk-2/60">
                   <CalendarClock size={18} className="text-falu" aria-hidden="true" />
                   <span className="flex-1 font-medium">{t.title}</span>
                   {t.due && <span className="text-sm text-sot-3">senast {formatDate(t.due)}</span>}
@@ -109,6 +133,22 @@ export function TodayPage() {
           <EmptyState title="Inget som brådskar">Uppgifter skapas när du fångar fynd med en tidsgräns.</EmptyState>
         )}
       </Section>
+
+      {!!data?.toThank.length && (
+        <Section title="Att tacka">
+          <ul className="card divide-y divide-dashed divide-lera-light">
+            {data.toThank.map(({ person, count }) => (
+              <li key={person!.id}>
+                <Link to={`/person/${person!.id}/tacka`} className="flex items-center gap-3 px-4 py-3 hover:bg-kalk-2/60">
+                  <Heart size={18} className="text-falu" aria-hidden="true" />
+                  <span className="flex-1 font-medium">{person!.name}</span>
+                  <span className="text-sm text-sot-3">{count} {count === 1 ? "bidrag" : "bidrag"}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
 
       {!!data?.stories.length && (
         <Section title="Att berätta">

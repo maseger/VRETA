@@ -1,9 +1,9 @@
-import { AlertTriangle, ChevronDown, Loader2, Send, Share2, ShieldCheck, Sparkles } from "lucide-react";
+import { AlertTriangle, ChevronDown, Copy, Loader2, Send, Share2, ShieldCheck, Sparkles, UserCheck } from "lucide-react";
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useApp, useData } from "../app/AppContext";
 import { CHANNEL_LABEL, GOAL_LABEL } from "../domain/labels";
-import type { Channel, ContentGoal, ContentItem } from "../domain/types";
+import type { Channel, ContentGoal, ContentItem, Person } from "../domain/types";
 import { shareStory } from "../services/share";
 import { draftForObject, type StoryDraftResult } from "../services/storyAgent";
 import { MediaImage, PageHeader } from "../ui/bits";
@@ -14,12 +14,16 @@ export function StoryStudioPage() {
   const { id } = useParams();
   const { repo, profile, refresh, toast } = useApp();
   const isOwner = profile?.role === "owner";
+  const [params] = useSearchParams();
   const { data } = useData(async (r) => {
     const object = await r.object(id!);
-    return object ? { object, media: await r.mediaFor("object", id!) } : null;
+    if (!object) return null;
+    const [media, acqs, contributions, persons] = await Promise.all([r.mediaFor("object", id!), r.acquisitionsFor(id!), r.contributions(), r.persons()]);
+    const ids = new Set([...acqs.map((a) => a.person_id), ...contributions.filter((c) => c.object_id === id).map((c) => c.person_id)]);
+    return { object, media, people: persons.filter((p) => ids.has(p.id)) };
   }, [id]);
 
-  const [goal, setGoal] = useState<ContentGoal>("fyndet");
+  const [goal, setGoal] = useState<ContentGoal>((params.get("mal") as ContentGoal) ?? "fyndet");
   const [channels, setChannels] = useState<Channel[]>(["facebook", "instagram"]);
   const [result, setResult] = useState<StoryDraftResult | null>(null);
   const [texts, setTexts] = useState<Partial<Record<Channel, string>>>({});
@@ -33,7 +37,8 @@ export function StoryStudioPage() {
 
   if (data === null) return <p>Objektet finns inte.</p>;
   if (!data) return null;
-  const { object, media } = data;
+  const { object, media, people } = data;
+  const askPeople = people.filter((p) => p.consent_name === "ask" || p.consent_contribution === "ask");
 
   async function draft() {
     setBusy(true);
@@ -46,8 +51,8 @@ export function StoryStudioPage() {
     }
   }
 
-  async function runDraft() {
-    const r = await draftForObject(repo, object.id, goal, channels);
+  async function runDraft(contentId = item?.id) {
+    const r = await draftForObject(repo, object.id, goal, channels, contentId);
     setResult(r);
     if (r.ok) {
       setTexts(Object.fromEntries(r.variants.map((v) => [v.channel, v.text])));
@@ -142,6 +147,9 @@ export function StoryStudioPage() {
                 {showRemoved && <ul className="mt-2 list-disc pl-6 text-sm text-sot-3">{result.removed.map((r, i) => <li key={i}>{r}</li>)}</ul>}
               </>
             )}
+            {isOwner && item && askPeople.length > 0 && askPeople.map((p) => (
+              <ConsentForPost key={p.id} person={p} contentId={item.id} onSaved={async () => { setBusy(true); try { await runDraft(item.id); } finally { setBusy(false); } }} />
+            ))}
           </section>
 
           {media.some((m) => result.media_ids.includes(m.id)) && (
@@ -188,6 +196,43 @@ export function StoryStudioPage() {
             </button>
           )}
         </>
+      )}
+    </div>
+  );
+}
+
+const ASK_TEXT = "Jag berättar gärna om Vreta på Facebook och Instagram. Okej om jag nämner dig vid namn, visar bild på dig eller berättar vad du bidragit med?";
+
+/** Samtycke för just detta inlägg när personen har "fråga varje gång" (12.2, 10.7). */
+export function ConsentForPost({ person, contentId, onSaved }: { person: Person; contentId: string; onSaved: () => Promise<void> }) {
+  const { repo, toast } = useApp();
+  const [open, setOpen] = useState(false);
+  const [nameOk, setNameOk] = useState(false);
+  const [contribOk, setContribOk] = useState(false);
+  const [how, setHow] = useState("muntligt");
+  return (
+    <div className="mt-3 border-t border-dashed border-lera-light pt-3">
+      <button className="flex items-center gap-1.5 text-sm font-semibold text-falu" onClick={() => setOpen((o) => !o)}>
+        <UserCheck size={16} aria-hidden="true" /> {person.name} vill bli tillfrågad – registrera svar för detta inlägg
+      </button>
+      {open && (
+        <div className="mt-2 space-y-2 text-sm">
+          <p className="rounded-md bg-kalk-2 px-3 py-2 italic text-sot-2">”{ASK_TEXT}”</p>
+          <button className="btn-ghost -ml-3 text-sm" onClick={async () => { await navigator.clipboard?.writeText(ASK_TEXT).catch(() => undefined); toast("Frågan är kopierad"); }}><Copy size={15} /> Kopiera frågan</button>
+          {person.consent_name === "ask" && <label className="flex items-center gap-2"><input type="checkbox" checked={nameOk} onChange={(e) => setNameOk(e.target.checked)} /> Namnet får nämnas</label>}
+          {person.consent_contribution === "ask" && <label className="flex items-center gap-2"><input type="checkbox" checked={contribOk} onChange={(e) => setContribOk(e.target.checked)} /> Bidraget får beskrivas</label>}
+          <label className="flex items-center gap-2">Hur svaret gavs
+            <select className="input w-auto py-1 text-sm" value={how} onChange={(e) => setHow(e.target.value)}>
+              <option value="muntligt">Muntligt</option><option value="meddelande">Meddelande</option><option value="formulär">Formulär</option>
+            </select>
+          </label>
+          <button className="btn-moss text-sm" onClick={async () => {
+            await repo.setContentConsent({ content_id: contentId, person_id: person.id, name_ok: nameOk, image_ok: false, contribution_ok: contribOk, how });
+            setOpen(false);
+            toast("Samtycket är sparat för detta inlägg");
+            await onSaved();
+          }}>Spara och skriv om</button>
+        </div>
       )}
     </div>
   );

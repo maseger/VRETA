@@ -1,4 +1,4 @@
-import type { UsageType, AcquisitionStatus, AcquisitionType, InteractionChannel, PickupStatus, ReceiptStatus, Channel, ContentGoal, ObjectStatus, Visibility } from "./types";
+import type { UsageType, AcquisitionStatus, AcquisitionType, InteractionChannel, PickupStatus, ReceiptStatus, Channel, ContentGoal, ObjectStatus, Visibility, ListingType, ListingStatus, LeadStatus, DisposalType, ContributionKind } from "./types";
 
 export const STATUS_LABEL: Record<ObjectStatus, string> = {
   discovered: "Upptäckt",
@@ -82,6 +82,11 @@ export const EVENT_LABEL: Record<string, string> = {
   "usage.replanted": "Omplanterad",
   "usage.decommissioned": "Tagen ur bruk",
   "decision": "Beslut",
+  "disposal.sold": "Såld",
+  "disposal.donated": "Skänkt",
+  "disposal.exchanged": "Bytt",
+  "disposal.lent": "Utlånad",
+  "disposal.discarded": "Kasserad",
 };
 
 export const CATEGORIES = [
@@ -134,7 +139,7 @@ export const CHANNEL_INTERACTION_LABEL: Record<InteractionChannel, string> = {
   annat: "Annat",
 };
 
-export const PERSON_ROLES = ["Leverantör", "Givare", "Medskapare", "Hantverkare", "Kunskapsbärare", "Transportör", "Köpare", "Följare", "Tipsare"];
+export const PERSON_ROLES = ["Leverantör", "Givare", "Medskapare", "Hantverkare", "Kunskapsbärare", "Transportör", "Köpare", "Mottagare", "Följare", "Tipsare"];
 
 export const RESOURCES = ["Släp", "Skåpbil", "Bärhjälp", "Spännband", "Verktyg", "Filtar"];
 
@@ -163,6 +168,10 @@ export const OBSERVATION_KINDS: { key: string; label: string }[] = [
 
 export function eventLabel(type: string): string {
   if (EVENT_LABEL[type]) return EVENT_LABEL[type];
+  if (type.startsWith("contribution.")) {
+    const k = type.slice(13) as ContributionKind;
+    return `Bidrag${CONTRIBUTION_LABEL[k] ? ` · ${CONTRIBUTION_LABEL[k]}` : ""}`;
+  }
   if (type.startsWith("observation.")) {
     const k = OBSERVATION_KINDS.find((o) => o.key === type.slice(12));
     return `Observation${k ? ` · ${k.label}` : ""}`;
@@ -177,5 +186,59 @@ export const JOURNAL_FILTERS: { key: string; label: string; match: (t: string) =
   { key: "obs", label: "Observationer", match: (t) => t.startsWith("observation.") },
   { key: "beslut", label: "Beslut", match: (t) => t === "decision" },
   { key: "in", label: "Fynd och hämtningar", match: (t) => t === "object.discovered" || t === "pickup.completed" },
+  { key: "ut", label: "Sålt och skänkt", match: (t) => t.startsWith("disposal.") },
+  { key: "bidrag", label: "Bidrag", match: (t) => t.startsWith("contribution.") },
   { key: "berattat", label: "Berättat", match: (t) => t === "content.shared" || t === "story.moment" },
 ];
+
+export const LISTING_TYPE_LABEL: Record<ListingType, string> = {
+  sell: "Sälja",
+  give: "Skänka",
+  exchange: "Byta",
+  lend: "Låna ut",
+  wanted: "Söker",
+  help_wanted: "Söker hjälp",
+};
+
+export const LISTING_STATUS_LABEL: Record<ListingStatus, string> = {
+  draft: "Utkast",
+  ready: "Klar att lägga ut",
+  published: "Ute",
+  agreed: "Överenskommen",
+  completed: "Klar",
+  archived: "Arkiverad",
+  withdrawn: "Tillbakadragen",
+};
+
+export const LEAD_STATUS_LABEL: Record<LeadStatus, string> = {
+  new: "Ny – väntar svar",
+  replied: "Svarat",
+  viewing_booked: "Visning bokad",
+  agreed: "Överens",
+  completed: "Klart",
+  no_show: "Kom inte",
+  lost: "Föll bort",
+  rejected: "Nej tack",
+};
+
+export const DISPOSAL_LABEL: Record<DisposalType, string> = {
+  sold: "Såld",
+  donated: "Skänkt",
+  exchanged: "Bytt",
+  lent: "Utlånad",
+  discarded: "Kasserad",
+};
+
+export const CONTRIBUTION_LABEL: Record<ContributionKind, string> = {
+  material: "Material",
+  tid: "Tid och händer",
+  kunskap: "Kunskap",
+  maskin: "Maskin eller verktyg",
+  transport: "Transport",
+  kontakter: "Kontakter",
+  mat: "Mat",
+  ekonomiskt: "Ekonomiskt",
+  omsorg: "Omsorg",
+};
+
+export const PAYMENT_METHODS = ["Swish", "Kontant", "Byte", "Annat"];

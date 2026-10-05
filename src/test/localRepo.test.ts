@@ -130,15 +130,16 @@ describe("M3: nytt liv, partier och journal", () => {
   it("delar ett parti och summan stämmer alltid (AC-04)", async () => {
     const tegel = (await repo.objects()).find((o) => o.title === "Tegel")!;
     let allocs = await repo.allocations(tegel.id);
-    expect(allocs.map((a) => [a.quantity, a.status])).toEqual([[250, "in_use"], [150, "stored"]]);
+    // Demodatan har redan sålt 30 via en annons (M4): 250 i bruk, 120 i lager, 30 sålda
+    expect(allocs.map((a) => [a.quantity, a.status])).toEqual([[250, "in_use"], [120, "stored"], [30, "sold"]]);
     expect((await repo.object(tegel.id))!.status).toBe("in_use");
 
     const zone = (await repo.zones()).find((z) => z.name === "Trädgården")!;
     await expect(repo.recordUsage(tegel.id, usage({ zone_id: zone.id, quantity: 200 }))).rejects.toThrow(/inte 200/);
-    await repo.recordUsage(tegel.id, usage({ zone_id: zone.id, quantity: 120 }));
+    await repo.recordUsage(tegel.id, usage({ zone_id: zone.id, quantity: 100 }));
     allocs = await repo.allocations(tegel.id);
     expect(allocs.reduce((s, a) => s + a.quantity, 0)).toBe(400);
-    expect(allocs.find((a) => a.status === "stored")!.quantity).toBe(30);
+    expect(allocs.find((a) => a.status === "stored")!.quantity).toBe(20);
     await expect(repo.changeStatus(tegel.id, "stored")).rejects.toThrow(/uppdelat/);
 
     const inUse = allocs.find((a) => a.zone_id === zone.id)!;
@@ -146,7 +147,7 @@ describe("M3: nytt liv, partier och journal", () => {
     await repo.storeAllocation(inUse.id, 20, loc.id);
     allocs = await repo.allocations(tegel.id);
     expect(allocs.reduce((s, a) => s + a.quantity, 0)).toBe(400);
-    expect(allocs.filter((a) => a.status === "stored").reduce((s, a) => s + a.quantity, 0)).toBe(50);
+    expect(allocs.filter((a) => a.status === "stored").reduce((s, a) => s + a.quantity, 0)).toBe(40);
   });
 
   it("nytt liv syns i objekt-, zon- och platsjournal från en händelse (AC-05)", async () => {
@@ -189,5 +190,116 @@ describe("M3: nytt liv, partier och journal", () => {
     expect(layer.corners).toHaveLength(4);
     expect(await repo.mapImage(layer)).toBeTruthy();
     expect((await repo.zones()).filter((z) => z.geom).length).toBe(4);
+  });
+});
+
+describe("M4: utflöde, intressenter och bidrag", () => {
+  it("ett lagerobjekt blir annonspaket för Blocket och Facebook Marketplace utan platsdata (AC-07)", async () => {
+    const { packagesForListing } = await import("../services/marketplaceAgent");
+    const fonster = (await repo.objects()).find((o) => o.title === "Gjutjärnsfönster")!;
+    const l = await repo.saveListing({ object_id: fonster.id, type: "sell", title: "Gjutjärnsfönster", description: "Från Anders torp, förvaras i Garaget på Hylla 3", price: 1500, quantity: 6, locality: "Storgatan 4, Storvik", image_ids: [] });
+    const t0 = performance.now();
+    const r = await packagesForListing(repo, l, ["blocket", "facebook_marketplace"]);
+    expect(performance.now() - t0).toBeLessThan(3 * 60 * 1000);
+    expect(r.ok).toBe(true);
+    expect(r.packages.map((p) => p.channel)).toEqual(["blocket", "facebook_marketplace"]);
+    for (const p of r.packages) {
+      const all = `${p.title}\n${p.text}`;
+      for (const secret of ["Anders", "Garaget", "Hylla 3", "Storgatan", "200 kr"]) expect(all).not.toContain(secret);
+      expect(p.text).toContain("Storvik");
+      expect(p.title.length).toBeLessThanOrEqual(p.channel === "blocket" ? 50 : 100);
+    }
+    expect(r.price?.price).toBeGreaterThan(0); // förslag från inköpspriset, som aldrig syns i texten
+    expect(r.warnings.join(" ")).toMatch(/ort/i);
+  });
+
+  it("en såld annons uppdaterar objekt, köpare, pris och påminner om nedtagning (AC-08)", async () => {
+    const fonster = (await repo.objects()).find((o) => o.title === "Gjutjärnsfönster")!;
+    const l = await repo.saveListing({ object_id: fonster.id, type: "sell", title: "Sex gjutjärnsfönster", description: "", price: 1500, quantity: 6, locality: "Storvik", image_ids: [] });
+    await repo.publishChannel(l.id, "blocket", "https://www.blocket.se/annons/1", "manual");
+    await repo.publishChannel(l.id, "facebook_marketplace", "https://www.facebook.com/marketplace/item/1", "browser_agent");
+    expect((await repo.object(fonster.id))!.status).toBe("listed");
+    const p1 = await repo.createPerson({ name: "Sara", locality: "", roles: [], how_we_met: "", organization_id: null, contact: "", notes: "" });
+    const p2 = await repo.createPerson({ name: "Olle", locality: "", roles: [], how_we_met: "", organization_id: null, contact: "", notes: "" });
+    const a = await repo.addLead({ listing_id: l.id, person_id: p1.id, channel: "blocket", message: "", bid: null });
+    const b = await repo.addLead({ listing_id: l.id, person_id: p2.id, channel: "facebook_marketplace", message: "", bid: 1400 });
+    expect(b.queue_position).toBe(2);
+    await expect(repo.setLeadStatus(a.id, "completed")).rejects.toThrow(/Otillåten/);
+    await repo.agreeLead(a.id);
+    expect((await repo.object(fonster.id))!.status).toBe("reserved_out");
+    await repo.releaseLead(a.id, "no_show");
+    expect((await repo.object(fonster.id))!.status).toBe("listed");
+    expect((await repo.listing(l.id))!.status).toBe("published");
+    await repo.agreeLead(b.id);
+    await repo.completeDisposal(l.id, { price: 1400, payment_method: "Swish" });
+
+    expect((await repo.object(fonster.id))!.status).toBe("sold");
+    expect((await repo.listing(l.id))!.status).toBe("completed");
+    expect((await repo.person(p2.id))!.roles).toContain("Köpare");
+    expect((await repo.disposals(fonster.id))[0]).toMatchObject({ type: "sold", price: 1400, person_id: p2.id });
+    const reminders = (await repo.tasks()).filter((t) => t.entity_id === l.id);
+    expect(reminders.map((t) => t.title)).toEqual(expect.arrayContaining([expect.stringContaining("blocket"), expect.stringContaining("facebook_marketplace")]));
+    expect((await repo.eventsFor("person", p2.id)).map((e) => e.event_type)).toContain("disposal.sold");
+    await repo.removeChannel(l.id, "blocket");
+    expect((await repo.tasks()).filter((t) => t.entity_id === l.id)).toHaveLength(1);
+
+    await repo.setDemoRole("contributor");
+    expect((await repo.disposals(fonster.id))[0].price).toBeUndefined();
+    await repo.setDemoRole("viewer");
+    expect(await repo.leads()).toHaveLength(0);
+  });
+
+  it("demodatan har 30 tegel sålda via annons och partiet summerar till 400 (AC-04)", async () => {
+    const tegel = (await repo.objects()).find((o) => o.title === "Tegel")!;
+    const allocs = await repo.allocations(tegel.id);
+    expect(allocs.reduce((s, a) => s + a.quantity, 0)).toBe(400);
+    expect(allocs.find((a) => a.status === "sold")!.quantity).toBe(30);
+    const johan = (await repo.persons()).find((p) => p.name === "Johan")!;
+    expect(johan.roles).toContain("Köpare");
+  });
+
+  it("en tillbakadragen annons lägger tillbaka delen i lager", async () => {
+    const tegel = (await repo.objects()).find((o) => o.title === "Tegel")!;
+    const l = await repo.saveListing({ object_id: tegel.id, type: "sell", title: "20 tegel", description: "", price: 300, quantity: 20, locality: "Storvik", image_ids: [] });
+    await repo.publishChannel(l.id, "blocket", "", "manual");
+    expect((await repo.allocations(tegel.id)).find((a) => a.status === "listed")!.quantity).toBe(20);
+    await repo.setListingStatus(l.id, "withdrawn");
+    const allocs = await repo.allocations(tegel.id);
+    expect(allocs.some((a) => a.status === "listed")).toBe(false);
+    expect(allocs.filter((a) => a.status === "stored").reduce((s, a) => s + a.quantity, 0)).toBe(120);
+    expect((await repo.tasks()).some((t) => t.entity_id === l.id)).toBe(true);
+  });
+
+  it("bidrag ger roll och syns i personens och platsens journal", async () => {
+    const erik = (await repo.persons()).find((p) => p.name === "Erik")!;
+    expect(erik.roles).toEqual(expect.arrayContaining(["Medskapare", "Kunskapsbärare"]));
+    const site = (await repo.site())!;
+    const ev = (await repo.eventsFor("person", erik.id)).find((e) => e.event_type === "contribution.tid")!;
+    expect((await repo.eventsFor("site", site.id)).map((e) => e.id)).toContain(ev.id);
+  });
+
+  it("tack till en person som sagt nej till namn nämner inte personen och varnar (AC-10)", async () => {
+    const { draftThanksForPerson } = await import("../services/thanks");
+    const erik = (await repo.persons()).find((p) => p.name === "Erik")!;
+    await repo.updateConsent(erik.id, { consent_name: "no", consent_contribution: "yes" });
+    const d = await draftThanksForPerson(repo, erik.id, ["facebook", "instagram", "privat"]);
+    for (const v of d.variants) expect(v.text).not.toContain("Erik");
+    expect(d.warnings.join(" ")).toMatch(/nej/);
+    expect(d.variants[0].text).toMatch(/mura/);
+  });
+
+  it("samtycke för ett enskilt inlägg låter namnet stå med, och bara ägaren kan ge det", async () => {
+    const { draftThanksForPerson } = await import("../services/thanks");
+    const erik = (await repo.persons()).find((p) => p.name === "Erik")!;
+    const item = await repo.saveContent({ goal: "tack", source_type: "person", source_id: erik.id, status: "draft", variants: [] });
+    let d = await draftThanksForPerson(repo, erik.id, ["facebook"], item.id);
+    expect(d.variants[0].text).not.toContain("Erik");
+    expect(d.warnings.join(" ")).toMatch(/Fråga Erik/);
+    await repo.setContentConsent({ content_id: item.id, person_id: erik.id, name_ok: true, image_ok: false, contribution_ok: true, how: "muntligt" });
+    d = await draftThanksForPerson(repo, erik.id, ["facebook"], item.id);
+    expect(d.variants[0].text).toContain("Erik");
+    expect((await repo.audit()).some((a) => a.action === "content_consent")).toBe(true);
+    await repo.setDemoRole("contributor");
+    await expect(repo.setContentConsent({ content_id: item.id, person_id: erik.id, name_ok: true, image_ok: false, contribution_ok: true, how: "" })).rejects.toThrow(/ägaren/);
   });
 });

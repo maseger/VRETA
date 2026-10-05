@@ -5,11 +5,15 @@ import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import {
   CAPTURE_SYSTEM,
   CaptureProposalSchema,
+  ListingPackagesSchema,
+  MARKETPLACE_SYSTEM,
   STORY_SYSTEM,
   StoryDraftSchema,
   type CaptureProposalOut,
 } from "./agentSchemas.ts";
 import type { SafeStoryContext } from "./privacyGuard.ts";
+import type { SafeListingContext } from "./listingPackage.ts";
+import type { ChannelAdapter } from "./channels.ts";
 
 const MODEL = "claude-opus-5-5";
 
@@ -74,4 +78,29 @@ export async function runStoryAgent(
   if (response.stop_reason === "refusal") throw new AgentRefusedError("Story Agent avböjde förfrågan");
   if (!response.parsed_output) throw new Error("Story Agent gav inget tolkningsbart svar");
   return response.parsed_output.variants.filter((v) => input.channels.includes(v.channel));
+}
+
+export async function runMarketplaceAgent(
+  client: Anthropic,
+  input: { context: SafeListingContext; price_label: string; channels: ChannelAdapter[] },
+): Promise<{ channel: string; title: string; text: string }[]> {
+  const channels = input.channels.map((c) => ({ id: c.id, name: c.name, title_max_length: c.title_max_length, text_max_length: c.text_max_length, footer: c.footer }));
+  const response = await client.beta.messages.parse({
+    model: MODEL,
+    max_tokens: 16000,
+    betas: ["server-side-fallback-2026-07-01"],
+    fallbacks: "default",
+    output_config: { effort: "low", format: betaZodOutputFormat(ListingPackagesSchema) },
+    system: MARKETPLACE_SYSTEM,
+    messages: [
+      {
+        role: "user",
+        content: `Kanaler:\n${JSON.stringify(channels, null, 2)}\nprice_label: ${input.price_label || "(tomt)"}\nKontext (redan rensad):\n${JSON.stringify({ ...input.context, media_ids: undefined }, null, 2)}`,
+      },
+    ],
+  });
+  if (response.stop_reason === "refusal") throw new AgentRefusedError("Marketplace Agent avböjde förfrågan");
+  if (!response.parsed_output) throw new Error("Marketplace Agent gav inget tolkningsbart svar");
+  const wanted = new Set(input.channels.map((c) => c.id));
+  return response.parsed_output.packages.filter((p) => wanted.has(p.channel));
 }

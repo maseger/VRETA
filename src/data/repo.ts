@@ -4,6 +4,8 @@ import type {
   AcquisitionStatus, ChecklistItem, ChecklistTemplate, Interaction, Organization, Pickup, PickupItem, PickupStatus,
   ReceiptStatus, StorageLocation,
   BatchAllocation, Decision, EventLink, MapLayer, Observation, UsageEvent, UsageType,
+  ChannelPost, ContentConsent, Contribution, Disposal, DisposalType, Lead, LeadStatus, Listing, ListingStatus, PublishMode,
+  ReciprocityEntry,
 } from "../domain/types";
 import type { PointGeom, PolygonGeom } from "../geo/geo";
 import type { StoryRows } from "../../supabase/functions/_shared/storyContext";
@@ -143,10 +145,34 @@ export interface Repo {
   updateMapLayer(id: string, patch: Partial<Pick<MapLayer, "opacity" | "name" | "taken_on" | "archived_at">>): Promise<void>;
   mapImage(layer: MapLayer): Promise<Blob | null>;
 
+  // ---- M4: utflöde, intressenter, bidrag och samtycke
+  listings(): Promise<Listing[]>;
+  listing(id: string): Promise<Listing | null>;
+  saveListing(input: ListingInput): Promise<Listing>;
+  setListingStatus(id: string, to: ListingStatus): Promise<void>;
+  channelPosts(listingId?: string): Promise<ChannelPost[]>;
+  saveChannelDraft(listingId: string, channel: string, title: string, text: string): Promise<void>;
+  publishChannel(listingId: string, channel: string, url: string, mode: PublishMode): Promise<void>;
+  removeChannel(listingId: string, channel: string): Promise<void>;
+  leads(listingId?: string): Promise<Lead[]>;
+  addLead(input: Pick<Lead, "listing_id" | "person_id" | "channel" | "message" | "bid">): Promise<Lead>;
+  setLeadStatus(id: string, to: LeadStatus): Promise<void>;
+  agreeLead(id: string): Promise<void>;
+  releaseLead(id: string, to: "no_show" | "lost" | "rejected"): Promise<void>;
+  completeDisposal(listingId: string, input: DisposalInput): Promise<string>;
+  disposals(objectId?: string): Promise<Disposal[]>;
+  contributions(personId?: string): Promise<Contribution[]>;
+  addContribution(input: Pick<Contribution, "person_id" | "kind" | "description" | "hours" | "object_id" | "zone_id" | "project" | "visibility"> & { occurred_at?: string }): Promise<Contribution>;
+  markThanked(contributionIds: string[]): Promise<void>;
+  reciprocity(personId: string): Promise<ReciprocityEntry[]>;
+  addReciprocity(personId: string, description: string): Promise<void>;
+  contentConsents(contentId: string): Promise<ContentConsent[]>;
+  setContentConsent(input: Pick<ContentConsent, "content_id" | "person_id" | "name_ok" | "image_ok" | "contribution_ok" | "how">): Promise<void>;
+
   /** Antal ändringar som väntar på att synkas (bara Supabase). */
   pendingSync?(): Promise<number>;
   flushOutbox?(): Promise<number>;
-  storyRows(objectId: string): Promise<StoryRows>;
+  storyRows(objectId: string, contentId?: string): Promise<StoryRows>;
   audit(): Promise<AuditEntry[]>;
   exportAll(): Promise<Record<string, unknown[]>>;
 }
@@ -201,6 +227,26 @@ export interface NewMapLayer {
   corners: [number, number][];
   source_crs: string;
   opacity: number;
+}
+
+export interface ListingInput {
+  id?: string;
+  object_id: string | null;
+  type: Listing["type"];
+  title: string;
+  description: string;
+  price: number | null;
+  quantity: number | null;
+  locality: string;
+  image_ids: string[];
+}
+
+export interface DisposalInput {
+  lead_id?: string | null;
+  type?: DisposalType;
+  price?: number | null;
+  payment_method?: string;
+  person_id?: string | null;
 }
 
 export class PermissionError extends Error {}

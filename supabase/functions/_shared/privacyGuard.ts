@@ -30,7 +30,11 @@ export interface RawStoryContext {
     relation: string;
     consent_name: Consent;
     consent_contribution: Consent;
+    /** Samtycke för just detta inlägg när personen har "fråga varje gång" (content_consents). */
+    consent_override?: { name_ok: boolean; contribution_ok: boolean } | null;
   }[];
+  /** Bidrag från personerna ovan (M4). */
+  contributions?: { person_id: string; kind: string; description: string; visibility: Vis }[];
   notes: { kind: "why" | "quote" | "moment"; text: string; quote_consent: boolean }[];
   events: { summary: string; occurred_at: string; visibility: Vis }[];
   media: { id: string; visibility: Vis; has_people: boolean; has_clean: boolean }[];
@@ -40,6 +44,7 @@ export interface SafeStoryContext {
   object: Omit<RawStoryContext["object"], "visibility" | "status"> & { status_label: string };
   acquisition_kind: string | null;
   people: { ref: string; name: string | null; relation: string; describe_contribution: boolean }[];
+  contributions: { ref: string; kind: string; description: string }[];
   why: string[];
   quotes: string[];
   moments: string[];
@@ -84,18 +89,10 @@ export function guardStoryContext(raw: RawStoryContext, statusLabel: string): Gu
   if (raw.acquisition?.price != null) removed.push("pris");
 
   const people = raw.people.map((p, i) => {
-    removed.push(`kontaktuppgifter och anteckningar för ${p.name}`);
-    if (p.locality) removed.push(`hemort för ${p.name}`);
-    let name: string | null = null;
-    if (p.consent_name === "yes") name = p.name;
-    else if (p.consent_name === "ask") {
-      warnings.push(`Fråga ${p.name} om namnet får nämnas – tills dess skrivs personen utan namn.`);
-      removed.push(`namn: ${p.name} (samtycke saknas)`);
-    } else removed.push(`namn: ${p.name} (har sagt nej)`);
-    const describe = p.consent_contribution === "yes";
-    if (p.consent_contribution === "ask") warnings.push(`Fråga ${p.name} om bidraget får beskrivas.`);
-    return { ref: `person${i + 1}`, name, relation: p.relation, describe_contribution: describe };
+    const r = personRules(p, removed, warnings);
+    return { ref: `person${i + 1}`, name: r.name, relation: p.relation, describe_contribution: r.describe };
   });
+  const contributions = safeContributions(raw, people.map((p, i) => ({ ...p, id: raw.people[i].id })), removed);
 
   const quotes: string[] = [];
   for (const n of raw.notes.filter((n) => n.kind === "quote")) {
@@ -132,6 +129,7 @@ export function guardStoryContext(raw: RawStoryContext, statusLabel: string): Gu
       object: { ...objectFields, status_label: statusLabel },
       acquisition_kind: raw.acquisition ? ACQ_KIND[raw.acquisition.type] ?? null : null,
       people,
+      contributions,
       why: raw.notes.filter((n) => n.kind === "why").map((n) => n.text),
       quotes,
       moments: raw.notes.filter((n) => n.kind === "moment").map((n) => n.text),
@@ -139,4 +137,97 @@ export function guardStoryContext(raw: RawStoryContext, statusLabel: string): Gu
       media_ids,
     },
   };
+}
+
+/** Namn- och bidragsregler för en person (12.2). Gemensamt för berättelser och tack. */
+export function personRules(
+  p: { name: string; locality: string; consent_name: Consent; consent_contribution: Consent; consent_override?: { name_ok: boolean; contribution_ok: boolean } | null },
+  removed: string[],
+  warnings: string[],
+): { name: string | null; describe: boolean } {
+  removed.push(`kontaktuppgifter och anteckningar för ${p.name}`);
+  if (p.locality) removed.push(`hemort för ${p.name}`);
+  let name: string | null = null;
+  if (p.consent_name === "yes") name = p.name;
+  else if (p.consent_name === "ask" && p.consent_override?.name_ok) name = p.name;
+  else if (p.consent_name === "ask") {
+    warnings.push(`Fråga ${p.name} om namnet får nämnas – tills dess skrivs personen utan namn.`);
+    removed.push(`namn: ${p.name} (samtycke saknas)`);
+  } else {
+    warnings.push(`${p.name} har sagt nej till att nämnas vid namn – utkastet nämner inte personen.`);
+    removed.push(`namn: ${p.name} (har sagt nej)`);
+  }
+  let describe = p.consent_contribution === "yes" || (p.consent_contribution === "ask" && !!p.consent_override?.contribution_ok);
+  if (p.consent_contribution === "ask" && !describe) warnings.push(`Fråga ${p.name} om bidraget får beskrivas.`);
+  if (p.consent_contribution === "no") describe = false;
+  return { name, describe };
+}
+
+function safeContributions(
+  raw: Pick<RawStoryContext, "contributions">,
+  people: { id: string; ref: string; describe_contribution: boolean }[],
+  removed: string[],
+): { ref: string; kind: string; description: string }[] {
+  const out: { ref: string; kind: string; description: string }[] = [];
+  for (const c of raw.contributions ?? []) {
+    const p = people.find((x) => x.id === c.person_id);
+    if (!p) continue;
+    if (!PUBLISHABLE.includes(c.visibility)) removed.push("internt bidrag");
+    else if (!p.describe_contribution) removed.push("bidrag utan samtycke");
+    else out.push({ ref: p.ref, kind: c.kind, description: c.description });
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------- tack till en person (4.8, AC-10)
+export interface RawThanksContext {
+  person: {
+    name: string;
+    locality: string;
+    contact: string;
+    notes: string;
+    consent_name: Consent;
+    consent_image: Consent;
+    consent_contribution: Consent;
+    consent_override?: { name_ok: boolean; contribution_ok: boolean } | null;
+  };
+  contributions: { kind: string; description: string; visibility: Vis; hours: number | null }[];
+  /** Objekt som kommit från personen, med var de fått nytt liv (zon eller byggnad). */
+  objects: { title: string; visibility: Vis; status: string; new_life_place: string | null; price: number | null }[];
+  media: { id: string; visibility: Vis; has_people: boolean; has_clean: boolean }[];
+}
+
+export interface SafeThanksContext {
+  name: string | null;
+  contributions: { kind: string; description: string }[];
+  objects: { title: string; new_life_place: string | null }[];
+  media_ids: string[];
+}
+
+export function guardThanks(raw: RawThanksContext): GuardResult & { thanks: SafeThanksContext | null } {
+  const removed: string[] = [];
+  const warnings: string[] = [];
+  const r = personRules(raw.person, removed, warnings);
+  const contributions: SafeThanksContext["contributions"] = [];
+  for (const c of raw.contributions) {
+    if (!PUBLISHABLE.includes(c.visibility)) removed.push("internt bidrag");
+    else if (!r.describe) removed.push("bidrag utan samtycke");
+    else contributions.push({ kind: c.kind, description: c.description });
+  }
+  const objects: SafeThanksContext["objects"] = [];
+  for (const o of raw.objects) {
+    if (o.price != null) removed.push("pris");
+    if (!PUBLISHABLE.includes(o.visibility)) removed.push(`internt objekt: ${o.title}`);
+    else objects.push({ title: o.title, new_life_place: o.status === "in_use" ? o.new_life_place : null });
+  }
+  const media_ids: string[] = [];
+  for (const m of raw.media) {
+    if (!m.has_clean) removed.push("bild utan rensad kopia");
+    else if (!PUBLISHABLE.includes(m.visibility)) removed.push("intern bild");
+    else if (m.has_people) {
+      removed.push("bild med personer");
+      if (raw.person.consent_image !== "yes") warnings.push("En bild visar personer och har tagits bort.");
+    } else media_ids.push(m.id);
+  }
+  return { allowed: true, context: null, removed, warnings, thanks: { name: r.name, contributions, objects, media_ids } };
 }

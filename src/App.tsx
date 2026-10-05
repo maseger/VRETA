@@ -21,6 +21,9 @@ import { SamlaPage } from "./pages/SamlaPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { StoryStudioPage } from "./pages/StoryStudioPage";
 import { TodayPage } from "./pages/TodayPage";
+import { ListingStudioPage } from "./pages/ListingStudioPage";
+import { NewListingPage } from "./pages/NewListingPage";
+import { ThanksPage } from "./pages/ThanksPage";
 // Kartsidorna laddas först när de öppnas (MapLibre är stort)
 const VretaPage = lazy(() => import("./pages/VretaPage").then((m) => ({ default: m.VretaPage })));
 const MapLayerPage = lazy(() => import("./pages/MapLayerPage").then((m) => ({ default: m.MapLayerPage })));
@@ -51,6 +54,9 @@ export default function App() {
         <Route path="/journal" element={<JournalPage />} />
         <Route path="/zon/:id" element={<ZonePage />} />
         <Route path="/person/:id" element={<PersonPage />} />
+        <Route path="/person/:id/tacka" element={<ThanksPage />} />
+        <Route path="/annons/ny" element={<NewListingPage />} />
+        <Route path="/annons/:id" element={<ListingStudioPage />} />
         <Route path="/hamtning/ny" element={<NewPickupPage />} />
         <Route path="/hamtning/:id" element={<PickupPage />} />
         <Route path="/lager" element={<StoragePage />} />

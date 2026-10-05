@@ -3,6 +3,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type {
   BatchAllocation, Decision, EventLink, MapLayer, Observation, UsageEvent,
+  ChannelPost, ContentConsent, Contribution, Disposal, Lead, LeadStatus, Listing, ListingStatus, PublishMode, ReciprocityEntry,
   AcquisitionStatus, ChecklistItem, ChecklistTemplate, Interaction, Organization, Pickup, PickupItem, PickupStatus,
   StorageLocation,
   Acquisition, AuditEntry, Capture, CaptureInput, ContentItem, EventRec, Media, ObjectStatus, Person, Profile,
@@ -10,7 +11,7 @@ import type {
 } from "../domain/types";
 import type { StoryRows } from "../../supabase/functions/_shared/storyContext";
 import type { PolygonGeom } from "../geo/geo";
-import type { ApproveInput, MediaInput, NewMapLayer, NewPerson, NewPickup, PlaceRef, Receipt, Repo, UsageInput } from "./repo";
+import type { DisposalInput, ListingInput, ApproveInput, MediaInput, NewMapLayer, NewPerson, NewPickup, PlaceRef, Receipt, Repo, UsageInput } from "./repo";
 
 function check<T>(res: { data: T | null; error: { message: string } | null }): T {
   if (res.error) throw new Error(res.error.message);
@@ -236,7 +237,13 @@ export class SupabaseRepo implements Repo {
     return check(await this.client.from("audit_entries").select("*").order("at", { ascending: false }).limit(200)) as AuditEntry[];
   }
   async exportAll(): Promise<Record<string, unknown[]>> {
-    const tables = ["sites", "zones", "structures", "objects", "persons", "person_private", "acquisitions", "acquisition_private", "media", "captures", "proposals", "events", "event_links", "story_notes", "content_items", "tasks", "audit_entries"];
+    const tables = [
+      "sites", "zones", "structures", "objects", "persons", "person_private", "acquisitions", "acquisition_private", "media", "captures", "proposals",
+      "events", "event_links", "story_notes", "content_items", "tasks", "audit_entries",
+      "organizations", "organization_private", "interactions", "storage_locations", "checklist_templates", "pickups", "pickup_private", "pickup_items", "checklist_items",
+      "map_layers", "batch_allocations", "usage_events", "observations", "decisions",
+      "listings", "channel_posts", "leads", "disposals", "disposal_private", "contributions", "reciprocity_entries", "content_consents",
+    ];
     const out: Record<string, unknown[]> = {};
     for (const t of tables) out[t] = check(await this.client.from(t).select("*")) as unknown[];
     return out;
@@ -403,5 +410,96 @@ export class SupabaseRepo implements Repo {
   async mapImage(layer: MapLayer): Promise<Blob | null> {
     const { data } = await this.client.storage.from("maps").download(layer.image_path);
     return data ?? null;
+  }
+
+  // ------------------------------------------------------------ M4: annonser, intressenter, utflöde
+  async listings(): Promise<Listing[]> {
+    return check(await this.client.from("listings").select("*").is("archived_at", null).order("updated_at", { ascending: false })) as Listing[];
+  }
+  async listing(id: string): Promise<Listing | null> {
+    return (check(await this.client.from("listings").select("*").eq("id", id).maybeSingle()) as Listing | null) ?? null;
+  }
+  async saveListing(input: ListingInput): Promise<Listing> {
+    const { id, ...fields } = input;
+    if (id) {
+      const { object_id: _o, ...patch } = fields;
+      void _o;
+      return check(await this.client.from("listings").update(patch).eq("id", id).select().single()) as Listing;
+    }
+    return check(await this.client.from("listings").insert({ ...fields, site_id: await this.siteId() }).select().single()) as Listing;
+  }
+  async setListingStatus(id: string, to: ListingStatus): Promise<void> {
+    if (to === "withdrawn") check(await this.client.rpc("withdraw_listing", { p_listing: id }));
+    else check(await this.client.from("listings").update({ status: to }).eq("id", id));
+  }
+  async channelPosts(listingId?: string): Promise<ChannelPost[]> {
+    let q = this.client.from("channel_posts").select("*");
+    if (listingId) q = q.eq("listing_id", listingId);
+    return check(await q) as ChannelPost[];
+  }
+  async saveChannelDraft(listingId: string, channel: string, title: string, text: string): Promise<void> {
+    check(await this.client.from("channel_posts").upsert({ site_id: await this.siteId(), listing_id: listingId, channel, title, text }, { onConflict: "listing_id,channel" }));
+  }
+  async publishChannel(listingId: string, channel: string, url: string, mode: PublishMode): Promise<void> {
+    check(await this.client.rpc("publish_channel", { p_listing: listingId, p_channel: channel, p_url: url, p_mode: mode }));
+  }
+  async removeChannel(listingId: string, channel: string): Promise<void> {
+    check(await this.client.rpc("remove_channel", { p_listing: listingId, p_channel: channel }));
+  }
+  async leads(listingId?: string): Promise<Lead[]> {
+    let q = this.client.from("leads").select("*").order("queue_position");
+    if (listingId) q = q.eq("listing_id", listingId);
+    return check(await q) as Lead[];
+  }
+  async addLead(input: Pick<Lead, "listing_id" | "person_id" | "channel" | "message" | "bid">): Promise<Lead> {
+    return check(await this.client.from("leads").insert({ ...input, site_id: await this.siteId() }).select().single()) as Lead;
+  }
+  async setLeadStatus(id: string, to: LeadStatus): Promise<void> {
+    check(await this.client.from("leads").update({ status: to }).eq("id", id));
+  }
+  async agreeLead(id: string): Promise<void> {
+    check(await this.client.rpc("agree_lead", { p_lead: id }));
+  }
+  async releaseLead(id: string, to: "no_show" | "lost" | "rejected"): Promise<void> {
+    check(await this.client.rpc("release_lead", { p_lead: id, p_status: to }));
+  }
+  async completeDisposal(listingId: string, input: DisposalInput): Promise<string> {
+    return check(await this.client.rpc("complete_disposal", { p_listing: listingId, p_input: input })) as string;
+  }
+  async disposals(objectId?: string): Promise<Disposal[]> {
+    let q = this.client.from("disposals").select("*").order("occurred_at", { ascending: false });
+    if (objectId) q = q.eq("object_id", objectId);
+    const rows = check(await q) as Disposal[];
+    if (!rows.length) return rows;
+    const priv = check(await this.client.from("disposal_private").select("disposal_id, price, payment_method").in("disposal_id", rows.map((d) => d.id))) as { disposal_id: string; price: number | null; payment_method: string }[];
+    return rows.map((d) => {
+      const dp = priv.find((x) => x.disposal_id === d.id);
+      return dp ? { ...d, price: dp.price, payment_method: dp.payment_method } : d;
+    });
+  }
+
+  // ------------------------------------------------------------ M4: bidrag, ömsesidighet, samtycke
+  async contributions(personId?: string): Promise<Contribution[]> {
+    let q = this.client.from("contributions").select("*").order("occurred_at", { ascending: false });
+    if (personId) q = q.eq("person_id", personId);
+    return check(await q) as Contribution[];
+  }
+  async addContribution(input: Pick<Contribution, "person_id" | "kind" | "description" | "hours" | "object_id" | "zone_id" | "project" | "visibility"> & { occurred_at?: string }): Promise<Contribution> {
+    return check(await this.client.from("contributions").insert({ ...input, site_id: await this.siteId() }).select().single()) as Contribution;
+  }
+  async markThanked(ids: string[]): Promise<void> {
+    if (ids.length) check(await this.client.from("contributions").update({ thanked_at: new Date().toISOString() }).in("id", ids).is("thanked_at", null));
+  }
+  async reciprocity(personId: string): Promise<ReciprocityEntry[]> {
+    return check(await this.client.from("reciprocity_entries").select("*").eq("person_id", personId).order("occurred_at", { ascending: false })) as ReciprocityEntry[];
+  }
+  async addReciprocity(personId: string, description: string): Promise<void> {
+    check(await this.client.from("reciprocity_entries").insert({ site_id: await this.siteId(), person_id: personId, description }));
+  }
+  async contentConsents(contentId: string): Promise<ContentConsent[]> {
+    return check(await this.client.from("content_consents").select("*").eq("content_id", contentId)) as ContentConsent[];
+  }
+  async setContentConsent(input: Pick<ContentConsent, "content_id" | "person_id" | "name_ok" | "image_ok" | "contribution_ok" | "how">): Promise<void> {
+    check(await this.client.from("content_consents").upsert({ ...input, site_id: await this.siteId() }, { onConflict: "content_id,person_id" }));
   }
 }

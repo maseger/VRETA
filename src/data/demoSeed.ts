@@ -137,4 +137,27 @@ export async function seedDemo(repo: LocalRepo, withImages = true): Promise<void
   const media = withImages ? [await addImage(repo, "handtag", "capture", capId)] : [];
   const cap = await repo.saveCapture(capId, { text: "Fyra mässingshandtag från Anders, 50 kr styck, hämtas före 15 november", kind: "find", media_ids: media.map((m) => m.id) });
   await repo.attachProposal(cap.id, fromHeuristics(parseCaptureText(cap.input.text), await repo.persons()));
+
+  // M4: 30 tegel sålda via Blocket (AC-04: 250 i bruk, 120 i lager, 30 sålda)
+  if (tegel) {
+    const annons = await repo.saveListing({ object_id: tegel.id, type: "sell", title: "Handslaget tegel", description: "Gammalt murtegel med fina färgskiftningar, rensat från bruk", price: 450, quantity: 30, locality: "Storvik", image_ids: [] });
+    await repo.publishChannel(annons.id, "blocket", "https://www.blocket.se/annons/demo", "manual");
+    const johan = await repo.createPerson({ name: "Johan", locality: "Sandviken", roles: [], how_we_met: "Svarade på annonsen ”Handslaget tegel”", organization_id: null, contact: "", notes: "" });
+    const lead = await repo.addLead({ listing_id: annons.id, person_id: johan.id, channel: "blocket", message: "Hej! Finns teglet kvar? Kan hämta på lördag.", bid: null });
+    await repo.agreeLead(lead.id);
+    await repo.completeDisposal(annons.id, { price: 450, payment_method: "Swish" });
+    await repo.removeChannel(annons.id, "blocket");
+  }
+
+  // En efterlysning med en intressent som väntar på svar
+  const sokes = await repo.saveListing({ object_id: null, type: "wanted", title: "Spröjsade fönster till orangeriet", description: "Gärna äldre fönster med spröjs, minst 60 cm breda", price: null, quantity: null, locality: "Storvik", image_ids: [] });
+  await repo.publishChannel(sokes.id, "facebook_group", "", "manual");
+  const maja = await repo.createPerson({ name: "Maja", locality: "Hofors", roles: [], how_we_met: "Svarade på efterlysningen i Facebookgruppen", organization_id: null, contact: "", notes: "" });
+  await repo.addLead({ listing_id: sokes.id, person_id: maja.id, channel: "facebook_group", message: "Jag har fyra spröjsade fönster i förrådet som du får hämta.", bid: null });
+
+  // Bidrag och ömsesidighet
+  const erik = await repo.createPerson({ name: "Erik", locality: "Storvik", roles: ["Hantverkare"], how_we_met: "Granne", organization_id: null, contact: "", notes: "" });
+  await repo.addContribution({ person_id: erik.id, kind: "tid", description: "Hjälpte till att mura orangeriets södra mur", hours: 6, object_id: tegel?.id ?? null, zone_id: orangeriZon.id, project: "Orangeriet", visibility: "shareable" });
+  await repo.addContribution({ person_id: erik.id, kind: "kunskap", description: "Lärde oss blanda kalkbruk", hours: null, object_id: null, zone_id: null, project: "Orangeriet", visibility: "shareable" });
+  if (anders) await repo.addReciprocity(anders.id, "Fick rhododendronsticklingar från trädgården");
 }

@@ -1,8 +1,8 @@
-import { ArrowRight, Camera, MapPin, Megaphone, Sparkles, Star, Truck } from "lucide-react";
+import { ArrowRight, Camera, MapPin, Megaphone, Sparkles, Star, Tag, Truck } from "lucide-react";
 import { useRef, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useApp, useData } from "../app/AppContext";
-import { ACQ_STATUS_LABEL, ACQUISITION_LABEL, EVENT_LABEL, PICKUP_STATUS_LABEL, PIPELINE, STATUS_LABEL, VISIBILITY_LABEL, humanizeSummary } from "../domain/labels";
+import { ACQ_STATUS_LABEL, ACQUISITION_LABEL, DISPOSAL_LABEL, LISTING_STATUS_LABEL, LISTING_TYPE_LABEL, EVENT_LABEL, PICKUP_STATUS_LABEL, PIPELINE, STATUS_LABEL, VISIBILITY_LABEL, humanizeSummary } from "../domain/labels";
 import { OBJECT_TRANSITIONS, nextAcquisitionStep, nextStep } from "../domain/stateMachine";
 import type { Acquisition, BatchAllocation, ObjectStatus, Person, Pickup, StorageLocation, Structure, VObject, Visibility, Zone } from "../domain/types";
 import { prepareImage } from "../services/images";
@@ -21,23 +21,28 @@ export function ObjectPage() {
   const [place, setPlace] = useState("");
   const [usage, setUsage] = useState<{ from: string | null; max: number | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const { data } = useData(async (r) => {
     const object = await r.object(id!);
     if (!object) return null;
-    const [media, events, notes, acquisitions, people, content, zones, structures, locations, pickups, allocations] = await Promise.all([
+    const [media, events, notes, acquisitions, people, content, zones, structures, locations, pickups, allocations, listings, disposals, leads] = await Promise.all([
       r.mediaFor("object", id!), r.eventsFor("object", id!), r.storyNotesFor("object", id!), r.acquisitionsFor(id!),
       r.persons(), r.contentFor("object", id!), r.zones(), r.structures(), r.storageLocations(), r.pickups(), r.allocations(id!),
+      r.listings(), r.disposals(id!), r.leads(),
     ]);
     const linked = acquisitions.map((a) => ({ a, person: people.find((p) => p.id === a.person_id) ?? null }));
     const mine: Pickup[] = [];
     for (const p of pickups) if ((await r.pickupItems(p.id)).some((i) => i.object_id === id)) mine.push(p);
-    return { object, media, events, notes, linked, content, zones, structures, locations, pickups: mine, allocations };
+    const mineListings = listings.filter((l) => l.object_id === id);
+    const buyers = disposals.map((d) => ({ d, person: people.find((p) => p.id === d.person_id) ?? null }));
+    return { object, media, events, notes, linked, content, zones, structures, locations, pickups: mine, allocations, listings: mineListings, buyers, leads };
   }, [id]);
 
   if (data === null) return <EmptyState title="Objektet finns inte">Det kan vara arkiverat eller privat.</EmptyState>;
   if (!data) return null;
-  const { object, media, events, notes, linked, content, zones, structures, locations, pickups, allocations } = data;
+  const { object, media, events, notes, linked, content, zones, structures, locations, pickups, allocations, listings, buyers, leads } = data;
+  const openListings = listings.filter((l) => ["draft", "ready", "published", "agreed"].includes(l.status));
   const split = object.is_batch && allocations.length > 1;
   const usable = split ? allocations.filter((a) => ["collected", "stored", "processing"].includes(a.status)).reduce((s, a) => s + a.quantity, 0) : object.quantity;
   const where = locationPath(locations, object.storage_location_id);
@@ -47,8 +52,13 @@ export function ObjectPage() {
   const placeName = zones.find((z) => z.id === object.zone_id)?.name ?? structures.find((s) => s.id === object.structure_id)?.name;
   const shared = content.filter((c) => c.status === "shared").length;
 
+  const canList = canWrite && (["collected", "stored", "processing", "in_use"].includes(object.status) || (split && usable > 0));
+
   async function go(to: ObjectStatus) {
     setError(null);
+    // Utflödet går via en annons (4.6), så att köpare, pris och kanaler kommer med
+    if (to === "listed") return navigate(`/annons/ny?objekt=${object.id}`);
+    if (["reserved_out", "sold", "donated", "exchanged", "lent"].includes(to) && openListings[0]) return navigate(`/annons/${openListings[0].id}`);
     if (to === "in_use") {
       setUsage({ from: null, max: object.is_batch ? usable : null });
       return;
@@ -122,10 +132,37 @@ export function ObjectPage() {
             </Link>
           )}
         </div>
-        <Link to={`/objekt/${object.id}/beratta`} className="btn-secondary">
-          <Megaphone size={18} aria-hidden="true" /> Berätta
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          {canList && (
+            <Link to={`/annons/ny?objekt=${object.id}`} className="btn-secondary">
+              <Tag size={18} aria-hidden="true" /> Lägg ut
+            </Link>
+          )}
+          <Link to={`/objekt/${object.id}/beratta`} className="btn-secondary">
+            <Megaphone size={18} aria-hidden="true" /> Berätta
+          </Link>
+        </div>
       </header>
+
+      {openListings.length > 0 && (
+        <ul className="card mb-5 divide-y divide-dashed divide-lera-light">
+          {openListings.map((l) => {
+            const waiting = leads.filter((x) => x.listing_id === l.id && x.status === "new").length;
+            return (
+              <li key={l.id}>
+                <Link to={`/annons/${l.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-kalk-2/60">
+                  <Tag size={18} className="text-falu" aria-hidden="true" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-medium">{LISTING_TYPE_LABEL[l.type]}: {l.title}</span>
+                    <span className="text-sm text-sot-3">{waiting ? `${waiting} ${waiting === 1 ? "intressent väntar" : "intressenter väntar"} på svar` : "Öppna annonsstudion"}</span>
+                  </span>
+                  <span className="stamp border-falu text-falu">{LISTING_STATUS_LABEL[l.status]}</span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
 
       {linked.length > 0 && <Inflow object={object} acquisition={linked[0].a} pickups={pickups} canWrite={canWrite} />}
 
@@ -219,9 +256,10 @@ export function ObjectPage() {
       )}
 
       {tab === "manniskor" && (
-        linked.some((l) => l.person) ? (
+        linked.some((l) => l.person) || buyers.some((b) => b.person) ? (
           <ul className="space-y-3">
             {linked.filter((l) => l.person).map(({ a, person }) => <PersonCard key={a.id} person={person!} relation={ACQUISITION_LABEL[a.type]} />)}
+            {buyers.filter((b) => b.person).map(({ d, person }) => <PersonCard key={d.id} person={person!} relation={`${DISPOSAL_LABEL[d.type]} till`} />)}
           </ul>
         ) : (
           <EmptyState title="Ingen person kopplad">Personer kopplas när du godkänner ett förslag med säljare eller givare.</EmptyState>
@@ -236,6 +274,12 @@ export function ObjectPage() {
               <span className="font-semibold">{a.price === undefined ? <span className="text-sm font-normal text-sot-3">Privat</span> : a.price == null ? "–" : `${a.price.toLocaleString("sv-SE")} kr`}</span>
             </div>
           )) : <p className="px-4 py-3 text-sot-3">Ingen anskaffning registrerad.</p>}
+          {buyers.map(({ d }) => (
+            <div key={d.id} className="flex items-center justify-between px-4 py-3">
+              <span>{DISPOSAL_LABEL[d.type]}{d.quantity != null ? ` · ${d.quantity} ${object.unit}` : ""} · {formatDate(d.occurred_at)}</span>
+              <span className="font-semibold">{d.price === undefined ? <span className="text-sm font-normal text-sot-3">Privat</span> : d.price == null ? "–" : `${d.price.toLocaleString("sv-SE")} kr`}</span>
+            </div>
+          ))}
           <p className="px-4 py-3 text-[12px] text-sot-3">Priser är privata och används aldrig i berättelser eller annonser.</p>
         </div>
       )}

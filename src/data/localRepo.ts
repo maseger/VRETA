@@ -1,9 +1,10 @@
 // Lokal implementation av datalagret i IndexedDB. Används i demoläge och följer samma
 // regler som databasen: tillståndsmaskin, INV-05, roller, privata fält och audit.
 import { openDB, type IDBPDatabase } from "idb";
-import { ACQUISITION_TRANSITIONS, PICKUP_TRANSITIONS, assertTransition } from "../domain/stateMachine";
+import { ACQUISITION_TRANSITIONS, LEAD_TRANSITIONS, LISTING_TRANSITIONS, PICKUP_TRANSITIONS, assertTransition } from "../domain/stateMachine";
 import type {
   BatchAllocation, Decision, MapLayer, Observation, UsageEvent,
+  ChannelPost, ContentConsent, Contribution, Disposal, DisposalType, Lead, LeadStatus, Listing, ListingStatus, PublishMode, ReciprocityEntry,
   AcquisitionStatus, ChecklistItem, ChecklistTemplate, Interaction, Organization, Pickup, PickupItem, PickupStatus,
   StorageLocation,
   Acquisition, AuditEntry, Capture, CaptureInput, ContentItem, EventLink, EventRec, Media, ObjectStatus, Person,
@@ -11,7 +12,7 @@ import type {
 } from "../domain/types";
 import type { StoryRows } from "../../supabase/functions/_shared/storyContext";
 import type { PolygonGeom } from "../geo/geo";
-import { PermissionError, type NewMapLayer, type UsageInput, type ApproveInput, type MediaInput, type NewPerson, type NewPickup, type PlaceRef, type Receipt, type Repo } from "./repo";
+import { PermissionError, type DisposalInput, type ListingInput, type NewMapLayer, type UsageInput, type ApproveInput, type MediaInput, type NewPerson, type NewPickup, type PlaceRef, type Receipt, type Repo } from "./repo";
 
 const STORES = [
   "sites", "zones", "structures", "objects", "persons", "person_private", "acquisitions", "acquisition_private",
@@ -22,6 +23,8 @@ const STORES = [
   "pickup_private", "pickup_items", "checklist_items",
   // M3
   "map_layers", "batch_allocations", "usage_events", "observations", "decisions",
+  // M4
+  "listings", "channel_posts", "leads", "disposals", "disposal_private", "contributions", "reciprocity_entries", "content_consents",
 ] as const;
 
 const KEY_PATHS: Partial<Record<string, string | null>> = {
@@ -29,6 +32,7 @@ const KEY_PATHS: Partial<Record<string, string | null>> = {
   acquisition_private: "acquisition_id",
   organization_private: "organization_id",
   pickup_private: "pickup_id",
+  disposal_private: "disposal_id",
   blobs: null,
   meta: null,
 };
@@ -44,6 +48,7 @@ type Store = (typeof STORES)[number];
 interface PersonPrivate { person_id: string; site_id: string; contact: string; notes: string; created_by: string }
 interface OrgPrivate { organization_id: string; site_id: string; contact: string; notes: string; created_by: string }
 interface PickupPrivate { pickup_id: string; site_id: string; address: string; created_by: string }
+interface DisposalPrivate { disposal_id: string; site_id: string; price: number | null; payment_method: string; created_by: string }
 interface AcqPrivate { acquisition_id: string; site_id: string; price: number | null; payment_method: string; created_by: string }
 
 const now = () => new Date().toISOString();
@@ -54,7 +59,7 @@ export class LocalRepo implements Repo {
   private dbp: Promise<IDBPDatabase>;
 
   constructor(dbName = "vreta-demo") {
-    this.dbp = openDB(dbName, 3, {
+    this.dbp = openDB(dbName, 4, {
       upgrade(db) {
         for (const s of STORES) {
           if (db.objectStoreNames.contains(s)) continue;
@@ -435,17 +440,20 @@ export class LocalRepo implements Repo {
       .filter((t) => t.status === "open" || t.status === "in_progress")
       .sort((a, b) => (a.due ?? "9999").localeCompare(b.due ?? "9999"));
   }
-  async storyRows(objectId: string): Promise<StoryRows> {
+  async storyRows(objectId: string, contentId?: string): Promise<StoryRows> {
     const o = await this.object(objectId);
     if (!o) throw new Error("Objektet finns inte");
     const acquisitions = (await this.all<Acquisition>("acquisitions")).filter((a) => a.object_id === objectId);
-    const personIds = new Set(acquisitions.map((a) => a.person_id));
+    const contributions = (await this.contributions()).filter((c) => c.object_id === objectId);
+    const personIds = new Set<string | null>([...acquisitions.map((a) => a.person_id), ...contributions.map((c) => c.person_id)]);
     const persons = (await this.all<Person>("persons")).filter((p) => personIds.has(p.id));
     return {
       object: { ...o },
       // Priser och kontaktuppgifter hämtas aldrig till berättelser (samma som servern).
       acquisitions: acquisitions.map((a) => ({ object_id: a.object_id, person_id: a.person_id, type: a.type, price: null })),
       persons: persons.map((p) => ({ id: p.id, name: p.name, locality: p.locality, contact: "", notes: "", consent_name: p.consent_name, consent_contribution: p.consent_contribution })),
+      contributions: contributions.map((c) => ({ person_id: c.person_id, kind: c.kind, description: c.description, visibility: c.visibility })),
+      consents: contentId ? await this.contentConsents(contentId) : [],
       notes: (await this.storyNotesFor("object", objectId)).map((n) => ({ kind: n.kind, text: n.text, quote_consent: n.quote_consent })),
       events: (await this.eventsFor("object", objectId)).map((e) => ({ summary: e.summary, occurred_at: e.occurred_at, visibility: e.visibility })),
       media: (await this.mediaFor("object", objectId)).map((m) => ({ id: m.id, visibility: m.visibility, has_people: m.has_people, clean_path: m.clean_path })),
@@ -819,6 +827,258 @@ export class LocalRepo implements Repo {
   }
   async mapImage(layer: MapLayer): Promise<Blob | null> {
     return (await this.get<Blob>("blobs", `maps/${layer.image_path}`)) ?? null;
+  }
+
+  // ------------------------------------------------------------ M4: annonser och kanaler
+  async listings(): Promise<Listing[]> {
+    return (await this.all<Listing>("listings")).filter((l) => !l.archived_at).sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+  }
+  async listing(id: string): Promise<Listing | null> {
+    return (await this.get<Listing>("listings", id)) ?? null;
+  }
+  async saveListing(input: ListingInput): Promise<Listing> {
+    const me = await this.requireWriter();
+    const existing = input.id ? await this.get<Listing>("listings", input.id) : undefined;
+    const { id: _id, ...fields } = input;
+    void _id;
+    const next: Listing = existing
+      ? { ...existing, ...fields, object_id: existing.object_id, updated_at: now() }
+      : { ...(await this.base(me)), ...fields, allocation_id: null, status: "draft" };
+    await this.put("listings", next);
+    if (!existing) await this.audit_(me, "listing_created", "listing", next.id, null, { type: next.type, title: next.title, object_id: next.object_id });
+    return next;
+  }
+  private async moveListing(me: Profile, l: Listing, to: ListingStatus): Promise<Listing> {
+    if (l.status === to) return l;
+    if (!LISTING_TRANSITIONS[l.status].includes(to)) throw new Error(`Otillåten ändring av annons: ${l.status} → ${to}`);
+    const next = { ...l, status: to, updated_at: now() };
+    await this.put("listings", next);
+    await this.audit_(me, "listings_status", "listings", l.id, { status: l.status }, { status: to });
+    return next;
+  }
+  /** Status på det annonsen gäller: en del av ett parti eller hela objektet. */
+  private async setListingTarget(me: Profile, l: Listing, to: ObjectStatus): Promise<void> {
+    if (l.allocation_id) {
+      const a = await this.get<BatchAllocation>("batch_allocations", l.allocation_id);
+      if (!a) return;
+      assertTransition(a.status, to);
+      const out = ["sold", "donated", "exchanged", "discarded", "lent"].includes(to);
+      await this.put("batch_allocations", { ...a, status: to, storage_location_id: out ? null : a.storage_location_id, updated_at: now() });
+      await this.syncBatch(me, a.object_id);
+    } else if (l.object_id) {
+      await this.changeStatus(l.object_id, to);
+    }
+  }
+  async setListingStatus(id: string, to: ListingStatus): Promise<void> {
+    const me = await this.requireWriter();
+    const l = await this.get<Listing>("listings", id);
+    if (!l) throw new Error("Annonsen finns inte");
+    const target = await this.listingTargetStatus(l);
+    await this.moveListing(me, l, to);
+    if (to === "withdrawn" && target === "listed") await this.setListingTarget(me, l, "stored");
+    if (to === "withdrawn") {
+      for (const cp of (await this.channelPosts(id)).filter((c) => c.status === "posted")) {
+        await this.put("tasks", { ...(await this.base(me)), title: `Ta ner annonsen ”${l.title}” på ${cp.channel}`, due: now().slice(0, 10), status: "open", entity_type: "listing", entity_id: id } satisfies Task);
+      }
+    }
+  }
+  private async listingTargetStatus(l: Listing): Promise<ObjectStatus | null> {
+    if (l.allocation_id) return (await this.get<BatchAllocation>("batch_allocations", l.allocation_id))?.status ?? null;
+    if (l.object_id) return (await this.get<VObject>("objects", l.object_id))?.status ?? null;
+    return null;
+  }
+  async channelPosts(listingId?: string): Promise<ChannelPost[]> {
+    return (await this.all<ChannelPost>("channel_posts")).filter((c) => !listingId || c.listing_id === listingId);
+  }
+  async saveChannelDraft(listingId: string, channel: string, title: string, text: string): Promise<void> {
+    await this.requireWriter();
+    const existing = (await this.channelPosts(listingId)).find((c) => c.channel === channel);
+    await this.put("channel_posts", existing
+      ? { ...existing, title, text }
+      : { id: uuid(), site_id: await this.siteId(), listing_id: listingId, channel, title, text, external_url: "", status: "not_posted", publish_mode: "manual", posted_at: null, removed_at: null } satisfies ChannelPost);
+  }
+  async publishChannel(listingId: string, channel: string, url: string, mode: PublishMode): Promise<void> {
+    const me = await this.requireWriter();
+    let l = await this.get<Listing>("listings", listingId);
+    if (!l) throw new Error("Annonsen finns inte");
+    const existing = (await this.channelPosts(listingId)).find((c) => c.channel === channel);
+    const post: ChannelPost = existing ?? { id: uuid(), site_id: l.site_id, listing_id: listingId, channel, title: "", text: "", external_url: "", status: "not_posted", publish_mode: mode, posted_at: null, removed_at: null };
+    await this.put("channel_posts", { ...post, external_url: url, status: "posted", publish_mode: mode, posted_at: now(), removed_at: null });
+    await this.audit_(me, "channel_posted", "listing", listingId, null, { channel, url, mode });
+
+    if (l.status !== "draft" && l.status !== "ready") return;
+    if (l.status === "draft") l = await this.moveListing(me, l, "ready");
+    l = await this.moveListing(me, l, "published");
+    if (!l.object_id || !["sell", "give", "exchange", "lend"].includes(l.type)) return;
+    const o = (await this.get<VObject>("objects", l.object_id))!;
+    if (o.is_batch && l.quantity != null && l.quantity < o.quantity && !l.allocation_id) {
+      const allocs = await this.ensureAllocations(o);
+      const src = allocs.filter((a) => ["collected", "stored", "processing"].includes(a.status))
+        .sort((a, b) => Number(b.status === "stored") - Number(a.status === "stored") || b.quantity - a.quantity)[0];
+      if (!src || src.quantity < l.quantity) throw new Error(`Det finns inte ${l.quantity} ${o.unit} i lager att annonsera`);
+      let allocId = src.id;
+      if (src.quantity === l.quantity) {
+        await this.put("batch_allocations", { ...src, status: "listed", updated_at: now() });
+      } else {
+        await this.put("batch_allocations", { ...src, quantity: src.quantity - l.quantity, updated_at: now() });
+        allocId = uuid();
+        await this.put("batch_allocations", { ...src, id: allocId, quantity: l.quantity, status: "listed", zone_id: null, structure_id: null, created_at: now(), updated_at: now() } satisfies BatchAllocation);
+      }
+      await this.put("listings", { ...l, allocation_id: allocId, updated_at: now() });
+      await this.syncBatch(me, o.id);
+    } else if (o.status !== "listed") {
+      await this.setListingTarget(me, l, "listed");
+    }
+  }
+  async removeChannel(listingId: string, channel: string): Promise<void> {
+    const me = await this.requireWriter();
+    const cp = (await this.channelPosts(listingId)).find((c) => c.channel === channel);
+    if (!cp) return;
+    await this.put("channel_posts", { ...cp, status: "removed", removed_at: now() });
+    await this.audit_(me, "channel_removed", "listing", listingId, null, { channel });
+    // Påminnelsen om att ta ner annonsen är klar
+    for (const t of (await this.all<Task>("tasks")).filter((t) => t.entity_id === listingId && t.status === "open" && t.title.endsWith(` på ${channel}`))) {
+      await this.put("tasks", { ...t, status: "done", updated_at: now() });
+    }
+  }
+
+  // ------------------------------------------------------------ M4: intressenter och utflöde
+  async leads(listingId?: string): Promise<Lead[]> {
+    const me = await this.me();
+    if (me.role === "viewer") return [];
+    return (await this.all<Lead>("leads")).filter((l) => !listingId || l.listing_id === listingId).sort((a, b) => a.queue_position - b.queue_position);
+  }
+  async addLead(input: Pick<Lead, "listing_id" | "person_id" | "channel" | "message" | "bid">): Promise<Lead> {
+    const me = await this.requireWriter();
+    const pos = Math.max(0, ...(await this.leads(input.listing_id)).map((l) => l.queue_position)) + 1;
+    const lead: Lead = { id: uuid(), site_id: await this.siteId(), ...input, queue_position: pos, status: "new", created_at: now(), created_by: me.id, updated_at: now() };
+    await this.put("leads", lead);
+    return lead;
+  }
+  private async moveLead(me: Profile, id: string, to: LeadStatus): Promise<Lead> {
+    const l = await this.get<Lead>("leads", id);
+    if (!l) throw new Error("Intressenten finns inte");
+    if (!LEAD_TRANSITIONS[l.status].includes(to)) throw new Error(`Otillåten ändring: ${l.status} → ${to}`);
+    const next = { ...l, status: to, updated_at: now() };
+    await this.put("leads", next);
+    await this.audit_(me, "leads_status", "leads", id, { status: l.status }, { status: to });
+    return next;
+  }
+  async setLeadStatus(id: string, to: LeadStatus): Promise<void> {
+    await this.moveLead(await this.requireWriter(), id, to);
+  }
+  async agreeLead(id: string): Promise<void> {
+    const me = await this.requireWriter();
+    const lead = await this.moveLead(me, id, "agreed");
+    const l = (await this.get<Listing>("listings", lead.listing_id))!;
+    if (l.status === "published") await this.moveListing(me, l, "agreed");
+    await this.setListingTarget(me, l, "reserved_out");
+  }
+  async releaseLead(id: string, to: "no_show" | "lost" | "rejected"): Promise<void> {
+    const me = await this.requireWriter();
+    const lead = await this.moveLead(me, id, to);
+    if ((await this.leads(lead.listing_id)).some((x) => x.status === "agreed")) return;
+    const l = (await this.get<Listing>("listings", lead.listing_id))!;
+    if (l.status === "agreed") {
+      await this.moveListing(me, l, "published");
+      await this.setListingTarget(me, l, "listed");
+    }
+  }
+  async completeDisposal(listingId: string, input: DisposalInput): Promise<string> {
+    const me = await this.requireWriter();
+    let l = await this.get<Listing>("listings", listingId);
+    if (!l) throw new Error("Annonsen finns inte");
+    if (l.status !== "agreed") throw new Error("Annonsen måste ha en överenskommen intressent");
+    const type: DisposalType = input.type ?? ({ give: "donated", exchange: "exchanged", lend: "lent" } as Record<string, DisposalType>)[l.type] ?? "sold";
+    const lead = (await this.leads(listingId)).find((x) => x.status === "agreed" && (!input.lead_id || x.id === input.lead_id));
+    const personId = lead?.person_id ?? input.person_id ?? null;
+
+    await this.setListingTarget(me, l, type);
+    l = await this.moveListing(me, l, "completed");
+    if (lead) await this.moveLead(me, lead.id, "completed");
+    for (const other of (await this.leads(listingId)).filter((x) => ["new", "replied", "viewing_booked"].includes(x.status))) await this.moveLead(me, other.id, "lost");
+
+    if (personId) {
+      const p = await this.get<Person>("persons", personId);
+      const role = type === "sold" || type === "exchanged" ? "Köpare" : "Mottagare";
+      if (p && !p.roles.includes(role)) await this.put("persons", { ...p, roles: [...p.roles, role], updated_at: now() });
+    }
+    const o = l.object_id ? await this.get<VObject>("objects", l.object_id) : undefined;
+    const verb: Record<DisposalType, string> = { sold: "Såld", donated: "Skänkt", exchanged: "Bytt", lent: "Utlånad", discarded: "Kasserad" };
+    const links: { type: string; id: string; role?: string }[] = [];
+    if (l.object_id) links.push({ type: "object", id: l.object_id });
+    if (personId) links.push({ type: "person", id: personId, role: "counterpart" });
+    links.push({ type: "listing", id: listingId, role: "source" });
+    const ev = await this.event(me, `disposal.${type}`, `${verb[type]}: ${l.quantity != null ? `${l.quantity} st ` : ""}${(o?.title ?? l.title).toLowerCase()}`, links, true);
+    const d: Disposal = {
+      id: uuid(), site_id: l.site_id, object_id: l.object_id ?? "", allocation_id: l.allocation_id, listing_id: listingId, person_id: personId,
+      type, quantity: l.quantity, occurred_at: now(), event_id: ev.id, created_at: now(), created_by: me.id,
+    };
+    await this.put("disposals", d);
+    await this.put("disposal_private", { disposal_id: d.id, site_id: l.site_id, price: input.price ?? null, payment_method: input.payment_method ?? "", created_by: me.id } satisfies DisposalPrivate);
+    for (const cp of (await this.channelPosts(listingId)).filter((c) => c.status === "posted")) {
+      await this.put("tasks", { ...(await this.base(me)), title: `Ta ner annonsen ”${l.title}” på ${cp.channel}`, due: now().slice(0, 10), status: "open", entity_type: "listing", entity_id: listingId } satisfies Task);
+    }
+    await this.audit_(me, "disposal", "listing", listingId, null, { type, disposal_id: d.id });
+    return d.id;
+  }
+  async disposals(objectId?: string): Promise<Disposal[]> {
+    const me = await this.me();
+    const priv = await this.all<DisposalPrivate>("disposal_private");
+    return (await this.all<Disposal>("disposals"))
+      .filter((d) => !objectId || d.object_id === objectId)
+      .map((d) => {
+        const dp = priv.find((x) => x.disposal_id === d.id);
+        return dp && this.seesPrivate(me, dp.created_by) ? { ...d, price: dp.price, payment_method: dp.payment_method } : d;
+      })
+      .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
+  }
+
+  // ------------------------------------------------------------ M4: bidrag, ömsesidighet och samtycke
+  async contributions(personId?: string): Promise<Contribution[]> {
+    const me = await this.me();
+    return (await this.all<Contribution>("contributions"))
+      .filter((c) => (!personId || c.person_id === personId) && (c.visibility !== "private" || this.seesPrivate(me, c.created_by)))
+      .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
+  }
+  async addContribution(input: Pick<Contribution, "person_id" | "kind" | "description" | "hours" | "object_id" | "zone_id" | "project" | "visibility"> & { occurred_at?: string }): Promise<Contribution> {
+    const me = await this.requireWriter();
+    const p = await this.get<Person>("persons", input.person_id);
+    if (!p) throw new Error("Personen finns inte");
+    const role = ({ material: "Givare", kunskap: "Kunskapsbärare", transport: "Transportör" } as Record<string, string>)[input.kind] ?? "Medskapare";
+    if (!p.roles.includes(role)) await this.put("persons", { ...p, roles: [...p.roles, role], updated_at: now() });
+    const links: { type: string; id: string; role?: string }[] = [{ type: "person", id: p.id, role: "contributor" }, { type: "site", id: await this.siteId(), role: "place" }];
+    if (input.object_id) links.push({ type: "object", id: input.object_id });
+    if (input.zone_id) links.push({ type: "zone", id: input.zone_id, role: "place" });
+    const occurred = input.occurred_at ?? now();
+    const ev = await this.event(me, `contribution.${input.kind}`, `Bidrag från ${p.name}: ${input.description}`, links, true, { occurred_at: occurred, visibility: input.visibility });
+    const c: Contribution = { id: uuid(), site_id: p.site_id, ...input, occurred_at: occurred, thanked_at: null, event_id: ev.id, created_at: now(), created_by: me.id };
+    await this.put("contributions", c);
+    return c;
+  }
+  async markThanked(ids: string[]): Promise<void> {
+    await this.requireWriter();
+    for (const id of ids) {
+      const c = await this.get<Contribution>("contributions", id);
+      if (c && !c.thanked_at) await this.put("contributions", { ...c, thanked_at: now() });
+    }
+  }
+  async reciprocity(personId: string): Promise<ReciprocityEntry[]> {
+    return (await this.all<ReciprocityEntry>("reciprocity_entries")).filter((r) => r.person_id === personId).sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
+  }
+  async addReciprocity(personId: string, description: string): Promise<void> {
+    const me = await this.requireWriter();
+    await this.put("reciprocity_entries", { id: uuid(), site_id: await this.siteId(), person_id: personId, description, occurred_at: now(), created_at: now(), created_by: me.id } satisfies ReciprocityEntry);
+  }
+  async contentConsents(contentId: string): Promise<ContentConsent[]> {
+    return (await this.all<ContentConsent>("content_consents")).filter((c) => c.content_id === contentId);
+  }
+  async setContentConsent(input: Pick<ContentConsent, "content_id" | "person_id" | "name_ok" | "image_ok" | "contribution_ok" | "how">): Promise<void> {
+    const me = await this.requireOwner();
+    const existing = (await this.contentConsents(input.content_id)).find((c) => c.person_id === input.person_id);
+    const next: ContentConsent = { ...(existing ?? { id: uuid(), site_id: await this.siteId(), created_at: now(), created_by: me.id }), ...input };
+    await this.put("content_consents", next);
+    await this.audit_(me, "content_consent", "person", input.person_id, existing ?? null, next);
   }
 
   /** Används av demodata och tester. */

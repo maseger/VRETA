@@ -7,6 +7,7 @@ import { AgentRefusedError, runStoryAgent } from "../_shared/agents.ts";
 import { corsHeaders, json } from "../_shared/http.ts";
 import { guardStoryContext } from "../_shared/privacyGuard.ts";
 import { buildRawStoryContext } from "../_shared/storyContext.ts";
+import { scrubText } from "../_shared/listingPackage.ts";
 
 const anthropic = new Anthropic();
 
@@ -28,18 +29,22 @@ Deno.serve(async (req: Request) => {
   const { data: canWrite } = await supabase.rpc("can_write");
   if (!canWrite) return json({ error: "forbidden" }, 403);
 
-  const { object_id, goal, channels } = (await req.json()) as { object_id: string; goal: string; channels: string[] };
+  const { object_id, goal, channels, content_id } = (await req.json()) as { object_id: string; goal: string; channels: string[]; content_id?: string };
 
   const { data: object } = await supabase.from("objects").select("*").eq("id", object_id).single();
   if (!object) return json({ error: "not_found" }, 404);
 
-  const [acq, notes, links, media] = await Promise.all([
+  const [acq, notes, links, media, contributions, consents] = await Promise.all([
     supabase.from("acquisitions").select("object_id, person_id, type").eq("object_id", object_id),
     supabase.from("story_notes").select("kind, text, quote_consent").eq("entity_type", "object").eq("entity_id", object_id),
     supabase.from("event_links").select("event_id").eq("entity_type", "object").eq("entity_id", object_id),
     supabase.from("media").select("id, visibility, has_people, clean_path").eq("entity_type", "object").eq("entity_id", object_id),
+    supabase.from("contributions").select("person_id, kind, description, visibility").eq("object_id", object_id),
+    content_id
+      ? supabase.from("content_consents").select("person_id, name_ok, contribution_ok").eq("content_id", content_id)
+      : Promise.resolve({ data: [] }),
   ]);
-  const personIds = (acq.data ?? []).map((a) => a.person_id).filter(Boolean) as string[];
+  const personIds = [...(acq.data ?? []), ...(contributions.data ?? [])].map((a) => a.person_id).filter(Boolean) as string[];
   const eventIds = (links.data ?? []).map((l) => l.event_id);
   const [persons, events] = await Promise.all([
     personIds.length
@@ -54,6 +59,8 @@ Deno.serve(async (req: Request) => {
     object,
     acquisitions: (acq.data ?? []).map((a) => ({ ...a, price: null })), // priser hämtas aldrig hit
     persons: (persons.data ?? []).map((p) => ({ ...p, contact: "", notes: "" })), // privata fält hämtas aldrig hit
+    contributions: contributions.data ?? [],
+    consents: consents.data ?? [],
     notes: notes.data ?? [],
     events: events.data ?? [],
     media: media.data ?? [],
@@ -62,7 +69,11 @@ Deno.serve(async (req: Request) => {
   if (!guard.allowed || !guard.context) return json({ error: "not_publishable", warnings: guard.warnings }, 400);
 
   try {
-    const variants = await runStoryAgent(anthropic, { context: guard.context, goal, channels });
+    const drafted = await runStoryAgent(anthropic, { context: guard.context, goal, channels });
+    // Sista kontroll: namn utan samtycke och personers hemorter får aldrig stå i texten (AC-11)
+    const hidden = raw.people.filter((_, i) => !guard.context!.people[i]?.name).map((p) => p.name);
+    const places = raw.people.map((p) => p.locality).filter(Boolean);
+    const variants = drafted.map((v) => ({ ...v, text: scrubText(v.text, hidden, places).text }));
     return json({ variants, media_ids: guard.context.media_ids, removed: guard.removed, warnings: guard.warnings });
   } catch (err) {
     if (err instanceof AgentRefusedError) return json({ error: "refused" }, 422);

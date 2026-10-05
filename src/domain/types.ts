@@ -396,3 +396,120 @@ export interface Decision extends Base {
   event_id: string | null;
   decided_on: string;
 }
+
+// ---------------------------------------------------------------- M4: utflöde och CRM
+
+export type ListingType = "sell" | "give" | "exchange" | "lend" | "wanted" | "help_wanted";
+export type ListingStatus = "draft" | "ready" | "published" | "agreed" | "completed" | "archived" | "withdrawn";
+
+export interface Listing extends Base {
+  object_id: string | null;
+  allocation_id: string | null;
+  type: ListingType;
+  title: string;
+  description: string;
+  /** Annonserat pris – publikt i annonsen. */
+  price: number | null;
+  quantity: number | null;
+  /** Ort på kommunnivå, aldrig adress (INV-12). */
+  locality: string;
+  status: ListingStatus;
+  image_ids: string[];
+}
+
+export type PublishMode = "manual" | "browser_agent" | "api";
+
+export interface ChannelPost {
+  id: string;
+  site_id: string;
+  listing_id: string;
+  channel: string;
+  title: string;
+  text: string;
+  external_url: string;
+  status: "not_posted" | "posted" | "removed";
+  publish_mode: PublishMode;
+  posted_at: string | null;
+  removed_at: string | null;
+}
+
+export type LeadStatus = "new" | "replied" | "viewing_booked" | "agreed" | "completed" | "no_show" | "lost" | "rejected";
+
+export interface Lead {
+  id: string;
+  site_id: string;
+  listing_id: string;
+  person_id: string | null;
+  channel: string;
+  queue_position: number;
+  bid: number | null;
+  message: string;
+  status: LeadStatus;
+  created_at: string;
+  created_by: string;
+  updated_at: string;
+}
+
+export type DisposalType = "sold" | "donated" | "exchanged" | "discarded" | "lent";
+
+export interface Disposal {
+  id: string;
+  site_id: string;
+  object_id: string;
+  allocation_id: string | null;
+  listing_id: string | null;
+  person_id: string | null;
+  type: DisposalType;
+  quantity: number | null;
+  occurred_at: string;
+  event_id: string | null;
+  created_at: string;
+  created_by: string;
+  /** Privat. Saknas när användaren inte får se det. */
+  price?: number | null;
+  payment_method?: string;
+}
+
+export type ContributionKind = "material" | "tid" | "kunskap" | "maskin" | "transport" | "kontakter" | "mat" | "ekonomiskt" | "omsorg";
+
+export interface Contribution {
+  id: string;
+  site_id: string;
+  person_id: string;
+  kind: ContributionKind;
+  description: string;
+  hours: number | null;
+  object_id: string | null;
+  zone_id: string | null;
+  project: string;
+  occurred_at: string;
+  thanked_at: string | null;
+  visibility: Visibility;
+  event_id: string | null;
+  created_at: string;
+  created_by: string;
+}
+
+export interface ReciprocityEntry {
+  id: string;
+  site_id: string;
+  person_id: string;
+  description: string;
+  occurred_at: string;
+  created_at: string;
+  created_by: string;
+}
+
+/** Samtycke för ett enskilt inlägg när personen har "fråga varje gång" (12.2). */
+export interface ContentConsent {
+  id: string;
+  site_id: string;
+  content_id: string;
+  person_id: string;
+  name_ok: boolean;
+  image_ok: boolean;
+  contribution_ok: boolean;
+  how: string;
+  created_at: string;
+  created_by: string;
+}

@@ -17,11 +17,11 @@ export interface StoryDraftResult {
   source: "claude" | "mall";
 }
 
-export async function draftForObject(repo: Repo, objectId: string, goal: ContentGoal, channels: Channel[]): Promise<StoryDraftResult> {
+export async function draftForObject(repo: Repo, objectId: string, goal: ContentGoal, channels: Channel[], contentId?: string): Promise<StoryDraftResult> {
   if (repo instanceof SupabaseRepo) {
     const { data, error } = await repo.client.functions.invoke<{
       variants: { channel: Channel; text: string }[]; media_ids: string[]; removed: string[]; warnings: string[]; error?: string;
-    }>("story-agent", { body: { object_id: objectId, goal, channels } });
+    }>("story-agent", { body: { object_id: objectId, goal, channels, content_id: contentId } });
     if (!error && data && !data.error) return { ok: true, ...data, source: "claude" };
     if (data?.error === "not_publishable") return { ok: false, variants: [], media_ids: [], removed: [], warnings: data.warnings ?? [], source: "claude" };
     // Servern äger rättigheterna till kontexten, så klienten bygger den inte själv vid fel.
@@ -30,7 +30,7 @@ export async function draftForObject(repo: Repo, objectId: string, goal: Content
 
   const obj = await repo.object(objectId);
   if (!obj) throw new Error("Objektet finns inte");
-  const raw = buildRawStoryContext(await repo.storyRows(objectId));
+  const raw = buildRawStoryContext(await repo.storyRows(objectId, contentId));
   const guard = guardStoryContext(raw, STATUS_LABEL[obj.status]);
   if (!guard.allowed || !guard.context) return { ok: false, variants: [], media_ids: [], removed: guard.removed, warnings: guard.warnings, source: "mall" };
   return {

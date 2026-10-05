@@ -38,7 +38,7 @@ scripts/test-db.sh # migrationer + RLS mot en tillfällig PostgreSQL (kräver po
 
 1. Skapa ett Supabase-projekt och kör migrationerna i `supabase/migrations/` (`supabase db push`).
 2. Lägg Claude-nyckeln som hemlighet: `supabase secrets set ANTHROPIC_API_KEY=...`
-3. Driftsätt funktionerna: `supabase functions deploy capture-agent story-agent`
+3. Driftsätt funktionerna: `supabase functions deploy capture-agent story-agent marketplace-agent`
 4. Kopiera `.env.example` till `.env.local` och fyll i projektets URL och anon-nyckel.
 5. Logga in med e-postlänk – första inloggningen skapar platsen och gör dig till ägare.
 
@@ -94,3 +94,22 @@ python3.12 scripts/prepare-basemap.py baskarta.pdf ut/    # GeoPDF eller GeoTIFF
 Ladda sedan upp båda filerna under **Vreta → Lager → Lägg till kartlager → Jag har en hörnfil**. Skriptet läser kartans inbäddade georeferens (t.ex. SWEREF 99 18 00), räknar om till Web Mercator och klipper vid kartramen. Ritningar utan georeferens placeras i appen med tre stödpunkter mot grundbilden.
 
 Databastesterna kräver PostGIS: `apt-get install postgresql-16-postgis-3`.
+
+## Vad M4 innehåller (utflöde och CRM)
+
+| Del | Var |
+| --- | --- |
+| Annonser, kanalposter, intressenter, utflöde (privat pris), bidrag, ömsesidighet, samtycke per inlägg, RLS | `supabase/migrations/20261008000000_m4_utflode_crm.sql` |
+| `publish_channel` delar av partiet, `agree_lead` / `release_lead` reserverar och släpper, `complete_disposal` sätter status, köpare, pris, händelse och nedtagningspåminnelser i en transaktion (AC-08) | migrationen |
+| Kanaladaptrar (Blocket, Facebook Marketplace, Facebookgrupp, Tiptapp) – gränserna är konfiguration och ska verifieras (Q-03) | `supabase/functions/_shared/channels.ts` |
+| Annonspaket, integritetsfilter för annonser, prisförslag och svarsutkast | `supabase/functions/_shared/listingPackage.ts` |
+| Marketplace Agent (Claude): skriver paket per kanal; inköpspriset skickas aldrig, och texten kontrolleras igen innan den lämnas ut | `supabase/functions/marketplace-agent/` |
+| Annonsstudion: gemensamma fält, bildval, flik per kanal, dela/kopiera, instruktion till Claude i Chrome, klistra in länk, intressentkö, avslut (AC-07) | `src/pages/ListingStudioPage.tsx`, `src/pages/listing/LeadQueue.tsx` |
+| Bidrag, ömsesidighet och tack med samtycke per inlägg (AC-10) | `src/pages/PersonPage.tsx`, `src/pages/ThanksPage.tsx` |
+| Idag: intressenter som väntar på svar och personer att tacka | `src/pages/TodayPage.tsx` |
+| Integritetssvit med 338 genererade fall för Berätta och annonser (AC-11) | `src/test/privacy.test.ts` |
+
+**Webbläsaragenten:** knappen *Låt agent publicera* kopierar en instruktion och sparar bilderna. Klistra in den i Claude i Chrome, som fyller i kanalens formulär i din inloggade webbläsare. Inloggning, betalning och sista publiceringsklicket gör du alltid själv (INV-04). Klistra sedan in annonslänken i studion. En MCP-server med `get_listing_package` och `mark_channel_posted` (9.4) är nästa steg.
+
+**Tack** skrivs från mallar i båda lägena, med samma integritetsfilter. Story Agent på servern får nu också bidrag och samtycke per inlägg, och dess text kontrolleras på samma sätt.
+

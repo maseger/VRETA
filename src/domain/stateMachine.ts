@@ -1,4 +1,4 @@
-import type { AcquisitionStatus, ObjectStatus, PickupStatus } from "./types";
+import type { AcquisitionStatus, LeadStatus, ListingStatus, ObjectStatus, PickupStatus } from "./types";
 
 // Tillåtna övergångar enligt specifikationen avsnitt 5.1. Speglas i databasen
 // (supabase/migrations) så att servern nekar samma övergångar.
@@ -91,6 +91,36 @@ export function nextAcquisitionStep(s: AcquisitionStatus): { to: AcquisitionStat
     case "contacted": return { to: "negotiating", label: "Vi förhandlar" };
     case "negotiating": return { to: "agreed", label: "Vi är överens" };
     case "received": return { to: "settled", label: "Betalt / kvitterat" };
+    default: return null;
+  }
+}
+
+// Annons (5.4) och intressent (5.5). Speglas i listing_transitions och lead_transitions.
+export const LISTING_TRANSITIONS: Record<ListingStatus, ListingStatus[]> = {
+  draft: ["ready", "withdrawn"],
+  ready: ["published", "draft", "withdrawn"],
+  published: ["ready", "agreed", "withdrawn"],
+  agreed: ["published", "completed", "withdrawn"],
+  completed: ["archived"],
+  withdrawn: ["archived"],
+  archived: [],
+};
+
+export const LEAD_TRANSITIONS: Record<LeadStatus, LeadStatus[]> = {
+  new: ["replied", "viewing_booked", "agreed", "lost", "rejected"],
+  replied: ["viewing_booked", "agreed", "lost", "rejected"],
+  viewing_booked: ["agreed", "no_show", "lost", "rejected"],
+  agreed: ["completed", "no_show", "lost"],
+  completed: [],
+  no_show: [],
+  lost: [],
+  rejected: [],
+};
+
+export function nextLeadStep(s: LeadStatus): { to: LeadStatus; label: string } | null {
+  switch (s) {
+    case "new": return { to: "replied", label: "Jag har svarat" };
+    case "replied": return { to: "viewing_booked", label: "Visning bokad" };
     default: return null;
   }
 }
