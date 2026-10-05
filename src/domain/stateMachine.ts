@@ -1,4 +1,4 @@
-import type { ObjectStatus } from "./types";
+import type { AcquisitionStatus, ObjectStatus, PickupStatus } from "./types";
 
 // Tillåtna övergångar enligt specifikationen avsnitt 5.1. Speglas i databasen
 // (supabase/migrations) så att servern nekar samma övergångar.
@@ -62,5 +62,35 @@ export function nextStep(status: ObjectStatus): { to: ObjectStatus; label: strin
       return { to: "reserved_out", label: "Reservera för köpare" };
     default:
       return null;
+  }
+}
+
+// Anskaffning (5.2) och hämtning (5.3). Speglas i databasens övergångstabeller.
+export const ACQUISITION_TRANSITIONS: Record<AcquisitionStatus, AcquisitionStatus[]> = {
+  lead: ["contacted", "negotiating", "agreed", "declined", "lost"],
+  contacted: ["negotiating", "agreed", "declined", "lost"],
+  negotiating: ["agreed", "declined", "lost"],
+  agreed: ["received", "declined", "lost"],
+  received: ["settled"],
+  settled: [],
+  declined: [],
+  lost: [],
+};
+
+export const PICKUP_TRANSITIONS: Record<PickupStatus, PickupStatus[]> = {
+  planned: ["confirmed", "in_progress", "cancelled"],
+  confirmed: ["in_progress", "cancelled"],
+  in_progress: ["completed"],
+  completed: [],
+  cancelled: [],
+};
+
+export function nextAcquisitionStep(s: AcquisitionStatus): { to: AcquisitionStatus; label: string } | null {
+  switch (s) {
+    case "lead": return { to: "contacted", label: "Jag har tagit kontakt" };
+    case "contacted": return { to: "negotiating", label: "Vi förhandlar" };
+    case "negotiating": return { to: "agreed", label: "Vi är överens" };
+    case "received": return { to: "settled", label: "Betalt / kvitterat" };
+    default: return null;
   }
 }

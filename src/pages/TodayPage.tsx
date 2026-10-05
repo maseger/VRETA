@@ -1,4 +1,4 @@
-import { ArrowRight, CalendarClock, Inbox, Megaphone } from "lucide-react";
+import { ArrowRight, CalendarClock, Inbox, Megaphone, MessageSquare, Truck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useApp, useData } from "../app/AppContext";
 import { EmptyState, MediaImage, Section, StatusStamp, formatDate } from "../ui/bits";
@@ -11,14 +11,19 @@ function greeting() {
 export function TodayPage() {
   const { profile, site } = useApp();
   const { data } = useData(async (repo) => {
-    const [proposals, offline, tasks, objects] = await Promise.all([repo.proposals(), repo.capturesWithoutProposal(), repo.tasks(), repo.objects()]);
+    const [proposals, offline, tasks, objects, pickups, followUps, people] = await Promise.all([
+      repo.proposals(), repo.capturesWithoutProposal(), repo.tasks(), repo.objects(), repo.pickups(), repo.followUps(), repo.persons(),
+    ]);
     const storyCandidates = [];
     for (const o of objects.slice(0, 12)) {
       const [content, notes, media] = await Promise.all([repo.contentFor("object", o.id), repo.storyNotesFor("object", o.id), repo.mediaFor("object", o.id)]);
       if (!content.some((c) => c.status === "shared") && (notes.length || o.status === "in_use")) storyCandidates.push({ object: o, cover: media[0], why: notes.find((n) => n.kind === "why")?.text });
     }
     const covers = await Promise.all(objects.slice(0, 6).map((o) => repo.mediaFor("object", o.id).then((m) => m[0])));
-    return { proposals, offline, tasks, recent: objects.slice(0, 6).map((o, i) => ({ object: o, cover: covers[i] })), stories: storyCandidates.slice(0, 3) };
+    const upcoming = pickups.filter((p) => p.status !== "completed" && p.status !== "cancelled").slice(0, 4);
+    const today = new Date().toISOString().slice(0, 10);
+    const due = followUps.filter((f) => f.follow_up! <= new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10)).map((f) => ({ f, person: people.find((p) => p.id === f.person_id) }));
+    return { today, upcoming, due, proposals, offline, tasks, recent: objects.slice(0, 6).map((o, i) => ({ object: o, cover: covers[i] })), stories: storyCandidates.slice(0, 3) };
   });
 
   const today = new Date().toLocaleDateString("sv-SE", { weekday: "long", day: "numeric", month: "long" });
@@ -47,6 +52,44 @@ export function TodayPage() {
           </span>
           <ArrowRight size={20} className="text-sot-3" aria-hidden="true" />
         </Link>
+      )}
+
+      {!!data?.upcoming.length && (
+        <Section title="Hämtningar" action={<Link to="/samla?vy=hamtningar" className="text-sm font-semibold text-falu">Alla</Link>}>
+          <ul className="card divide-y divide-dashed divide-lera-light">
+            {data.upcoming.map((p) => (
+              <li key={p.id}>
+                <Link to={`/hamtning/${p.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-kalk-2/60">
+                  <Truck size={18} className="text-falu" aria-hidden="true" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-medium">{p.title}</span>
+                    {p.address && <span className="block truncate text-sm text-sot-3">{p.address}</span>}
+                  </span>
+                  <span className={`text-sm ${p.scheduled_date === data.today ? "font-semibold text-falu" : "text-sot-3"}`}>
+                    {p.scheduled_date === data.today ? "Idag" : p.scheduled_date ? formatDate(p.scheduled_date) : ""}
+                    {p.window_from ? ` ${p.window_from.slice(0, 5)}` : ""}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
+      {!!data?.due.length && (
+        <Section title="Följ upp">
+          <ul className="card divide-y divide-dashed divide-lera-light">
+            {data.due.map(({ f, person }) => (
+              <li key={f.id}>
+                <Link to={`/person/${f.person_id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-kalk-2/60">
+                  <MessageSquare size={18} className="text-linolja" aria-hidden="true" />
+                  <span className="min-w-0 flex-1"><span className="block font-medium">{person?.name}</span><span className="block truncate text-sm text-sot-3">{f.summary}</span></span>
+                  <span className="text-sm text-sot-3">{formatDate(f.follow_up)}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Section>
       )}
 
       <Section title="Att göra">

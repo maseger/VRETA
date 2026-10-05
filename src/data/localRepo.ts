@@ -1,22 +1,45 @@
 // Lokal implementation av datalagret i IndexedDB. Används i demoläge och följer samma
 // regler som databasen: tillståndsmaskin, INV-05, roller, privata fält och audit.
 import { openDB, type IDBPDatabase } from "idb";
-import { assertTransition } from "../domain/stateMachine";
+import { ACQUISITION_TRANSITIONS, PICKUP_TRANSITIONS, assertTransition } from "../domain/stateMachine";
 import type {
+  AcquisitionStatus, ChecklistItem, ChecklistTemplate, Interaction, Organization, Pickup, PickupItem, PickupStatus,
+  StorageLocation,
   Acquisition, AuditEntry, Capture, CaptureInput, ContentItem, EventLink, EventRec, Media, ObjectStatus, Person,
   Profile, Proposal, ProposalContent, Role, Site, StoryNote, Structure, Task, VObject, Zone,
 } from "../domain/types";
 import type { StoryRows } from "../../supabase/functions/_shared/storyContext";
-import { PermissionError, type ApproveInput, type MediaInput, type PlaceRef, type Repo } from "./repo";
+import { PermissionError, type ApproveInput, type MediaInput, type NewPerson, type NewPickup, type PlaceRef, type Receipt, type Repo } from "./repo";
 
 const STORES = [
   "sites", "zones", "structures", "objects", "persons", "person_private", "acquisitions", "acquisition_private",
   "media", "blobs", "captures", "proposals", "events", "event_links", "story_notes", "content_items", "tasks",
   "audit_entries", "meta",
+  // M2
+  "organizations", "organization_private", "interactions", "storage_locations", "checklist_templates", "pickups",
+  "pickup_private", "pickup_items", "checklist_items",
 ] as const;
+
+const KEY_PATHS: Partial<Record<string, string | null>> = {
+  person_private: "person_id",
+  acquisition_private: "acquisition_id",
+  organization_private: "organization_id",
+  pickup_private: "pickup_id",
+  blobs: null,
+  meta: null,
+};
+
+export const DEFAULT_CHECKLISTS: [string, string[]][] = [
+  ["Stora byggnadsdelar", ["Släp", "Spännband", "Filtar och skydd", "Bärhjälp", "Handskar", "Kofot och skruvdragare"]],
+  ["Fönster och glas", ["Släp eller skåpbil", "Filtar mellan fönstren", "Spännband", "Bärhjälp", "Handskar"]],
+  ["Växter", ["Säckar eller hinkar", "Spade", "Vatten", "Presenning", "Handskar"]],
+  ["Småsaker", ["Lådor", "Tidningspapper", "Märkpenna"]],
+];
 type Store = (typeof STORES)[number];
 
 interface PersonPrivate { person_id: string; site_id: string; contact: string; notes: string; created_by: string }
+interface OrgPrivate { organization_id: string; site_id: string; contact: string; notes: string; created_by: string }
+interface PickupPrivate { pickup_id: string; site_id: string; address: string; created_by: string }
 interface AcqPrivate { acquisition_id: string; site_id: string; price: number | null; payment_method: string; created_by: string }
 
 const now = () => new Date().toISOString();
@@ -27,10 +50,11 @@ export class LocalRepo implements Repo {
   private dbp: Promise<IDBPDatabase>;
 
   constructor(dbName = "vreta-demo") {
-    this.dbp = openDB(dbName, 1, {
+    this.dbp = openDB(dbName, 2, {
       upgrade(db) {
         for (const s of STORES) {
-          const key = s === "person_private" ? "person_id" : s === "acquisition_private" ? "acquisition_id" : s === "blobs" || s === "meta" ? undefined : "id";
+          if (db.objectStoreNames.contains(s)) continue;
+          const key = s in KEY_PATHS ? KEY_PATHS[s] : "id";
           db.createObjectStore(s, key ? { keyPath: key } : undefined);
         }
       },
@@ -101,6 +125,9 @@ export class LocalRepo implements Repo {
     const t = now();
     const site: Site = { id: uuid(), name: siteName, description: "", created_at: t, created_by: profile.id, updated_at: t, archived_at: null };
     await this.put("sites", site);
+    for (const [name, items] of DEFAULT_CHECKLISTS) {
+      await this.put("checklist_templates", { ...(await this.base(profile)), name, items } satisfies ChecklistTemplate);
+    }
   }
   async setDemoRole(role: Role): Promise<void> {
     const ids: Record<Role, string> = { owner: "demo-owner", contributor: "demo-contributor", viewer: "demo-viewer" };
@@ -159,6 +186,7 @@ export class LocalRepo implements Repo {
     if (!o) throw new Error("Objektet finns inte");
     assertTransition(o.status, to);
     const next: VObject = { ...o, status: to, updated_at: now() };
+    if (to !== "stored" && to !== "processing") next.storage_location_id = null;
     if (place) {
       next.zone_id = place.zone_id ?? next.zone_id;
       next.structure_id = place.structure_id ?? next.structure_id;
@@ -255,7 +283,7 @@ export class LocalRepo implements Repo {
     const obj: VObject = {
       ...b, title: o.title, category: o.category || "Övrigt", description: o.description, material: o.material,
       dimensions: o.dimensions, era: "", condition: o.condition, is_batch: o.quantity > 1, quantity: o.quantity, unit: o.unit || "st",
-      status: "discovered", visibility: "shareable", source_type: "ai_capture", zone_id: null, structure_id: null,
+      status: "discovered", visibility: "shareable", source_type: "ai_capture", zone_id: null, structure_id: null, storage_location_id: null,
       cover_media_id: input.media_ids[0] ?? null, field_meta: o.field_meta,
     };
     await this.put("objects", obj);
@@ -266,7 +294,7 @@ export class LocalRepo implements Repo {
       else {
         const p: Person = {
           ...(await this.base(me)), name: input.person.name, locality: input.person.locality,
-          roles: [input.acquisition?.type === "gift" ? "Givare" : "Leverantör"],
+          roles: [input.acquisition?.type === "gift" ? "Givare" : "Leverantör"], organization_id: null, how_we_met: "",
           consent_name: "ask", consent_image: "ask", consent_contribution: "ask",
         };
         await this.put("persons", p);
@@ -421,6 +449,192 @@ export class LocalRepo implements Repo {
     const out: Record<string, unknown[]> = {};
     for (const s of STORES) if (s !== "blobs" && s !== "meta") out[s] = await this.all(s);
     return out;
+  }
+
+  // ------------------------------------------------------------ M2: människor och inflöde
+  async organizations(): Promise<Organization[]> {
+    const me = await this.me();
+    const priv = await this.all<OrgPrivate>("organization_private");
+    return (await this.all<Organization>("organizations")).filter((o) => !o.archived_at).map((o) => {
+      const p = priv.find((x) => x.organization_id === o.id);
+      return p && this.seesPrivate(me, p.created_by) ? { ...o, contact: p.contact, notes: p.notes } : o;
+    }).sort((a, b) => a.name.localeCompare(b.name, "sv"));
+  }
+  async createOrganization(input: Pick<Organization, "name" | "kind" | "locality">): Promise<Organization> {
+    const me = await this.requireWriter();
+    const o: Organization = { ...(await this.base(me)), ...input, roles: [] };
+    await this.put("organizations", o);
+    await this.put("organization_private", { organization_id: o.id, site_id: o.site_id, contact: "", notes: "", created_by: me.id } satisfies OrgPrivate);
+    return o;
+  }
+  async createPerson(input: NewPerson): Promise<Person> {
+    const me = await this.requireWriter();
+    const p: Person = {
+      ...(await this.base(me)), name: input.name, locality: input.locality, roles: input.roles, how_we_met: input.how_we_met,
+      organization_id: input.organization_id, consent_name: "ask", consent_image: "ask", consent_contribution: "ask",
+    };
+    await this.put("persons", p);
+    await this.put("person_private", { person_id: p.id, site_id: p.site_id, contact: input.contact, notes: input.notes, created_by: me.id } satisfies PersonPrivate);
+    return p;
+  }
+  async updatePerson(id: string, patch: Partial<Pick<Person, "name" | "locality" | "roles" | "how_we_met" | "organization_id">>): Promise<void> {
+    await this.requireWriter();
+    const p = await this.get<Person>("persons", id);
+    if (p) await this.put("persons", { ...p, ...patch, updated_at: now() });
+  }
+  async updatePersonPrivate(id: string, patch: { contact?: string; notes?: string }): Promise<void> {
+    const me = await this.requireWriter();
+    const pp = await this.get<PersonPrivate>("person_private", id);
+    if (!pp || !this.seesPrivate(me, pp.created_by)) throw new PermissionError("Bara ägaren kan se och ändra privata uppgifter");
+    await this.put("person_private", { ...pp, ...patch });
+  }
+  async interactions(person_id: string): Promise<Interaction[]> {
+    return (await this.mine<Interaction>("interactions")).filter((i) => i.person_id === person_id).sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
+  }
+  async addInteraction(input: Pick<Interaction, "person_id" | "organization_id" | "channel" | "summary" | "follow_up"> & { occurred_at?: string }): Promise<void> {
+    const me = await this.requireWriter();
+    await this.put("interactions", { ...(await this.base(me)), ...input, occurred_at: input.occurred_at ?? now() } satisfies Interaction);
+  }
+  async followUps(): Promise<Interaction[]> {
+    return (await this.mine<Interaction>("interactions")).filter((i) => i.follow_up).sort((a, b) => a.follow_up!.localeCompare(b.follow_up!));
+  }
+  async allAcquisitions(): Promise<Acquisition[]> {
+    const me = await this.me();
+    const priv = await this.all<AcqPrivate>("acquisition_private");
+    return (await this.all<Acquisition>("acquisitions")).map((a) => {
+      const ap = priv.find((x) => x.acquisition_id === a.id);
+      return ap && this.seesPrivate(me, ap.created_by) ? { ...a, price: ap.price, payment_method: ap.payment_method } : a;
+    });
+  }
+  async setAcquisitionStatus(id: string, to: AcquisitionStatus): Promise<void> {
+    const me = await this.requireWriter();
+    const a = await this.get<Acquisition>("acquisitions", id);
+    if (!a) return;
+    if (!ACQUISITION_TRANSITIONS[a.status].includes(to)) throw new Error(`Otillåten ändring av anskaffning: ${a.status} → ${to}`);
+    await this.put("acquisitions", { ...a, status: to, updated_at: now() });
+    await this.audit_(me, "acquisition_status", "acquisition", id, { status: a.status }, { status: to });
+  }
+  async updateAcquisitionPrivate(id: string, patch: { price?: number | null; payment_method?: string }): Promise<void> {
+    const me = await this.requireWriter();
+    const ap = await this.get<AcqPrivate>("acquisition_private", id);
+    if (!ap || !this.seesPrivate(me, ap.created_by)) throw new PermissionError("Bara ägaren kan ändra priser");
+    await this.put("acquisition_private", { ...ap, ...patch });
+  }
+
+  // ------------------------------------------------------------ M2: lager
+  async storageLocations(): Promise<StorageLocation[]> {
+    return (await this.all<StorageLocation>("storage_locations")).filter((l) => !l.archived_at).sort((a, b) => a.name.localeCompare(b.name, "sv", { numeric: true }));
+  }
+  async createStorageLocation(input: Pick<StorageLocation, "name" | "parent_id" | "structure_id" | "notes">): Promise<StorageLocation> {
+    const me = await this.requireWriter();
+    const l: StorageLocation = { ...(await this.base(me)), ...input };
+    await this.put("storage_locations", l);
+    return l;
+  }
+  async storeObject(objectId: string, locationId: string): Promise<void> {
+    const me = await this.requireWriter();
+    const o = await this.get<VObject>("objects", objectId);
+    if (!o) throw new Error("Objektet finns inte");
+    if (o.status === "stored") {
+      await this.put("objects", { ...o, storage_location_id: locationId, updated_at: now() });
+      await this.audit_(me, "moved_in_storage", "object", objectId, { storage_location_id: o.storage_location_id }, { storage_location_id: locationId });
+      return;
+    }
+    assertTransition(o.status, "stored");
+    await this.put("objects", { ...o, status: "stored", storage_location_id: locationId, zone_id: null, structure_id: null, updated_at: now() });
+    await this.event(me, "object.status_changed", `${o.title}: ${o.status} → stored`, [{ type: "object", id: objectId }]);
+    await this.audit_(me, "status_change", "object", objectId, { status: o.status }, { status: "stored" });
+  }
+
+  // ------------------------------------------------------------ M2: hämtningar
+  async checklistTemplates(): Promise<ChecklistTemplate[]> {
+    return (await this.all<ChecklistTemplate>("checklist_templates")).filter((t) => !t.archived_at);
+  }
+  private async withAddress(p: Pickup): Promise<Pickup> {
+    const me = await this.me();
+    if (me.role === "viewer") return p;
+    const pp = await this.get<PickupPrivate>("pickup_private", p.id);
+    return { ...p, address: pp?.address ?? "" };
+  }
+  async pickups(): Promise<Pickup[]> {
+    const list = (await this.all<Pickup>("pickups")).filter((p) => !p.archived_at);
+    return Promise.all(list.sort((a, b) => (a.scheduled_date ?? "9999").localeCompare(b.scheduled_date ?? "9999")).map((p) => this.withAddress(p)));
+  }
+  async pickup(id: string): Promise<Pickup | null> {
+    const p = await this.get<Pickup>("pickups", id);
+    return p ? this.withAddress(p) : null;
+  }
+  async pickupItems(pickupId: string): Promise<PickupItem[]> {
+    return (await this.all<PickupItem>("pickup_items")).filter((i) => i.pickup_id === pickupId);
+  }
+  async checklist(pickupId: string): Promise<ChecklistItem[]> {
+    return (await this.all<ChecklistItem>("checklist_items")).filter((i) => i.pickup_id === pickupId).sort((a, b) => a.position - b.position);
+  }
+  async createPickup(input: NewPickup): Promise<string> {
+    const me = await this.requireWriter();
+    const b = await this.base(me);
+    const p: Pickup = {
+      ...b, acquisition_id: input.acquisition_id, person_id: input.person_id, title: input.title, scheduled_date: input.scheduled_date,
+      window_from: input.window_from, window_to: input.window_to, resources: input.resources, status: "planned",
+      safety_note: input.safety_note, completed_at: null,
+    };
+    await this.put("pickups", p);
+    await this.put("pickup_private", { pickup_id: p.id, site_id: p.site_id, address: input.address, created_by: me.id } satisfies PickupPrivate);
+    for (const oid of input.object_ids) {
+      await this.put("pickup_items", { id: uuid(), site_id: p.site_id, pickup_id: p.id, object_id: oid, receipt: null, note: "" } satisfies PickupItem);
+      const o = await this.get<VObject>("objects", oid);
+      if (o?.status === "reserved") await this.changeStatus(oid, "pickup_planned");
+    }
+    const tpl = input.template_id ? await this.get<ChecklistTemplate>("checklist_templates", input.template_id) : undefined;
+    for (const [i, label] of (tpl?.items ?? []).entries()) {
+      await this.put("checklist_items", { id: uuid(), site_id: p.site_id, pickup_id: p.id, label, done: false, position: i } satisfies ChecklistItem);
+    }
+    return p.id;
+  }
+  async setPickupStatus(id: string, to: PickupStatus): Promise<void> {
+    const me = await this.requireWriter();
+    const p = await this.get<Pickup>("pickups", id);
+    if (!p) return;
+    if (!PICKUP_TRANSITIONS[p.status].includes(to)) throw new Error(`Otillåten ändring av hämtning: ${p.status} → ${to}`);
+    await this.put("pickups", { ...p, status: to, updated_at: now() });
+    await this.audit_(me, "pickup_status", "pickup", id, { status: p.status }, { status: to });
+  }
+  async toggleChecklistItem(item: ChecklistItem, done: boolean): Promise<void> {
+    await this.requireWriter();
+    await this.put("checklist_items", { ...item, done });
+  }
+  async completePickup(id: string, receipts: Receipt[], locationId: string | null): Promise<void> {
+    const me = await this.requireWriter();
+    const p = await this.get<Pickup>("pickups", id);
+    if (!p) throw new Error("Hämtningen finns inte");
+    const items = await this.pickupItems(id);
+    for (const it of items) {
+      const r = receipts.find((x) => x.object_id === it.object_id);
+      if (r) await this.put("pickup_items", { ...it, receipt: r.receipt, note: r.note });
+    }
+    const updated = await this.pickupItems(id);
+    if (updated.some((i) => !i.receipt)) throw new Error("Alla objekt måste kvitteras innan hämtningen avslutas");
+    if (p.status === "planned" || p.status === "confirmed") await this.setPickupStatus(id, "in_progress");
+    const cur = (await this.get<Pickup>("pickups", id))!;
+    if (!PICKUP_TRANSITIONS[cur.status].includes("completed")) throw new Error("Hämtningen kan inte avslutas");
+    await this.put("pickups", { ...cur, status: "completed", completed_at: now(), updated_at: now() });
+    await this.audit_(me, "pickup_status", "pickup", id, { status: cur.status }, { status: "completed" });
+
+    const received = updated.filter((i) => i.receipt === "received" || i.receipt === "partial");
+    const links = [{ type: "pickup", id }, ...received.map((i) => ({ type: "object", id: i.object_id }))];
+    if (p.person_id) links.push({ type: "person", id: p.person_id });
+    await this.event(me, "pickup.completed", `Hämtning klar: ${p.title}`, links, true);
+    for (const it of received) {
+      const o = await this.get<VObject>("objects", it.object_id);
+      if (o && ["discovered", "contacted", "reserved", "pickup_planned"].includes(o.status)) await this.changeStatus(o.id, "collected");
+      if (locationId) await this.storeObject(it.object_id, locationId);
+    }
+    if (p.acquisition_id) {
+      const a = await this.get<Acquisition>("acquisitions", p.acquisition_id);
+      if (a && ["lead", "contacted", "negotiating"].includes(a.status)) await this.setAcquisitionStatus(a.id, "agreed");
+      const a2 = await this.get<Acquisition>("acquisitions", p.acquisition_id);
+      if (a2?.status === "agreed") await this.setAcquisitionStatus(a2.id, "received");
+    }
   }
 
   /** Används av demodata och tester. */

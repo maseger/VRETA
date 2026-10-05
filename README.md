@@ -57,3 +57,17 @@ scripts/test-db.sh # migrationer + RLS mot en tillfällig PostgreSQL (kräver po
 | EXIF/GPS-rensning av alla bilder som kan delas | `src/services/images.ts` |
 
 Formspråket hämtar färger från byggnadsvårdens material – kalkputs, linoljefärg, Falu rödfärg, ockra, järnvitriol och mossa – med Fraunces för rubriker och Source Sans 3 för text.
+
+## Vad M2 innehåller (inflöde och lager)
+
+| Del | Var |
+| --- | --- |
+| Organisationer, kontakthistorik (privat), anskaffningsflöde, hämtningar, checklistor, lagerplatser, RLS | `supabase/migrations/20261006000000_m2_infloede_lager.sql` |
+| Avsluta hämtning i en transaktion: kvittering, status, händelse, lagerplats, anskaffning (AC-03) | `complete_pickup` i migrationen |
+| Offline-kö för fångst, bilder, checklistor och avslut + läscache för hämtningar (AC-02) | `src/data/outbox.ts`, `src/data/offlineSupabaseRepo.ts` |
+| Samla: Objekt · Människor · Inköp (pipeline) · Hämtningar | `src/pages/samla/` |
+| Personkort med roller, samtycke, privata uppgifter, kontakthistorik och diktering (AC-09) | `src/pages/PersonPage.tsx` |
+| Planera hämtning och hämtning på plats med navigering, checklista, foton och kvittering | `src/pages/NewPickupPage.tsx`, `src/pages/PickupPage.tsx` |
+| Lagerträd, lagerplats med QR-kod och utskrivbara etiketter | `src/pages/StoragePage.tsx`, `StorageLocationPage.tsx`, `LabelsPage.tsx` |
+
+QR-koderna innehåller en länk till lagerplatsen, så telefonens vanliga kamera öppnar rätt hylla direkt i appen.

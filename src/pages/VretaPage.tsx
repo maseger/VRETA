@@ -1,4 +1,5 @@
-import { Map as MapIcon, Plus } from "lucide-react";
+import { Archive, ChevronRight, Map as MapIcon, Plus } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useState } from "react";
 import { useApp, useData } from "../app/AppContext";
 import { PageHeader, Section } from "../ui/bits";
@@ -26,6 +27,12 @@ export function VretaPage() {
           <p className="text-sm text-sot-3">Fastighetskartan byggs på kommunens baskarta med ritningar som lager. Zoner och byggnader nedan placeras på kartan då.</p>
         </div>
       </div>
+
+      <Link to="/lager" className="card mb-8 flex items-center gap-4 p-5 hover:bg-kalk-2/60">
+        <Archive size={28} strokeWidth={1.5} className="shrink-0 text-falu" aria-hidden="true" />
+        <span className="flex-1"><span className="block font-serif text-lg font-semibold">Lager</span><span className="text-sm text-sot-3">Lagerplatser, QR-etiketter och vad som ligger var</span></span>
+        <ChevronRight size={18} className="text-sot-3" aria-hidden="true" />
+      </Link>
 
       <Section title="Zoner">
         <ul className="card divide-y divide-dashed divide-lera-light">

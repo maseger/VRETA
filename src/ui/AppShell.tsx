@@ -12,7 +12,7 @@ const NAV = [
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { profile, online, toastMessage, repo } = useApp();
+  const { profile, online, toastMessage, repo, pending } = useApp();
   const { pathname } = useLocation();
   const canWrite = profile?.role !== "viewer";
 
@@ -41,6 +41,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           ))}
         </nav>
         <div className="mt-auto space-y-3">
+          {(!online || pending > 0) && (
+            <p className="flex items-center gap-2 px-3 text-[12px] text-sot-3" role="status">
+              <CloudOff size={14} aria-hidden="true" /> {pending > 0 ? `${pending} ändringar väntar på synk` : "Offline – sparas lokalt"}
+            </p>
+          )}
           {repo.kind === "local" && <p className="rounded-md border border-dashed border-ockra px-3 py-2 text-[12px] text-sot-3">Demoläge – data sparas bara i den här webbläsaren.</p>}
           <NavLink to="/installningar" className="flex min-h-[44px] items-center gap-3 rounded-md px-3 text-sot-2 hover:bg-kalk-3/60">
             <Settings size={18} strokeWidth={1.75} aria-hidden="true" /> {profile?.name ?? "Inställningar"}
@@ -54,7 +59,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Logo />
         </NavLink>
         <div className="flex items-center gap-1">
-          {!online && <CloudOff size={18} className="text-sot-3" aria-label="Offline – sparas lokalt" />}
+          {(!online || pending > 0) && (
+            <span className="flex items-center gap-1 text-[12px] text-sot-3" role="status">
+              <CloudOff size={16} aria-hidden="true" />
+              {pending > 0 ? `${pending} väntar på synk` : "Offline"}
+            </span>
+          )}
           <NavLink to="/installningar" className="rounded-md p-2 text-sot-2" aria-label="Inställningar">
             <Settings size={20} strokeWidth={1.75} />
           </NavLink>

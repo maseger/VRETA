@@ -1,4 +1,4 @@
-import type { AcquisitionType, Channel, ContentGoal, ObjectStatus, Visibility } from "./types";
+import type { AcquisitionStatus, AcquisitionType, InteractionChannel, PickupStatus, ReceiptStatus, Channel, ContentGoal, ObjectStatus, Visibility } from "./types";
 
 export const STATUS_LABEL: Record<ObjectStatus, string> = {
   discovered: "Upptäckt",
@@ -71,6 +71,7 @@ export const EVENT_LABEL: Record<string, string> = {
   "object.status_changed": "Status ändrad",
   "content.shared": "Berättat",
   "story.moment": "Ögonblick",
+  "pickup.completed": "Hämtat",
 };
 
 export const CATEGORIES = [
@@ -87,3 +88,42 @@ export const CATEGORIES = [
   "Trädgård och utemiljö",
   "Övrigt",
 ];
+
+export const ACQ_STATUS_LABEL: Record<AcquisitionStatus, string> = {
+  lead: "Fynd",
+  contacted: "Kontaktad",
+  negotiating: "Förhandlar",
+  agreed: "Överens",
+  received: "Mottaget",
+  settled: "Klart",
+  declined: "Avstått",
+  lost: "Missat",
+};
+
+export const PIPELINE: AcquisitionStatus[] = ["lead", "contacted", "negotiating", "agreed", "received", "settled"];
+
+export const PICKUP_STATUS_LABEL: Record<PickupStatus, string> = {
+  planned: "Planerad",
+  confirmed: "Bekräftad",
+  in_progress: "Pågår",
+  completed: "Klar",
+  cancelled: "Inställd",
+};
+
+export const RECEIPT_LABEL: Record<ReceiptStatus, string> = {
+  received: "Allt mottaget",
+  partial: "Delvis",
+  deviation: "Avvikelse",
+};
+
+export const CHANNEL_INTERACTION_LABEL: Record<InteractionChannel, string> = {
+  samtal: "Samtal",
+  meddelande: "Meddelande",
+  mote: "Möte",
+  mejl: "Mejl",
+  annat: "Annat",
+};
+
+export const PERSON_ROLES = ["Leverantör", "Givare", "Medskapare", "Hantverkare", "Kunskapsbärare", "Transportör", "Köpare", "Följare", "Tipsare"];
+
+export const RESOURCES = ["Släp", "Skåpbil", "Bärhjälp", "Spännband", "Verktyg", "Filtar"];

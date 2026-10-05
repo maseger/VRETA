@@ -22,6 +22,8 @@ export type ObjectStatus =
   | "exchanged"
   | "discarded";
 
+export type Consent = "yes" | "no" | "ask";
+
 export type SourceType = "manual" | "ai_capture" | "marketplace_import" | "email_import" | "agent" | "system";
 
 export interface Base {
@@ -78,6 +80,7 @@ export interface VObject extends Base {
   zone_id: string | null;
   structure_id: string | null;
   cover_media_id: string | null;
+  storage_location_id: string | null;
   field_meta: Record<string, FieldMeta>;
 }
 
@@ -85,6 +88,8 @@ export interface Person extends Base {
   name: string;
   locality: string;
   roles: string[];
+  organization_id: string | null;
+  how_we_met: string;
   /** Privat (INV-13). Saknas när användaren inte får se det. */
   contact?: string;
   /** Privat. Saknas när användaren inte får se det. */
@@ -100,6 +105,7 @@ export type AcquisitionStatus = "lead" | "contacted" | "negotiating" | "agreed" 
 export interface Acquisition extends Base {
   object_id: string;
   person_id: string | null;
+  organization_id?: string | null;
   type: AcquisitionType;
   status: AcquisitionStatus;
   /** Privat. Saknas när användaren inte får se det. */
@@ -248,4 +254,72 @@ export interface Profile {
   id: string;
   name: string;
   role: Role;
+}
+
+export interface Organization extends Base {
+  name: string;
+  kind: string;
+  locality: string;
+  roles: string[];
+  contact?: string;
+  notes?: string;
+}
+
+export type InteractionChannel = "samtal" | "meddelande" | "mote" | "mejl" | "annat";
+
+export interface Interaction extends Base {
+  person_id: string | null;
+  organization_id: string | null;
+  channel: InteractionChannel;
+  occurred_at: string;
+  summary: string;
+  follow_up: string | null;
+}
+
+export interface StorageLocation extends Base {
+  parent_id: string | null;
+  structure_id: string | null;
+  name: string;
+  notes: string;
+}
+
+export type PickupStatus = "planned" | "confirmed" | "in_progress" | "completed" | "cancelled";
+export type ReceiptStatus = "received" | "partial" | "deviation";
+
+export interface Pickup extends Base {
+  acquisition_id: string | null;
+  person_id: string | null;
+  title: string;
+  scheduled_date: string | null;
+  window_from: string | null;
+  window_to: string | null;
+  resources: string[];
+  status: PickupStatus;
+  safety_note: string;
+  completed_at: string | null;
+  /** Privat för läsare. */
+  address?: string;
+}
+
+export interface PickupItem {
+  id: string;
+  site_id: string;
+  pickup_id: string;
+  object_id: string;
+  receipt: ReceiptStatus | null;
+  note: string;
+}
+
+export interface ChecklistItem {
+  id: string;
+  site_id: string;
+  pickup_id: string;
+  label: string;
+  done: boolean;
+  position: number;
+}
+
+export interface ChecklistTemplate extends Base {
+  name: string;
+  items: string[];
 }

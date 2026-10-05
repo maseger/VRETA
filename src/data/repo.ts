@@ -1,6 +1,8 @@
 import type {
   Acquisition, AcquisitionType, AuditEntry, Capture, CaptureInput, ContentItem, EventRec, Media, ObjectStatus,
   Person, Profile, Proposal, ProposalContent, Role, Site, StoryNote, Structure, Task, VObject, Zone, FieldMeta,
+  AcquisitionStatus, ChecklistItem, ChecklistTemplate, Interaction, Organization, Pickup, PickupItem, PickupStatus,
+  ReceiptStatus, StorageLocation,
 } from "../domain/types";
 import type { StoryRows } from "../../supabase/functions/_shared/storyContext";
 
@@ -93,9 +95,70 @@ export interface Repo {
   markShared(id: string, url: string): Promise<void>;
 
   tasks(): Promise<Task[]>;
+
+  // ---- M2: människor, inflöde, hämtning och lager
+  organizations(): Promise<Organization[]>;
+  createOrganization(input: Pick<Organization, "name" | "kind" | "locality">): Promise<Organization>;
+  createPerson(input: NewPerson): Promise<Person>;
+  updatePerson(id: string, patch: Partial<Pick<Person, "name" | "locality" | "roles" | "how_we_met" | "organization_id">>): Promise<void>;
+  updatePersonPrivate(id: string, patch: { contact?: string; notes?: string }): Promise<void>;
+  interactions(person_id: string): Promise<Interaction[]>;
+  addInteraction(input: Pick<Interaction, "person_id" | "organization_id" | "channel" | "summary" | "follow_up"> & { occurred_at?: string }): Promise<void>;
+  followUps(): Promise<Interaction[]>;
+  allAcquisitions(): Promise<Acquisition[]>;
+  setAcquisitionStatus(id: string, to: AcquisitionStatus): Promise<void>;
+  updateAcquisitionPrivate(id: string, patch: { price?: number | null; payment_method?: string }): Promise<void>;
+
+  storageLocations(): Promise<StorageLocation[]>;
+  createStorageLocation(input: Pick<StorageLocation, "name" | "parent_id" | "structure_id" | "notes">): Promise<StorageLocation>;
+  storeObject(objectId: string, locationId: string): Promise<void>;
+
+  checklistTemplates(): Promise<ChecklistTemplate[]>;
+  pickups(): Promise<Pickup[]>;
+  pickup(id: string): Promise<Pickup | null>;
+  pickupItems(pickupId: string): Promise<PickupItem[]>;
+  checklist(pickupId: string): Promise<ChecklistItem[]>;
+  createPickup(input: NewPickup): Promise<string>;
+  setPickupStatus(id: string, to: PickupStatus): Promise<void>;
+  toggleChecklistItem(item: ChecklistItem, done: boolean): Promise<void>;
+  completePickup(id: string, receipts: Receipt[], locationId: string | null): Promise<void>;
+
+  /** Antal ändringar som väntar på att synkas (bara Supabase). */
+  pendingSync?(): Promise<number>;
+  flushOutbox?(): Promise<number>;
   storyRows(objectId: string): Promise<StoryRows>;
   audit(): Promise<AuditEntry[]>;
   exportAll(): Promise<Record<string, unknown[]>>;
+}
+
+export interface NewPerson {
+  name: string;
+  locality: string;
+  roles: string[];
+  how_we_met: string;
+  organization_id: string | null;
+  contact: string;
+  notes: string;
+}
+
+export interface NewPickup {
+  acquisition_id: string | null;
+  person_id: string | null;
+  title: string;
+  scheduled_date: string | null;
+  window_from: string | null;
+  window_to: string | null;
+  resources: string[];
+  address: string;
+  object_ids: string[];
+  template_id: string | null;
+  safety_note: string;
+}
+
+export interface Receipt {
+  object_id: string;
+  receipt: ReceiptStatus;
+  note: string;
 }
 
 export class PermissionError extends Error {}

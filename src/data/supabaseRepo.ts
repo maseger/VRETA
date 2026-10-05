@@ -2,11 +2,13 @@
 // audit, händelser vid statusbyten) upprätthålls i databasen; klienten anropar bara.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type {
+  AcquisitionStatus, ChecklistItem, ChecklistTemplate, Interaction, Organization, Pickup, PickupItem, PickupStatus,
+  StorageLocation,
   Acquisition, AuditEntry, Capture, CaptureInput, ContentItem, EventRec, Media, ObjectStatus, Person, Profile,
   Proposal, ProposalContent, Site, StoryNote, Structure, Task, VObject, Zone,
 } from "../domain/types";
 import type { StoryRows } from "../../supabase/functions/_shared/storyContext";
-import type { ApproveInput, MediaInput, PlaceRef, Repo } from "./repo";
+import type { ApproveInput, MediaInput, NewPerson, NewPickup, PlaceRef, Receipt, Repo } from "./repo";
 
 function check<T>(res: { data: T | null; error: { message: string } | null }): T {
   if (res.error) throw new Error(res.error.message);
@@ -236,5 +238,109 @@ export class SupabaseRepo implements Repo {
     const out: Record<string, unknown[]> = {};
     for (const t of tables) out[t] = check(await this.client.from(t).select("*")) as unknown[];
     return out;
+  }
+
+  // ------------------------------------------------------------ M2: människor och inflöde
+  async organizations(): Promise<Organization[]> {
+    const orgs = check(await this.client.from("organizations").select("*").is("archived_at", null).order("name")) as Organization[];
+    const priv = check(await this.client.from("organization_private").select("organization_id, contact, notes")) as { organization_id: string; contact: string; notes: string }[];
+    return orgs.map((o) => {
+      const p = priv.find((x) => x.organization_id === o.id);
+      return p ? { ...o, contact: p.contact, notes: p.notes } : o;
+    });
+  }
+  async createOrganization(input: Pick<Organization, "name" | "kind" | "locality">): Promise<Organization> {
+    const site_id = await this.siteId();
+    const o = check(await this.client.from("organizations").insert({ ...input, site_id }).select().single()) as Organization;
+    check(await this.client.from("organization_private").insert({ organization_id: o.id, site_id }));
+    return o;
+  }
+  async createPerson(input: NewPerson): Promise<Person> {
+    const site_id = await this.siteId();
+    const { contact, notes, ...rest } = input;
+    const p = check(await this.client.from("persons").insert({ ...rest, site_id }).select().single()) as Person;
+    check(await this.client.from("person_private").insert({ person_id: p.id, site_id, contact, notes }));
+    return p;
+  }
+  async updatePerson(id: string, patch: Partial<Pick<Person, "name" | "locality" | "roles" | "how_we_met" | "organization_id">>): Promise<void> {
+    check(await this.client.from("persons").update(patch).eq("id", id));
+  }
+  async updatePersonPrivate(id: string, patch: { contact?: string; notes?: string }): Promise<void> {
+    check(await this.client.from("person_private").update(patch).eq("person_id", id));
+  }
+  async interactions(person_id: string): Promise<Interaction[]> {
+    return check(await this.client.from("interactions").select("*").eq("person_id", person_id).order("occurred_at", { ascending: false })) as Interaction[];
+  }
+  async addInteraction(input: Pick<Interaction, "person_id" | "organization_id" | "channel" | "summary" | "follow_up"> & { occurred_at?: string }): Promise<void> {
+    check(await this.client.from("interactions").insert({ ...input, site_id: await this.siteId() }));
+  }
+  async followUps(): Promise<Interaction[]> {
+    return check(await this.client.from("interactions").select("*").not("follow_up", "is", null).order("follow_up")) as Interaction[];
+  }
+  async allAcquisitions(): Promise<Acquisition[]> {
+    const acqs = check(await this.client.from("acquisitions").select("*").is("archived_at", null)) as Acquisition[];
+    const priv = check(await this.client.from("acquisition_private").select("acquisition_id, price, payment_method")) as { acquisition_id: string; price: number | null; payment_method: string }[];
+    return acqs.map((a) => {
+      const ap = priv.find((x) => x.acquisition_id === a.id);
+      return ap ? { ...a, price: ap.price, payment_method: ap.payment_method } : a;
+    });
+  }
+  async setAcquisitionStatus(id: string, to: AcquisitionStatus): Promise<void> {
+    check(await this.client.from("acquisitions").update({ status: to }).eq("id", id));
+  }
+  async updateAcquisitionPrivate(id: string, patch: { price?: number | null; payment_method?: string }): Promise<void> {
+    check(await this.client.from("acquisition_private").update(patch).eq("acquisition_id", id));
+  }
+
+  // ------------------------------------------------------------ M2: lager
+  async storageLocations(): Promise<StorageLocation[]> {
+    return check(await this.client.from("storage_locations").select("*").is("archived_at", null).order("name")) as StorageLocation[];
+  }
+  async createStorageLocation(input: Pick<StorageLocation, "name" | "parent_id" | "structure_id" | "notes">): Promise<StorageLocation> {
+    return check(await this.client.from("storage_locations").insert({ ...input, site_id: await this.siteId() }).select().single()) as StorageLocation;
+  }
+  async storeObject(objectId: string, locationId: string): Promise<void> {
+    check(await this.client.rpc("store_object", { p_object: objectId, p_location: locationId }));
+  }
+
+  // ------------------------------------------------------------ M2: hämtningar
+  async checklistTemplates(): Promise<ChecklistTemplate[]> {
+    return check(await this.client.from("checklist_templates").select("*").is("archived_at", null).order("name")) as ChecklistTemplate[];
+  }
+  async pickups(): Promise<Pickup[]> {
+    const list = check(await this.client.from("pickups").select("*").is("archived_at", null).order("scheduled_date", { nullsFirst: false })) as Pickup[];
+    const priv = check(await this.client.from("pickup_private").select("pickup_id, address")) as { pickup_id: string; address: string }[];
+    return list.map((p) => ({ ...p, address: priv.find((x) => x.pickup_id === p.id)?.address }));
+  }
+  async pickup(id: string): Promise<Pickup | null> {
+    const p = check(await this.client.from("pickups").select("*").eq("id", id).maybeSingle()) as Pickup | null;
+    if (!p) return null;
+    const priv = check(await this.client.from("pickup_private").select("address").eq("pickup_id", id).maybeSingle()) as { address: string } | null;
+    return { ...p, address: priv?.address };
+  }
+  async pickupItems(pickupId: string): Promise<PickupItem[]> {
+    return check(await this.client.from("pickup_items").select("*").eq("pickup_id", pickupId)) as PickupItem[];
+  }
+  async checklist(pickupId: string): Promise<ChecklistItem[]> {
+    return check(await this.client.from("checklist_items").select("*").eq("pickup_id", pickupId).order("position")) as ChecklistItem[];
+  }
+  async createPickup(input: NewPickup): Promise<string> {
+    return check(await this.client.rpc("create_pickup", { p_site: await this.siteId(), p_input: input })) as string;
+  }
+  async setPickupStatus(id: string, to: PickupStatus): Promise<void> {
+    check(await this.client.from("pickups").update({ status: to }).eq("id", id));
+  }
+  async toggleChecklistItem(item: ChecklistItem, done: boolean): Promise<void> {
+    check(await this.client.from("checklist_items").update({ done }).eq("id", item.id));
+  }
+  async completePickup(id: string, receipts: Receipt[], locationId: string | null): Promise<void> {
+    check(await this.client.rpc("complete_pickup", { p_pickup: id, p_receipts: receipts, p_location: locationId }));
+  }
+
+  async pendingSync(): Promise<number> {
+    return 0;
+  }
+  async flushOutbox(): Promise<number> {
+    return 0;
   }
 }

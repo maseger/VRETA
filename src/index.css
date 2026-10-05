@@ -50,3 +50,9 @@
 .scroll-snap-x { scroll-snap-type: x mandatory; }
 .scroll-snap-x > * { scroll-snap-align: start; }
 .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 0px); }
+
+@media print {
+  body { background: white; }
+  aside, header.sticky, nav[aria-label="Huvudmeny"] { display: none !important; }
+  main { padding: 0 !important; max-width: none !important; }
+}

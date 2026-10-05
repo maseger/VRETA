@@ -15,6 +15,7 @@ interface AppState {
   refresh: () => Promise<void>;
   toast: (message: string) => void;
   toastMessage: string | null;
+  pending: number;
 }
 
 const Ctx = createContext<AppState | null>(null);
@@ -28,6 +29,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [version, setVersion] = useState(0);
   const [online, setOnline] = useState(navigator.onLine);
   const [toastMessage, setToast] = useState<string | null>(null);
+  const [pending, setPending] = useState(0);
+
+  const sync = useCallback(async () => {
+    if (!navigator.onLine || !(await repo.session())) return;
+    const sent = (await repo.flushOutbox?.()) ?? 0;
+    const tolkade = await processPendingCaptures(repo);
+    if (sent || tolkade) {
+      setToast(tolkade ? `Synkat. ${tolkade} fångst${tolkade > 1 ? "er" : ""} väntar på granskning.` : "Synkat");
+      setVersion((v) => v + 1);
+    }
+  }, [repo]);
 
   const refresh = useCallback(async () => {
     const p = await repo.session();
@@ -41,19 +53,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (repo instanceof LocalRepo) await (seeding ??= seedDemo(repo));
       await refresh();
       setReady(true);
+      await sync();
     })();
-  }, [repo, refresh]);
+  }, [repo, refresh, sync]);
+
+  useEffect(() => {
+    repo.pendingSync?.().then(setPending);
+  }, [repo, version, toastMessage]);
 
   useEffect(() => {
     const on = async () => {
       setOnline(true);
-      if (await repo.session()) {
-        const n = await processPendingCaptures(repo);
-        if (n) {
-          setToast(`${n} fångst${n > 1 ? "er" : ""} tolkade och väntar på granskning`);
-          setVersion((v) => v + 1);
-        }
-      }
+      await sync();
     };
     const off = () => setOnline(false);
     window.addEventListener("online", on);
@@ -62,7 +73,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       window.removeEventListener("online", on);
       window.removeEventListener("offline", off);
     };
-  }, [repo]);
+  }, [sync]);
 
   useEffect(() => {
     if (!toastMessage) return;
@@ -70,7 +81,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(t);
   }, [toastMessage]);
 
-  const value: AppState = { repo, profile, site, ready, online, version, refresh, toast: setToast, toastMessage };
+  const value: AppState = { repo, profile, site, ready, online, version, refresh, toast: setToast, toastMessage, pending };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
