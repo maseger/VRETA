@@ -381,12 +381,14 @@ Saker, människor och platser är tre olika delar som är beroende av varandra: 
 | Saker | Objekt och partier (lista/rutnät) med filter på status och plats; sakernas väg in och ut: inköp, hämtningar och annonser |
 | + | Global fångst, alltid tillgänglig |
 | Människor | Personer med roller, samtycke, kontakthistorik, bidrag och ömsesidighet |
-| Platser | **På Vreta:** karta, zoner och byggnader, och det som sker där – förvaring (lager), projekt (byggen, planteringar) och observationer (djur, växter m.m.) med journal. **Utanför:** orterna där saker hämtas, köps och lämnas, härledda från människornas och organisationernas ort |
+| Platser | **På Vreta:** karta, zoner och byggnader, och det som sker där – förvaring (lager), projekt (byggen, planteringar) och observationer (djur, växter m.m.) med journal. **Utanför:** platser som loppisar, hämtställen och återvinningscentraler, och orterna där saker hämtas, köps och lämnas |
 | Fråga | Chatboten Fråga Vreta: sök, frågor och uppdrag i text eller tal (se 11.6) |
 
 **Dator:** vänsterkolumn med Idag, Saker, Människor, Platser och Fråga samt Fånga och Inställningar. Listor och detaljer visas sida vid sida.
 
-Projekt är i R1 ett namn på nytt liv och bidrag; Platser → Projekt samlar dem per namn tills Project blir en egen entitet (P1). Platser utanför Vreta har ingen egen entitet i R1 – orten anges på kommunnivå (INV-12).
+**Projekt** (Project) är egna poster med namn, slag, status (idé, planerat, pågår, vilar, klart), zon eller byggnad och beskrivning. Nytt liv och bidrag kopplas med project_id; ett nytt projektnamn i formulären blir ett projekt. Projektsidan visar saker, människor och projektjournal. Behov (Need) är fortfarande P1.
+
+**Platser utanför Vreta** (ExternalPlace) har namn, slag, ort och en privat adress. Inköp, hämtningar och avslut kan kopplas till en plats (place_id), så att man ser vad som kom därifrån och vad som lämnades där. Orten är på kommunnivå och får synas; adressen syns bara för ägare och medhjälpare (INV-12, INV-13). Objektsidan har en flik Platser med var saken är på Vreta och var den kom ifrån och tog vägen.
 
 ### 7.2 Designprinciper
 

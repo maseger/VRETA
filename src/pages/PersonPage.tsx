@@ -5,6 +5,7 @@ import { useApp, useData } from "../app/AppContext";
 import { ACQ_STATUS_LABEL, ACQUISITION_LABEL, CHANNEL_INTERACTION_LABEL, CONTRIBUTION_LABEL, DISPOSAL_LABEL, PERSON_ROLES, eventLabel } from "../domain/labels";
 import type { Consent, ContributionKind, InteractionChannel, Visibility } from "../domain/types";
 import { EmptyState, MediaImage, Section, StatusStamp, formatDate } from "../ui/bits";
+import { ProjectInput } from "../ui/ProjectInput";
 import { useDictation } from "../ui/useDictation";
 
 type ConsentKey = "consent_name" | "consent_image" | "consent_contribution";
@@ -278,7 +279,7 @@ function Contributions({ personId, firstName, contributions, reciprocity, object
                   <option value="">Inget objekt</option>
                   {objects.map((o) => <option key={o.id} value={o.id}>{o.title}</option>)}
                 </select>
-                <input className="input" value={project} onChange={(e) => setProject(e.target.value)} placeholder="Projekt (valfritt), t.ex. Orangeriet" aria-label="Projekt" />
+                <ProjectInput value={project} onChange={setProject} />
                 <select className="input" value={visibility} onChange={(e) => setVisibility(e.target.value as Visibility)} aria-label="Synlighet">
                   <option value="shareable">Får berättas</option>
                   <option value="internal">Bara internt</option>

@@ -117,6 +117,8 @@ export interface Acquisition extends Base {
   payment_method?: string;
   source_url: string;
   deadline: string | null;
+  /** Plats utanför Vreta där saken köptes eller hämtades (M6). */
+  place_id?: string | null;
 }
 
 export type MediaKind = "image" | "audio";
@@ -303,6 +305,7 @@ export interface Pickup extends Base {
   completed_at: string | null;
   /** Privat för läsare. */
   address?: string;
+  place_id?: string | null;
 }
 
 export interface PickupItem {
@@ -364,6 +367,7 @@ export interface UsageEvent {
   structure_id: string | null;
   quantity: number | null;
   project: string;
+  project_id?: string | null;
   note: string;
   geom: PointGeom | null;
   event_id: string | null;
@@ -459,6 +463,7 @@ export interface Disposal {
   allocation_id: string | null;
   listing_id: string | null;
   person_id: string | null;
+  place_id?: string | null;
   type: DisposalType;
   quantity: number | null;
   occurred_at: string;
@@ -482,6 +487,7 @@ export interface Contribution {
   object_id: string | null;
   zone_id: string | null;
   project: string;
+  project_id?: string | null;
   occurred_at: string;
   thanked_at: string | null;
   visibility: Visibility;
@@ -512,6 +518,33 @@ export interface ContentConsent {
   how: string;
   created_at: string;
   created_by: string;
+}
+
+// ---------------------------------------------------------------- M6: projekt och platser utanför Vreta
+
+export type ProjectStatus = "idea" | "planned" | "active" | "paused" | "done";
+
+/** Projekt på Vreta: bygge, plantering m.m. Nytt liv och bidrag kopplas hit (6.4). */
+export interface Project extends Base {
+  name: string;
+  kind: string;
+  status: ProjectStatus;
+  description: string;
+  zone_id: string | null;
+  structure_id: string | null;
+  started_on: string | null;
+  finished_on: string | null;
+}
+
+/** Plats utanför Vreta där saker hämtas, köps och lämnas. */
+export interface ExternalPlace extends Base {
+  name: string;
+  kind: string;
+  /** Ort på kommunnivå – får synas. */
+  locality: string;
+  notes: string;
+  /** Privat för läsare (INV-13). */
+  address?: string;
 }
 
 // ---------------------------------------------------------------- M5: Fråga Vreta

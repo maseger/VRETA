@@ -2,7 +2,6 @@ import { Archive, ChevronRight, Crosshair, Eye, Hammer, Layers, Pencil, Plus, Un
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useApp, useData } from "../../app/AppContext";
-import { groupProjects } from "../../domain/places";
 import type { MapLayer } from "../../domain/types";
 import { areaM2, centroid, closeRing, formatArea, zoneAt, type LngLat, type PolygonGeom } from "../../geo/geo";
 import { VretaMap, type MapPin, type MapPolygon } from "../../geo/VretaMap";
@@ -16,10 +15,10 @@ export function OnSitePlaces() {
   const navigate = useNavigate();
   const canWrite = profile?.role !== "viewer";
   const { data } = useData(async (r) => {
-    const [zones, structures, layers, usage, observations, objects, contributions] = await Promise.all([
-      r.zones(), r.structures(), r.mapLayers(), r.allUsageEvents(), r.observations(), r.objects(), r.contributions(),
+    const [zones, structures, layers, usage, observations, objects, projects] = await Promise.all([
+      r.zones(), r.structures(), r.mapLayers(), r.allUsageEvents(), r.observations(), r.objects(), r.projects(),
     ]);
-    return { zones, structures, layers, usage, observations, objects, contributions };
+    return { zones, structures, layers, usage, observations, objects, projects };
   });
 
   // Bildlager som blob-URL:er (fungerar offline när bilden är cachad)
@@ -149,7 +148,7 @@ export function OnSitePlaces() {
       <ul className="mb-4 grid grid-cols-3 gap-2 sm:gap-3">
         {[
           { to: "/lager", icon: Archive, title: "Förvaring", text: "Lagerplatser, QR-etiketter och vad som ligger var", n: `${data?.objects.filter((o) => o.status === "stored").length ?? 0} saker i lager` },
-          { to: "/platser/projekt", icon: Hammer, title: "Projekt", text: "Byggen, planteringar och annat som tar saker i bruk", n: `${data ? groupProjects(data.usage, data.contributions).length : 0} projekt` },
+          { to: "/platser/projekt", icon: Hammer, title: "Projekt", text: "Byggen, planteringar och annat som tar saker i bruk", n: `${data?.projects.filter((p) => p.status === "active").length ?? 0} pågår` },
           { to: "/journal?filter=obs", icon: Eye, title: "Observationer", text: "Djur, växter, väder och annat som syns på platsen", n: `${data?.observations.length ?? 0} observationer` },
         ].map(({ to, icon: Icon, title, text, n }) => (
           <li key={to}>

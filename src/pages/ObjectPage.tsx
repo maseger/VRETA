@@ -2,15 +2,16 @@ import { ArrowRight, Camera, MapPin, Megaphone, Sparkles, Star, Tag, Truck } fro
 import { useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useApp, useData } from "../app/AppContext";
-import { ACQ_STATUS_LABEL, ACQUISITION_LABEL, DISPOSAL_LABEL, LISTING_STATUS_LABEL, LISTING_TYPE_LABEL, EVENT_LABEL, PICKUP_STATUS_LABEL, PIPELINE, STATUS_LABEL, VISIBILITY_LABEL, humanizeSummary } from "../domain/labels";
+import { ACQ_STATUS_LABEL, ACQUISITION_LABEL, DISPOSAL_LABEL, USAGE_LABEL, LISTING_STATUS_LABEL, LISTING_TYPE_LABEL, EVENT_LABEL, PICKUP_STATUS_LABEL, PIPELINE, STATUS_LABEL, VISIBILITY_LABEL, humanizeSummary } from "../domain/labels";
 import { OBJECT_TRANSITIONS, nextAcquisitionStep, nextStep } from "../domain/stateMachine";
-import type { Acquisition, BatchAllocation, ObjectStatus, Person, Pickup, StorageLocation, Structure, VObject, Visibility, Zone } from "../domain/types";
+import type { Acquisition, BatchAllocation, ExternalPlace, ObjectStatus, Person, Pickup, StorageLocation, Structure, VObject, Visibility, Zone } from "../domain/types";
 import { prepareImage } from "../services/images";
 import { EmptyState, MediaImage, StatusStamp, VisibilityIcon, formatDate } from "../ui/bits";
 import { LocationSelect, locationPath } from "../ui/location";
+import { ExternalPlaceSelect } from "../ui/ExternalPlaceSelect";
 import { UsageForm } from "../ui/UsageForm";
 
-type Tab = "resa" | "fakta" | "manniskor" | "ekonomi";
+type Tab = "resa" | "fakta" | "manniskor" | "platser" | "ekonomi";
 
 export function ObjectPage() {
   const { id } = useParams();
@@ -31,12 +32,13 @@ export function ObjectPage() {
       r.persons(), r.contentFor("object", id!), r.zones(), r.structures(), r.storageLocations(), r.pickups(), r.allocations(id!),
       r.listings(), r.disposals(id!), r.leads(),
     ]);
+    const [usage, projects, externalPlaces] = await Promise.all([r.usageEvents(id!), r.projects(), r.externalPlaces()]);
     const linked = acquisitions.map((a) => ({ a, person: people.find((p) => p.id === a.person_id) ?? null }));
     const mine: Pickup[] = [];
     for (const p of pickups) if ((await r.pickupItems(p.id)).some((i) => i.object_id === id)) mine.push(p);
     const mineListings = listings.filter((l) => l.object_id === id);
     const buyers = disposals.map((d) => ({ d, person: people.find((p) => p.id === d.person_id) ?? null }));
-    return { object, media, events, notes, linked, content, zones, structures, locations, pickups: mine, allocations, listings: mineListings, buyers, leads };
+    return { object, media, events, notes, linked, content, zones, structures, locations, pickups: mine, allocations, listings: mineListings, buyers, leads, usage, projects, externalPlaces };
   }, [id]);
 
   if (data === null) return <EmptyState title="Objektet finns inte">Det kan vara arkiverat eller privat.</EmptyState>;
@@ -205,9 +207,9 @@ export function ObjectPage() {
         </div>
       )}
 
-      <div role="tablist" className="mb-5 flex gap-1 border-b border-lera-light">
-        {([["resa", "Resa"], ["fakta", "Fakta"], ["manniskor", "Människor"], ["ekonomi", "Ekonomi"]] as [Tab, string][]).map(([k, label]) => (
-          <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`-mb-px border-b-2 px-3 py-2.5 text-[15px] font-semibold ${tab === k ? "border-falu text-sot" : "border-transparent text-sot-3"}`}>
+      <div role="tablist" className="mb-5 flex gap-1 overflow-x-auto border-b border-lera-light">
+        {([["resa", "Resa"], ["fakta", "Fakta"], ["manniskor", "Människor"], ["platser", "Platser"], ["ekonomi", "Ekonomi"]] as [Tab, string][]).map(([k, label]) => (
+          <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`-mb-px shrink-0 border-b-2 px-3 py-2.5 text-[15px] font-semibold ${tab === k ? "border-falu text-sot" : "border-transparent text-sot-3"}`}>
             {label}
           </button>
         ))}
@@ -264,6 +266,47 @@ export function ObjectPage() {
         ) : (
           <EmptyState title="Ingen person kopplad">Personer kopplas när du godkänner ett förslag med säljare eller givare.</EmptyState>
         )
+      )}
+
+      {tab === "platser" && (
+        <div className="space-y-6">
+          <div>
+            <p className="kicker mb-2">På Vreta</p>
+            <div className="card divide-y divide-dashed divide-lera-light">
+              <p className="flex items-center gap-2 px-4 py-3"><MapPin size={16} className="shrink-0 text-sot-3" aria-hidden="true" />{placeName ?? (where || "Ingen plats på Vreta ännu")}</p>
+              {data.usage.map((u) => {
+                const project = data.projects.find((p) => p.id === u.project_id);
+                const at = zones.find((z) => z.id === u.zone_id)?.name ?? structures.find((s) => s.id === u.structure_id)?.name;
+                return (
+                  <p key={u.id} className="px-4 py-3 text-sm">
+                    <span className="font-medium">{USAGE_LABEL[u.type]}</span>
+                    <span className="text-sot-3">{[at, formatDate(u.occurred_at)].filter(Boolean).map((x) => ` · ${x}`).join("")}</span>
+                    {project && <> · <Link to={`/projekt/${project.id}`} className="font-semibold text-falu">{project.name}</Link></>}
+                  </p>
+                );
+              })}
+            </div>
+          </div>
+          <div>
+            <p className="kicker mb-2">Utanför Vreta</p>
+            {linked.length || buyers.length || pickups.length ? (
+              <div className="card space-y-4 p-4">
+                {linked.map(({ a }) => (
+                  <PlaceRow key={a.id} label={`${ACQUISITION_LABEL[a.type]} – varifrån?`} placeId={a.place_id ?? null} places={data.externalPlaces} canWrite={canWrite}
+                    onChange={async (pid) => { await repo.setAcquisitionPlace(a.id, pid); await refresh(); }} />
+                ))}
+                {pickups.map((k) => (
+                  <PlaceRow key={k.id} label={`Hämtning: ${k.title}`} placeId={k.place_id ?? null} places={data.externalPlaces} canWrite={canWrite}
+                    onChange={async (pid) => { await repo.setPickupPlace(k.id, pid); await refresh(); }} />
+                ))}
+                {buyers.map(({ d }) => (
+                  <PlaceRow key={d.id} label={`${DISPOSAL_LABEL[d.type]} – vart?`} placeId={d.place_id ?? null} places={data.externalPlaces} canWrite={canWrite}
+                    onChange={async (pid) => { await repo.setDisposalPlace(d.id, pid); await refresh(); }} />
+                ))}
+              </div>
+            ) : <EmptyState title="Ingen väg in eller ut ännu">När saken köps, hämtas eller lämnas kan du välja platsen här.</EmptyState>}
+          </div>
+        </div>
       )}
 
       {tab === "ekonomi" && (
@@ -368,6 +411,17 @@ function AfterApprove({ objectId, onDone }: { objectId: string; onDone: () => vo
 }
 
 /** Inflödet för objektet: anskaffningens steg och hämtningar (specifikationen 4.2–4.3). */
+function PlaceRow({ label, placeId, places, canWrite, onChange }: { label: string; placeId: string | null; places: ExternalPlace[]; canWrite: boolean; onChange: (id: string | null) => Promise<void> }) {
+  const place = places.find((p) => p.id === placeId);
+  return (
+    <div>
+      <p className="field-label">{label}</p>
+      {canWrite ? <ExternalPlaceSelect value={placeId} onChange={onChange} label="Plats" /> : <p>{place ? place.name : <span className="text-sot-3">Ingen plats vald</span>}</p>}
+      {place && <Link to={`/plats/${place.id}`} className="mt-1 inline-block text-sm font-semibold text-falu">Öppna {place.name}{place.locality ? `, ${place.locality}` : ""}</Link>}
+    </div>
+  );
+}
+
 function Inflow({ object, acquisition, pickups, canWrite }: { object: { id: string; status: ObjectStatus }; acquisition: Acquisition; pickups: Pickup[]; canWrite: boolean }) {
   const { repo, refresh, toast } = useApp();
   const step = nextAcquisitionStep(acquisition.status);

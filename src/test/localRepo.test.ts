@@ -302,4 +302,36 @@ describe("M4: utflöde, intressenter och bidrag", () => {
     await repo.setDemoRole("contributor");
     await expect(repo.setContentConsent({ content_id: item.id, person_id: erik.id, name_ok: true, image_ok: false, contribution_ok: true, how: "" })).rejects.toThrow(/ägaren/);
   });
+
+  it("gör projektnamn till projekt, återanvänder dem och länkar händelserna (M6)", async () => {
+    const orangeriet = (await repo.projects()).find((p) => p.name === "Orangeriet")!;
+    expect(orangeriet).toBeTruthy(); // från nytt liv och bidrag i demodata
+    const usage = (await repo.allUsageEvents()).filter((u) => u.project_id === orangeriet.id);
+    const contribs = (await repo.contributions()).filter((c) => c.project_id === orangeriet.id);
+    expect(usage.length).toBeGreaterThan(0);
+    expect(contribs.length).toBe(2);
+    expect((await repo.projects()).filter((p) => p.name.toLowerCase() === "orangeriet")).toHaveLength(1);
+    expect((await repo.eventsFor("project", orangeriet.id)).length).toBe(usage.length + contribs.length);
+    await expect(repo.createProject({ name: " orangeriet ", kind: "", status: "idea", description: "", zone_id: null, structure_id: null, started_on: null, finished_on: null })).rejects.toThrow(/redan/);
+    await repo.updateProject(orangeriet.id, { name: "Orangeriet i söder", status: "done" });
+    const done = (await repo.projects()).find((p) => p.id === orangeriet.id)!;
+    expect(done.finished_on).toBeTruthy();
+    expect((await repo.contributions()).filter((c) => c.project_id === orangeriet.id).every((c) => c.project === "Orangeriet i söder")).toBe(true);
+  });
+
+  it("har platser utanför Vreta med privat adress och kopplar inköp, hämtning och avslut (M6)", async () => {
+    const place = await repo.createExternalPlace({ name: "Kyrkans loppis", kind: "loppis", locality: "Sandviken", notes: "", address: "Kyrkogatan 2" });
+    const [acq] = await repo.allAcquisitions();
+    await repo.setAcquisitionPlace(acq.id, place.id);
+    expect((await repo.allAcquisitions()).find((a) => a.id === acq.id)!.place_id).toBe(place.id);
+    const [pickup] = await repo.pickups();
+    await repo.setPickupPlace(pickup.id, place.id);
+    const [disposal] = await repo.disposals();
+    await repo.setDisposalPlace(disposal.id, place.id);
+    expect((await repo.disposals()).find((d) => d.id === disposal.id)!.place_id).toBe(place.id);
+    expect((await repo.externalPlaces()).find((p) => p.id === place.id)!.address).toBe("Kyrkogatan 2");
+    await repo.setDemoRole("viewer");
+    expect((await repo.externalPlaces()).find((p) => p.id === place.id)!.address).toBeUndefined();
+    await expect(repo.setDisposalPlace(disposal.id, null)).rejects.toThrow();
+  });
 });

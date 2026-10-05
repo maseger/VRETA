@@ -2,6 +2,7 @@
 // audit, händelser vid statusbyten) upprätthålls i databasen; klienten anropar bara.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type {
+  ExternalPlace, Project,
   BatchAllocation, Decision, EventLink, MapLayer, Observation, UsageEvent,
   AskThread, ChannelPost, ContentConsent, Contribution, Disposal, Lead, LeadStatus, Listing, ListingStatus, PublishMode, ReciprocityEntry,
   AcquisitionStatus, ChecklistItem, ChecklistTemplate, Interaction, Organization, Pickup, PickupItem, PickupStatus,
@@ -11,11 +12,17 @@ import type {
 } from "../domain/types";
 import type { StoryRows } from "../../supabase/functions/_shared/storyContext";
 import type { PolygonGeom } from "../geo/geo";
-import type { DisposalInput, ListingInput, ApproveInput, MediaInput, NewMapLayer, NewPerson, NewPickup, PlaceRef, Receipt, Repo, UsageInput } from "./repo";
+import type { DisposalInput, ListingInput, ApproveInput, MediaInput, NewExternalPlace, NewMapLayer, NewPerson, NewProject, NewPickup, PlaceRef, Receipt, Repo, UsageInput } from "./repo";
 
 function check<T>(res: { data: T | null; error: { message: string } | null }): T {
   if (res.error) throw new Error(res.error.message);
   return res.data as T;
+}
+
+/** Projektnamn är unika per plats (projects_site_name). */
+function projectCheck<T>(res: { data: T | null; error: { message: string } | null }): T {
+  if (res.error?.message.includes("projects_site_name")) throw new Error("Det finns redan ett projekt med det namnet");
+  return check(res);
 }
 
 export class SupabaseRepo implements Repo {
@@ -244,6 +251,7 @@ export class SupabaseRepo implements Repo {
       "map_layers", "batch_allocations", "usage_events", "observations", "decisions",
       "listings", "channel_posts", "leads", "disposals", "disposal_private", "contributions", "reciprocity_entries", "content_consents",
       "ask_threads",
+      "projects", "external_places", "external_place_private",
     ];
     const out: Record<string, unknown[]> = {};
     for (const t of tables) out[t] = check(await this.client.from(t).select("*")) as unknown[];
@@ -335,7 +343,10 @@ export class SupabaseRepo implements Repo {
     return check(await this.client.from("checklist_items").select("*").eq("pickup_id", pickupId).order("position")) as ChecklistItem[];
   }
   async createPickup(input: NewPickup): Promise<string> {
-    return check(await this.client.rpc("create_pickup", { p_site: await this.siteId(), p_input: input })) as string;
+    const { place_id, ...rest } = input;
+    const id = check(await this.client.rpc("create_pickup", { p_site: await this.siteId(), p_input: rest })) as string;
+    if (place_id) await this.setPickupPlace(id, place_id);
+    return id;
   }
   async setPickupStatus(id: string, to: PickupStatus): Promise<void> {
     check(await this.client.from("pickups").update({ status: to }).eq("id", id));
@@ -488,6 +499,46 @@ export class SupabaseRepo implements Repo {
   async addContribution(input: Pick<Contribution, "person_id" | "kind" | "description" | "hours" | "object_id" | "zone_id" | "project" | "visibility"> & { occurred_at?: string }): Promise<Contribution> {
     return check(await this.client.from("contributions").insert({ ...input, site_id: await this.siteId() }).select().single()) as Contribution;
   }
+  // ------------------------------------------------------------ M6: projekt och platser utanför Vreta
+  async projects(): Promise<Project[]> {
+    return check(await this.client.from("projects").select("*").is("archived_at", null).order("name")) as Project[];
+  }
+  async createProject(input: NewProject): Promise<Project> {
+    return projectCheck(await this.client.from("projects").insert({ ...input, name: input.name.trim().replace(/\s+/g, " "), site_id: await this.siteId() }).select().single()) as Project;
+  }
+  async updateProject(id: string, patch: Partial<NewProject>): Promise<void> {
+    projectCheck(await this.client.from("projects").update(patch.name !== undefined ? { ...patch, name: patch.name.trim().replace(/\s+/g, " ") } : patch).eq("id", id));
+  }
+  async externalPlaces(): Promise<ExternalPlace[]> {
+    const places = check(await this.client.from("external_places").select("*").is("archived_at", null).order("name")) as ExternalPlace[];
+    const priv = check(await this.client.from("external_place_private").select("place_id, address")) as { place_id: string; address: string }[];
+    return places.map((p) => {
+      const pp = priv.find((x) => x.place_id === p.id);
+      return pp ? { ...p, address: pp.address } : p;
+    });
+  }
+  async createExternalPlace(input: NewExternalPlace): Promise<ExternalPlace> {
+    const site_id = await this.siteId();
+    const { address, ...rest } = input;
+    const p = check(await this.client.from("external_places").insert({ ...rest, site_id }).select().single()) as ExternalPlace;
+    check(await this.client.from("external_place_private").insert({ place_id: p.id, site_id, address }));
+    return p;
+  }
+  async updateExternalPlace(id: string, patch: Partial<NewExternalPlace>): Promise<void> {
+    const { address, ...rest } = patch;
+    if (Object.keys(rest).length) check(await this.client.from("external_places").update({ ...rest, updated_at: new Date().toISOString() }).eq("id", id));
+    if (address !== undefined) check(await this.client.from("external_place_private").upsert({ place_id: id, site_id: await this.siteId(), address }));
+  }
+  async setAcquisitionPlace(id: string, placeId: string | null): Promise<void> {
+    check(await this.client.from("acquisitions").update({ place_id: placeId }).eq("id", id));
+  }
+  async setPickupPlace(id: string, placeId: string | null): Promise<void> {
+    check(await this.client.from("pickups").update({ place_id: placeId }).eq("id", id));
+  }
+  async setDisposalPlace(id: string, placeId: string | null): Promise<void> {
+    check(await this.client.rpc("set_disposal_place", { p_disposal: id, p_place: placeId }));
+  }
+
   async markThanked(ids: string[]): Promise<void> {
     if (ids.length) check(await this.client.from("contributions").update({ thanked_at: new Date().toISOString() }).in("id", ids).is("thanked_at", null));
   }

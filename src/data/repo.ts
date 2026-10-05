@@ -1,4 +1,5 @@
 import type {
+  ExternalPlace, Project,
   Acquisition, AcquisitionType, AuditEntry, Capture, CaptureInput, ContentItem, EventRec, Media, ObjectStatus,
   Person, Profile, Proposal, ProposalContent, Role, Site, StoryNote, Structure, Task, VObject, Zone, FieldMeta,
   AcquisitionStatus, ChecklistItem, ChecklistTemplate, Interaction, Organization, Pickup, PickupItem, PickupStatus,
@@ -188,6 +189,17 @@ export interface Repo {
   /** Antal ändringar som väntar på att synkas (bara Supabase). */
   pendingSync?(): Promise<number>;
   flushOutbox?(): Promise<number>;
+  // ---- M6: projekt och platser utanför Vreta
+  projects(): Promise<Project[]>;
+  createProject(input: NewProject): Promise<Project>;
+  updateProject(id: string, patch: Partial<NewProject>): Promise<void>;
+  externalPlaces(): Promise<ExternalPlace[]>;
+  createExternalPlace(input: NewExternalPlace): Promise<ExternalPlace>;
+  updateExternalPlace(id: string, patch: Partial<NewExternalPlace>): Promise<void>;
+  setAcquisitionPlace(acquisitionId: string, placeId: string | null): Promise<void>;
+  setPickupPlace(pickupId: string, placeId: string | null): Promise<void>;
+  setDisposalPlace(disposalId: string, placeId: string | null): Promise<void>;
+
   storyRows(objectId: string, contentId?: string): Promise<StoryRows>;
   audit(): Promise<AuditEntry[]>;
   exportAll(): Promise<Record<string, unknown[]>>;
@@ -215,7 +227,12 @@ export interface NewPickup {
   object_ids: string[];
   template_id: string | null;
   safety_note: string;
+  /** Plats utanför Vreta (M6). */
+  place_id?: string | null;
 }
+
+export type NewProject = Pick<Project, "name" | "kind" | "status" | "description" | "zone_id" | "structure_id" | "started_on" | "finished_on">;
+export type NewExternalPlace = Pick<ExternalPlace, "name" | "kind" | "locality" | "notes"> & { address: string };
 
 export interface Receipt {
   object_id: string;

@@ -1,4 +1,4 @@
-import type { UsageType, AcquisitionStatus, AcquisitionType, InteractionChannel, PickupStatus, ReceiptStatus, Channel, ContentGoal, ObjectStatus, Visibility, ListingType, ListingStatus, LeadStatus, DisposalType, ContributionKind } from "./types";
+import type { UsageType, AcquisitionStatus, AcquisitionType, InteractionChannel, PickupStatus, ReceiptStatus, Channel, ContentGoal, ObjectStatus, Visibility, ListingType, ListingStatus, LeadStatus, DisposalType, ContributionKind, ProjectStatus } from "./types";
 
 export const STATUS_LABEL: Record<ObjectStatus, string> = {
   discovered: "Upptäckt",
@@ -242,3 +242,24 @@ export const CONTRIBUTION_LABEL: Record<ContributionKind, string> = {
 };
 
 export const PAYMENT_METHODS = ["Swish", "Kontant", "Byte", "Annat"];
+
+// ---------------------------------------------------------------- M6: projekt och platser utanför Vreta
+export const PROJECT_STATUS_LABEL: Record<ProjectStatus, string> = {
+  idea: "Idé",
+  planned: "Planerat",
+  active: "Pågår",
+  paused: "Vilar",
+  done: "Klart",
+};
+export const PROJECT_KINDS = ["Bygge", "Plantering", "Renovering", "Anläggning", "Odling", "Annat"];
+
+export const PLACE_KINDS: { key: string; label: string }[] = [
+  { key: "hamtstalle", label: "Hämtställe" },
+  { key: "loppis", label: "Loppis" },
+  { key: "atervinning", label: "Återvinningscentral" },
+  { key: "butik", label: "Butik eller handlare" },
+  { key: "gard", label: "Gård eller trädgård" },
+  { key: "leverantor", label: "Leverantör" },
+  { key: "annat", label: "Annat" },
+];
+export const placeKindLabel = (k: string) => PLACE_KINDS.find((x) => x.key === k)?.label ?? k;

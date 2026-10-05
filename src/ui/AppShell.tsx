@@ -10,7 +10,7 @@ const NAV = [
   { to: "/", label: "Idag", icon: Sun, under: [] as string[] },
   { to: "/saker", label: "Saker", icon: Boxes, under: ["/objekt", "/hamtning", "/annons", "/granska"] },
   { to: "/manniskor", label: "Människor", icon: Users, under: ["/person"] },
-  { to: "/platser", label: "Platser", icon: MapPinned, under: ["/lager", "/journal", "/zon"] },
+  { to: "/platser", label: "Platser", icon: MapPinned, under: ["/lager", "/journal", "/zon", "/projekt", "/plats"] },
   { to: "/fraga", label: "Fråga", icon: MessageCircle, under: [] as string[] },
 ];
 

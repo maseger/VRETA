@@ -1,58 +1,38 @@
-import type { Contribution, UsageEvent } from "./types";
+import type { Contribution, Project, UsageEvent } from "./types";
 
-// Projekt i R1 är ett namn på nytt liv och bidrag (spec 3.2: "objekt kan taggas med ett projektnamn som
-// senare blir en riktig Project-entitet"). Här samlas de per namn så att projektet blir en plats i appen.
+// Projekt och platser utanför Vreta (M6). Projekt är egna poster; nytt liv och bidrag pekar på dem
+// med project_id. Platser utanför Vreta är egna poster, och orterna härleds dessutom från människorna.
 
-export interface ProjectGroup {
-  key: string;
-  name: string;
+export interface ProjectSummary {
+  project: Project;
   usage: UsageEvent[];
   contributions: Contribution[];
-  zone_ids: string[];
-  structure_ids: string[];
   object_ids: string[];
   person_ids: string[];
-  first_at: string;
+  /** Senaste aktivitet: senaste nytt liv eller bidrag, annars när projektet ändrades. */
   last_at: string;
 }
 
-export function projectKey(name: string): string {
-  return name.trim().replace(/\s+/g, " ").toLocaleLowerCase("sv");
+export function summarizeProjects(projects: Project[], usage: UsageEvent[], contributions: Contribution[]): ProjectSummary[] {
+  return projects.map((project) => {
+    const u = usage.filter((x) => x.project_id === project.id);
+    const c = contributions.filter((x) => x.project_id === project.id);
+    const dates = [...u.map((x) => x.occurred_at), ...c.map((x) => x.occurred_at)];
+    return {
+      project,
+      usage: u,
+      contributions: c,
+      object_ids: [...new Set(u.map((x) => x.object_id))],
+      person_ids: [...new Set(c.map((x) => x.person_id))],
+      last_at: dates.sort().at(-1) ?? project.updated_at,
+    };
+  });
 }
 
-export function groupProjects(usage: UsageEvent[], contributions: Contribution[]): ProjectGroup[] {
-  const groups = new Map<string, ProjectGroup>();
-  const group = (name: string, at: string) => {
-    const key = projectKey(name);
-    let g = groups.get(key);
-    if (!g) {
-      g = { key, name: name.trim().replace(/\s+/g, " "), usage: [], contributions: [], zone_ids: [], structure_ids: [], object_ids: [], person_ids: [], first_at: at, last_at: at };
-      groups.set(key, g);
-    }
-    if (at < g.first_at) g.first_at = at;
-    if (at > g.last_at) g.last_at = at;
-    return g;
-  };
-  const add = (list: string[], id: string | null) => {
-    if (id && !list.includes(id)) list.push(id);
-  };
-  for (const u of usage) {
-    if (!projectKey(u.project)) continue;
-    const g = group(u.project, u.occurred_at);
-    g.usage.push(u);
-    add(g.zone_ids, u.zone_id);
-    add(g.structure_ids, u.structure_id);
-    add(g.object_ids, u.object_id);
-  }
-  for (const c of contributions) {
-    if (!projectKey(c.project)) continue;
-    const g = group(c.project, c.occurred_at);
-    g.contributions.push(c);
-    add(g.zone_ids, c.zone_id);
-    add(g.object_ids, c.object_id);
-    add(g.person_ids, c.person_id);
-  }
-  return [...groups.values()].sort((a, b) => b.last_at.localeCompare(a.last_at));
+/** Pågående först, sedan planerade och idéer, vilande och sist klara – senast aktiva först inom varje. */
+const ORDER: Project["status"][] = ["active", "planned", "idea", "paused", "done"];
+export function sortProjects(list: ProjectSummary[]): ProjectSummary[] {
+  return [...list].sort((a, b) => ORDER.indexOf(a.project.status) - ORDER.indexOf(b.project.status) || b.last_at.localeCompare(a.last_at));
 }
 
 /** Ort som nyckel för platser utanför Vreta: kommunnivå, aldrig adress (INV-12). */

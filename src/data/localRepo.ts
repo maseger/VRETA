@@ -3,6 +3,7 @@
 import { openDB, type IDBPDatabase } from "idb";
 import { ACQUISITION_TRANSITIONS, LEAD_TRANSITIONS, LISTING_TRANSITIONS, PICKUP_TRANSITIONS, assertTransition } from "../domain/stateMachine";
 import type {
+  ExternalPlace, Project,
   BatchAllocation, Decision, MapLayer, Observation, UsageEvent,
   ChannelPost, ContentConsent, Contribution, Disposal, DisposalType, Lead, LeadStatus, Listing, ListingStatus, PublishMode, ReciprocityEntry, AskThread,
   AcquisitionStatus, ChecklistItem, ChecklistTemplate, Interaction, Organization, Pickup, PickupItem, PickupStatus,
@@ -12,7 +13,7 @@ import type {
 } from "../domain/types";
 import type { StoryRows } from "../../supabase/functions/_shared/storyContext";
 import type { PolygonGeom } from "../geo/geo";
-import { PermissionError, type DisposalInput, type ListingInput, type NewMapLayer, type UsageInput, type ApproveInput, type MediaInput, type NewPerson, type NewPickup, type PlaceRef, type Receipt, type Repo } from "./repo";
+import { PermissionError, type DisposalInput, type ListingInput, type NewMapLayer, type UsageInput, type ApproveInput, type MediaInput, type NewExternalPlace, type NewPerson, type NewProject, type NewPickup, type PlaceRef, type Receipt, type Repo } from "./repo";
 
 const STORES = [
   "sites", "zones", "structures", "objects", "persons", "person_private", "acquisitions", "acquisition_private",
@@ -27,6 +28,8 @@ const STORES = [
   "listings", "channel_posts", "leads", "disposals", "disposal_private", "contributions", "reciprocity_entries", "content_consents",
   // M5
   "ask_threads",
+  // M6
+  "projects", "external_places", "external_place_private",
 ] as const;
 
 const KEY_PATHS: Partial<Record<string, string | null>> = {
@@ -35,6 +38,7 @@ const KEY_PATHS: Partial<Record<string, string | null>> = {
   organization_private: "organization_id",
   pickup_private: "pickup_id",
   disposal_private: "disposal_id",
+  external_place_private: "place_id",
   blobs: null,
   meta: null,
 };
@@ -51,6 +55,7 @@ interface PersonPrivate { person_id: string; site_id: string; contact: string; n
 interface OrgPrivate { organization_id: string; site_id: string; contact: string; notes: string; created_by: string }
 interface PickupPrivate { pickup_id: string; site_id: string; address: string; created_by: string }
 interface DisposalPrivate { disposal_id: string; site_id: string; price: number | null; payment_method: string; created_by: string }
+interface PlacePrivate { place_id: string; site_id: string; address: string; created_by: string }
 interface AcqPrivate { acquisition_id: string; site_id: string; price: number | null; payment_method: string; created_by: string }
 
 const now = () => new Date().toISOString();
@@ -61,7 +66,7 @@ export class LocalRepo implements Repo {
   private dbp: Promise<IDBPDatabase>;
 
   constructor(dbName = "vreta-demo") {
-    this.dbp = openDB(dbName, 5, {
+    this.dbp = openDB(dbName, 6, {
       upgrade(db) {
         for (const s of STORES) {
           if (db.objectStoreNames.contains(s)) continue;
@@ -610,7 +615,7 @@ export class LocalRepo implements Repo {
     const p: Pickup = {
       ...b, acquisition_id: input.acquisition_id, person_id: input.person_id, title: input.title, scheduled_date: input.scheduled_date,
       window_from: input.window_from, window_to: input.window_to, resources: input.resources, status: "planned",
-      safety_note: input.safety_note, completed_at: null,
+      safety_note: input.safety_note, completed_at: null, place_id: input.place_id ?? null,
     };
     await this.put("pickups", p);
     await this.put("pickup_private", { pickup_id: p.id, site_id: p.site_id, address: input.address, created_by: me.id } satisfies PickupPrivate);
@@ -736,11 +741,13 @@ export class LocalRepo implements Repo {
     const links: { type: string; id: string; role?: string }[] = [{ type: "object", id: objectId }];
     if (input.zone_id) links.push({ type: "zone", id: input.zone_id, role: "place" });
     if (input.structure_id) links.push({ type: "structure", id: input.structure_id, role: "place" });
+    const project = await this.resolveProject(me, input.project, input.zone_id, input.occurred_at ?? now());
+    if (project) links.push({ type: "project", id: project.id, role: "project" });
     const ev = await this.event(me, `usage.${input.type}`, `${verb[input.type]}: ${qty}${o.title.toLowerCase()}${place ? ` – ${place}` : ""}`, links, true,
       { occurred_at: input.occurred_at ?? now(), notes: input.note });
     const u: UsageEvent = {
       id: uuid(), site_id: o.site_id, object_id: objectId, allocation_id: allocationId, type: input.type, occurred_at: input.occurred_at ?? now(),
-      zone_id: input.zone_id, structure_id: input.structure_id, quantity: input.quantity, project: input.project, note: input.note, geom: input.geom,
+      zone_id: input.zone_id, structure_id: input.structure_id, quantity: input.quantity, project: project?.name ?? "", project_id: project?.id ?? null, note: input.note, geom: input.geom,
       event_id: ev.id, created_at: now(), created_by: me.id,
     };
     await this.put("usage_events", u);
@@ -763,6 +770,7 @@ export class LocalRepo implements Repo {
     return (await this.allUsageEvents()).filter((u) => u.object_id === objectId);
   }
   async allUsageEvents(): Promise<UsageEvent[]> {
+    await this.backfillProjects();
     return (await this.all<UsageEvent>("usage_events")).sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
   }
 
@@ -1041,6 +1049,7 @@ export class LocalRepo implements Repo {
 
   // ------------------------------------------------------------ M4: bidrag, ömsesidighet och samtycke
   async contributions(personId?: string): Promise<Contribution[]> {
+    await this.backfillProjects();
     const me = await this.me();
     return (await this.all<Contribution>("contributions"))
       .filter((c) => (!personId || c.person_id === personId) && (c.visibility !== "private" || this.seesPrivate(me, c.created_by)))
@@ -1056,11 +1065,115 @@ export class LocalRepo implements Repo {
     if (input.object_id) links.push({ type: "object", id: input.object_id });
     if (input.zone_id) links.push({ type: "zone", id: input.zone_id, role: "place" });
     const occurred = input.occurred_at ?? now();
+    const project = await this.resolveProject(me, input.project, input.zone_id, occurred);
+    if (project) links.push({ type: "project", id: project.id, role: "project" });
     const ev = await this.event(me, `contribution.${input.kind}`, `Bidrag från ${p.name}: ${input.description}`, links, true, { occurred_at: occurred, visibility: input.visibility });
-    const c: Contribution = { id: uuid(), site_id: p.site_id, ...input, occurred_at: occurred, thanked_at: null, event_id: ev.id, created_at: now(), created_by: me.id };
+    const c: Contribution = { id: uuid(), site_id: p.site_id, ...input, project: project?.name ?? "", project_id: project?.id ?? null, occurred_at: occurred, thanked_at: null, event_id: ev.id, created_at: now(), created_by: me.id };
     await this.put("contributions", c);
     return c;
   }
+  // ------------------------------------------------------------ M6: projekt och platser utanför Vreta
+  async projects(): Promise<Project[]> {
+    await this.backfillProjects();
+    return (await this.all<Project>("projects")).filter((p) => !p.archived_at).sort((a, b) => a.name.localeCompare(b.name, "sv"));
+  }
+  /** Demodata från före M6 har projekt bara som namn – som migrationen gör de dem till projekt. */
+  private backfill?: Promise<void>;
+  private backfillProjects(): Promise<void> {
+    return (this.backfill ??= this.runBackfill());
+  }
+  private async runBackfill() {
+    const me = await this.session();
+    if (!me) return;
+    for (const u of (await this.all<UsageEvent>("usage_events")).filter((x) => x.project?.trim() && !x.project_id)) {
+      const p = await this.resolveProject(me, u.project, u.zone_id, u.occurred_at);
+      if (p) await this.put("usage_events", { ...u, project: p.name, project_id: p.id });
+    }
+    for (const c of (await this.all<Contribution>("contributions")).filter((x) => x.project?.trim() && !x.project_id)) {
+      const p = await this.resolveProject(me, c.project, c.zone_id, c.occurred_at);
+      if (p) await this.put("contributions", { ...c, project: p.name, project_id: p.id });
+    }
+  }
+  /** Som triggern resolve_project: ett namn slås upp utan hänsyn till skiftläge, annars skapas projektet. */
+  private async resolveProject(me: Profile, name: string, zoneId: string | null, at: string): Promise<Project | null> {
+    const clean = name.trim().replace(/\s+/g, " ");
+    if (!clean) return null;
+    const found = (await this.all<Project>("projects")).find((p) => p.name.toLocaleLowerCase("sv") === clean.toLocaleLowerCase("sv"));
+    if (found) return found;
+    const p: Project = { ...(await this.base(me)), name: clean, kind: "", status: "active", description: "", zone_id: zoneId, structure_id: null, started_on: at.slice(0, 10), finished_on: null };
+    await this.put("projects", p);
+    return p;
+  }
+  private async assertUniqueProject(name: string, exceptId?: string) {
+    const key = name.trim().replace(/\s+/g, " ").toLocaleLowerCase("sv");
+    if (!key) throw new Error("Projektet behöver ett namn");
+    if ((await this.all<Project>("projects")).some((p) => p.id !== exceptId && p.name.toLocaleLowerCase("sv") === key)) throw new Error("Det finns redan ett projekt med det namnet");
+  }
+  async createProject(input: NewProject): Promise<Project> {
+    const me = await this.requireWriter();
+    await this.assertUniqueProject(input.name);
+    const p: Project = { ...(await this.base(me)), ...input, name: input.name.trim().replace(/\s+/g, " ") };
+    await this.put("projects", p);
+    return p;
+  }
+  async updateProject(id: string, patch: Partial<NewProject>): Promise<void> {
+    const me = await this.requireWriter();
+    const p = await this.get<Project>("projects", id);
+    if (!p) throw new Error("Projektet finns inte");
+    if (patch.name !== undefined) await this.assertUniqueProject(patch.name, id);
+    const next: Project = { ...p, ...patch, updated_at: now() };
+    if (patch.status && patch.status !== p.status) {
+      if (patch.status === "done" && !next.finished_on) next.finished_on = now().slice(0, 10);
+      if (patch.status === "active" && !next.started_on) next.started_on = now().slice(0, 10);
+      await this.audit_(me, "project_status", "project", id, { status: p.status }, { status: patch.status });
+    }
+    await this.put("projects", next);
+    if (patch.name !== undefined && next.name !== p.name) {
+      for (const u of (await this.all<UsageEvent>("usage_events")).filter((x) => x.project_id === id)) await this.put("usage_events", { ...u, project: next.name });
+      for (const c of (await this.all<Contribution>("contributions")).filter((x) => x.project_id === id)) await this.put("contributions", { ...c, project: next.name });
+    }
+  }
+  async externalPlaces(): Promise<ExternalPlace[]> {
+    const me = await this.me();
+    const priv = await this.all<PlacePrivate>("external_place_private");
+    return (await this.all<ExternalPlace>("external_places")).filter((p) => !p.archived_at)
+      .map((p) => (me.role === "viewer" ? p : { ...p, address: priv.find((x) => x.place_id === p.id)?.address ?? "" }))
+      .sort((a, b) => a.name.localeCompare(b.name, "sv"));
+  }
+  async createExternalPlace(input: NewExternalPlace): Promise<ExternalPlace> {
+    const me = await this.requireWriter();
+    const { address, ...rest } = input;
+    if (!rest.name.trim()) throw new Error("Platsen behöver ett namn");
+    const p: ExternalPlace = { ...(await this.base(me)), ...rest, name: rest.name.trim() };
+    await this.put("external_places", p);
+    await this.put("external_place_private", { place_id: p.id, site_id: p.site_id, address, created_by: me.id } satisfies PlacePrivate);
+    return p;
+  }
+  async updateExternalPlace(id: string, patch: Partial<NewExternalPlace>): Promise<void> {
+    const me = await this.requireWriter();
+    const p = await this.get<ExternalPlace>("external_places", id);
+    if (!p) throw new Error("Platsen finns inte");
+    const { address, ...rest } = patch;
+    await this.put("external_places", { ...p, ...rest, updated_at: now() });
+    if (address !== undefined) await this.put("external_place_private", { place_id: id, site_id: p.site_id, address, created_by: me.id } satisfies PlacePrivate);
+  }
+  private async setPlace(store: "acquisitions" | "pickups" | "disposals", id: string, placeId: string | null) {
+    await this.requireWriter();
+    const row = await this.get<{ place_id?: string | null }>(store, id);
+    if (!row) throw new Error("Posten finns inte");
+    if (placeId && !(await this.get<ExternalPlace>("external_places", placeId))) throw new Error("Platsen finns inte");
+    await this.put(store, { ...row, place_id: placeId });
+  }
+  async setAcquisitionPlace(id: string, placeId: string | null): Promise<void> {
+    await this.setPlace("acquisitions", id, placeId);
+  }
+  async setPickupPlace(id: string, placeId: string | null): Promise<void> {
+    await this.setPlace("pickups", id, placeId);
+  }
+  async setDisposalPlace(id: string, placeId: string | null): Promise<void> {
+    await this.setPlace("disposals", id, placeId);
+  }
+
   async markThanked(ids: string[]): Promise<void> {
     await this.requireWriter();
     for (const id of ids) {

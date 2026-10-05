@@ -190,4 +190,11 @@ export async function seedDemo(repo: LocalRepo, withImages = true): Promise<void
   await repo.addContribution({ person_id: erik.id, kind: "tid", description: "Hjälpte till att mura orangeriets södra mur", hours: 6, object_id: tegel?.id ?? null, zone_id: orangeriZon.id, project: "Orangeriet", visibility: "shareable" });
   await repo.addContribution({ person_id: erik.id, kind: "kunskap", description: "Lärde oss blanda kalkbruk", hours: null, object_id: null, zone_id: null, project: "Orangeriet", visibility: "shareable" });
   if (anders) await repo.addReciprocity(anders.id, "Fick rhododendronsticklingar från trädgården");
+
+  // M6: projekt och platser utanför Vreta
+  await repo.createProject({ name: "Jordkällaren", kind: "Bygge", status: "planned", description: "Mura upp den gamla jordkällaren vid ladan igen, med kalkbruk och sten från fastigheten.", zone_id: null, structure_id: null, started_on: null, finished_on: null });
+  const atervinning = await repo.createExternalPlace({ name: "Återbruket", kind: "atervinning", locality: "Gävle", notes: "Återbruksdelen vid återvinningscentralen. Bra för tegel och fönster.", address: "" });
+  const radAcq = (await repo.acquisitionsFor(radId))[0];
+  if (radAcq) await repo.setAcquisitionPlace(radAcq.id, atervinning.id);
+  await repo.createExternalPlace({ name: "Kyrkans loppis", kind: "loppis", locality: "Sandviken", notes: "Öppet lördagar 10–14.", address: "" });
 }

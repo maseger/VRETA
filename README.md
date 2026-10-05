@@ -128,6 +128,19 @@ Navigeringen följer vad saker är: **Saker** hanteras, **Människor** hanterar 
 
 Gamla adresser (`/samla`, `/vreta`) skickas vidare till de nya.
 
+### M6: projekt och platser utanför Vreta
+
+| Del | Var |
+| --- | --- |
+| Tabellerna `projects`, `external_places` (+ privat adress), `project_id` på nytt liv och bidrag, `place_id` på inköp, hämtningar och avslut, RLS | `supabase/migrations/20261010000000_m6_projekt_platser.sql` |
+| Projektnamn i fritext blir projekt (`resolve_project`); händelsen länkas till projektet; befintliga namn migreras | migrationen |
+| Projektlista och projektsida med status, saker, människor och projektjournal | `src/pages/ProjectsPage.tsx`, `src/pages/ProjectPage.tsx` |
+| Platser utanför Vreta: lista, ny plats, platssida med vad som kom in, lämnades och hämtades | `src/pages/platser/ExternalPlaces.tsx`, `src/pages/ExternalPlacePage.tsx` |
+| Fliken Platser på objektsidan; plats på ny hämtning; projektförslag i formulären | `src/pages/ObjectPage.tsx`, `src/ui/ExternalPlaceSelect.tsx`, `src/ui/ProjectInput.tsx` |
+| Databastester | `supabase/tests/m6_rls_test.sql` |
+
+Med Supabase: kör `supabase db push` för att lägga in migrationen.
+
 ## Vad M5 innehåller (kunskap och härdning)
 
 | Del | Var |
