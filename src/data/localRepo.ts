@@ -3,7 +3,7 @@
 import { openDB, type IDBPDatabase } from "idb";
 import { ACQUISITION_TRANSITIONS, LEAD_TRANSITIONS, LISTING_TRANSITIONS, PICKUP_TRANSITIONS, assertTransition } from "../domain/stateMachine";
 import type {
-  ExternalPlace, Project,
+  ExternalPlace, Need, NeedFulfillment, Project,
   BatchAllocation, Decision, MapLayer, Observation, UsageEvent,
   ChannelPost, ContentConsent, Contribution, Disposal, DisposalType, Lead, LeadStatus, Listing, ListingStatus, PublishMode, ReciprocityEntry, AskThread,
   AcquisitionStatus, ChecklistItem, ChecklistTemplate, Interaction, Organization, Pickup, PickupItem, PickupStatus,
@@ -13,7 +13,7 @@ import type {
 } from "../domain/types";
 import type { StoryRows } from "../../supabase/functions/_shared/storyContext";
 import type { PolygonGeom } from "../geo/geo";
-import { PermissionError, type DisposalInput, type ListingInput, type NewMapLayer, type UsageInput, type ApproveInput, type MediaInput, type NewExternalPlace, type NewPerson, type NewProject, type NewPickup, type PlaceRef, type Receipt, type Repo } from "./repo";
+import { PermissionError, type DisposalInput, type ListingInput, type NewMapLayer, type UsageInput, type ApproveInput, type MediaInput, type NewExternalPlace, type NewFulfillment, type NewNeed, type NewPerson, type NewProject, type NewPickup, type PlaceRef, type Receipt, type Repo } from "./repo";
 
 const STORES = [
   "sites", "zones", "structures", "objects", "persons", "person_private", "acquisitions", "acquisition_private",
@@ -30,6 +30,8 @@ const STORES = [
   "ask_threads",
   // M6
   "projects", "external_places", "external_place_private",
+  // M7
+  "needs", "need_fulfillments",
 ] as const;
 
 const KEY_PATHS: Partial<Record<string, string | null>> = {
@@ -66,7 +68,7 @@ export class LocalRepo implements Repo {
   private dbp: Promise<IDBPDatabase>;
 
   constructor(dbName = "vreta-demo") {
-    this.dbp = openDB(dbName, 6, {
+    this.dbp = openDB(dbName, 7, {
       upgrade(db) {
         for (const s of STORES) {
           if (db.objectStoreNames.contains(s)) continue;
@@ -1172,6 +1174,57 @@ export class LocalRepo implements Repo {
   }
   async setDisposalPlace(id: string, placeId: string | null): Promise<void> {
     await this.setPlace("disposals", id, placeId);
+  }
+
+  // ------------------------------------------------------------ M7: behov och projektytor
+  async needs(projectId?: string): Promise<Need[]> {
+    return (await this.all<Need>("needs")).filter((n) => !n.archived_at && (!projectId || n.project_id === projectId)).sort((a, b) => a.created_at.localeCompare(b.created_at));
+  }
+  async createNeed(input: NewNeed): Promise<Need> {
+    const me = await this.requireWriter();
+    if (!input.title.trim()) throw new Error("Behovet behöver en rubrik");
+    if (input.quantity != null && !(input.quantity > 0)) throw new Error("Antalet måste vara större än noll");
+    if (!(await this.get<Project>("projects", input.project_id))) throw new Error("Projektet finns inte");
+    const n: Need = { ...(await this.base(me)), ...input, title: input.title.trim(), unit: input.unit.trim() || "st", status: "open", listing_id: null };
+    await this.put("needs", n);
+    return n;
+  }
+  async updateNeed(id: string, patch: Partial<Pick<Need, "title" | "quantity" | "unit" | "notes" | "status" | "listing_id">>): Promise<void> {
+    await this.requireWriter();
+    const n = await this.get<Need>("needs", id);
+    if (!n) throw new Error("Behovet finns inte");
+    await this.put("needs", { ...n, ...patch, updated_at: now() });
+  }
+  async needFulfillments(needIds?: string[]): Promise<NeedFulfillment[]> {
+    return (await this.all<NeedFulfillment>("need_fulfillments")).filter((f) => !needIds || needIds.includes(f.need_id)).sort((a, b) => a.occurred_at.localeCompare(b.occurred_at));
+  }
+  /** Som triggern need_fulfillments_journal: en händelse i projektjournalen med hur långt behovet kommit. */
+  async fulfillNeed(input: NewFulfillment): Promise<NeedFulfillment> {
+    const me = await this.requireWriter();
+    if (!(input.quantity > 0)) throw new Error("Antalet måste vara större än noll");
+    const n = await this.get<Need>("needs", input.need_id);
+    if (!n) throw new Error("Behovet finns inte");
+    const total = (await this.needFulfillments([n.id])).reduce((s, f) => s + f.quantity, 0) + input.quantity;
+    const obj = input.object_id ? await this.get<VObject>("objects", input.object_id) : undefined;
+    const contrib = input.contribution_id ? await this.get<Contribution>("contributions", input.contribution_id) : undefined;
+    const from = obj?.title ?? (contrib ? (await this.get<Person>("persons", contrib.person_id))?.name : "") ?? "";
+    const covered = n.quantity != null && total >= n.quantity;
+    const links: { type: string; id: string; role?: string }[] = [{ type: "project", id: n.project_id, role: "project" }, { type: "site", id: n.site_id, role: "place" }];
+    if (obj) links.push({ type: "object", id: obj.id });
+    const amount = n.quantity == null ? `${total} ${n.unit}` : `${total} av ${n.quantity} ${n.unit}`;
+    const ev = await this.event(me, covered ? "need.covered" : "need.fulfilled", `${n.title}: ${amount}${from ? ` – ${from}` : ""}`, links, covered, { notes: input.note });
+    const f: NeedFulfillment = { id: uuid(), site_id: n.site_id, ...input, occurred_at: now(), event_id: ev.id, created_at: now(), created_by: me.id };
+    await this.put("need_fulfillments", f);
+    return f;
+  }
+  async removeFulfillment(id: string): Promise<void> {
+    await this.requireWriter();
+    await (await this.dbp).delete("need_fulfillments", id);
+  }
+  async setProjectGeom(id: string, geom: PolygonGeom | null): Promise<void> {
+    await this.requireWriter();
+    const p = await this.get<Project>("projects", id);
+    if (p) await this.put("projects", { ...p, geom, updated_at: now() });
   }
 
   async markThanked(ids: string[]): Promise<void> {

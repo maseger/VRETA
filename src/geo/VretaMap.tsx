@@ -18,7 +18,7 @@ export interface MapImageLayer {
 
 export interface MapPolygon {
   id: string;
-  kind: "zone" | "structure";
+  kind: "zone" | "structure" | "project";
   name: string;
   geom: PolygonGeom;
   highlight?: boolean;
@@ -51,6 +51,7 @@ maplibregl.setWorkerUrl(workerUrl);
 const PALETTE = {
   zone: "#4F5E3A",
   structure: "#8C2F1D",
+  project: "#3F5F78",
   draft: "#B9852B",
 };
 

@@ -1,6 +1,6 @@
 import { Archive, ChevronRight, Crosshair, Eye, Hammer, Layers, Pencil, Plus, Undo2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useApp, useData } from "../../app/AppContext";
 import type { MapLayer } from "../../domain/types";
 import { areaM2, centroid, closeRing, formatArea, zoneAt, type LngLat, type PolygonGeom } from "../../geo/geo";
@@ -48,7 +48,7 @@ export function OnSitePlaces() {
   const overlays = data?.layers.filter((l) => l.kind === "overlay") ?? [];
   const [baseId, setBaseId] = useState<string | null>(null);
   const [shownOverlays, setShownOverlays] = useState<Record<string, number>>({});
-  const [show, setShow] = useState({ zoner: true, byggnader: true, liv: true, obs: true });
+  const [show, setShow] = useState({ zoner: true, byggnader: true, projekt: true, liv: true, obs: true });
   const [panel, setPanel] = useState(false);
   const [mode, setMode] = useState<Mode>({ kind: "view" });
   const [draft, setDraft] = useState<LngLat[]>([]);
@@ -72,6 +72,7 @@ export function OnSitePlaces() {
     const out: MapPolygon[] = [];
     if (show.zoner) for (const z of data.zones) if (z.geom) out.push({ id: z.id, kind: "zone", name: z.name, geom: z.geom, highlight: selected?.id === z.id });
     if (show.byggnader) for (const s of data.structures) if (s.geom) out.push({ id: s.id, kind: "structure", name: s.name, geom: s.geom, highlight: selected?.id === s.id });
+    if (show.projekt) for (const p of data.projects) if (p.geom && p.status !== "done") out.push({ id: p.id, kind: "project", name: p.name, geom: p.geom, highlight: selected?.id === p.id });
     if (mode.kind === "edit") return out.map((p) => (p.id === mode.target.id ? { ...p, geom: closeRing(mode.vertices), highlight: true } : p));
     return out;
   }, [data, show, selected, mode]);
@@ -118,6 +119,7 @@ export function OnSitePlaces() {
     const [kind, id] = target.split(":");
     if (kind === "zone") await repo.setZoneGeom(id, geom);
     else if (kind === "structure") await repo.setStructureGeom(id, geom);
+    else if (kind === "project") await repo.setProjectGeom(id, geom);
     else if (kind === "new-zone") await repo.setZoneGeom((await repo.createZone({ name: newName.trim(), kind: "", notes: "" })).id, geom);
     else if (kind === "new-structure") await repo.setStructureGeom((await repo.createStructure({ name: newName.trim(), kind: "", notes: "", zone_id: null })).id, geom);
     setDraft([]);
@@ -132,6 +134,7 @@ export function OnSitePlaces() {
     if (mode.kind !== "edit") return;
     const geom = closeRing(mode.vertices);
     if (mode.target.kind === "zone") await repo.setZoneGeom(mode.target.id, geom);
+    else if (mode.target.kind === "project") await repo.setProjectGeom(mode.target.id, geom);
     else await repo.setStructureGeom(mode.target.id, geom);
     setMode({ kind: "view" });
     setSelected(null);
@@ -140,7 +143,28 @@ export function OnSitePlaces() {
   }
 
   const count = (key: "zone_id" | "structure_id", id: string) => data?.objects.filter((o) => o[key] === id && o.status === "in_use").length ?? 0;
-  const unmapped = [...(data?.zones.filter((z) => !z.geom).map((z) => ({ v: `zone:${z.id}`, l: `Zon: ${z.name}` })) ?? []), ...(data?.structures.filter((s) => !s.geom).map((s) => ({ v: `structure:${s.id}`, l: `Byggnad: ${s.name}` })) ?? [])];
+  const inProject = (id: string) => new Set(data?.usage.filter((u) => u.project_id === id).map((u) => u.object_id)).size;
+  const unmapped = [...(data?.zones.filter((z) => !z.geom).map((z) => ({ v: `zone:${z.id}`, l: `Zon: ${z.name}` })) ?? []), ...(data?.structures.filter((s) => !s.geom).map((s) => ({ v: `structure:${s.id}`, l: `Byggnad: ${s.name}` })) ?? []), ...(data?.projects.filter((p) => !p.geom && p.status !== "done").map((p) => ({ v: `project:${p.id}`, l: `Projekt: ${p.name}` })) ?? [])];
+
+  // Från projektsidan: ?rita=project:<id> börjar rita ytan, ?visa=project:<id> markerar den
+  const [params, setParams] = useSearchParams();
+  useEffect(() => {
+    if (!data) return;
+    const rita = params.get("rita");
+    const visa = params.get("visa");
+    if (!rita && !visa) return;
+    if (rita && canWrite) {
+      setMode({ kind: "draw" });
+      setDraft([]);
+      setTarget(rita);
+    }
+    if (visa) {
+      const [, id] = visa.split(":");
+      const p = data.projects.find((x) => x.id === id);
+      if (p?.geom) setSelected({ id: p.id, kind: "project", name: p.name, geom: p.geom });
+    }
+    setParams({}, { replace: true });
+  }, [data, params, setParams, canWrite]);
 
   return (
     <div>
@@ -149,12 +173,12 @@ export function OnSitePlaces() {
         {[
           { to: "/lager", icon: Archive, title: "Förvaring", text: "Lagerplatser, QR-etiketter och vad som ligger var", n: `${data?.objects.filter((o) => o.status === "stored").length ?? 0} saker i lager` },
           { to: "/platser/projekt", icon: Hammer, title: "Projekt", text: "Byggen, planteringar och annat som tar saker i bruk", n: `${data?.projects.filter((p) => p.status === "active").length ?? 0} pågår` },
-          { to: "/journal?filter=obs", icon: Eye, title: "Observationer", text: "Djur, växter, väder och annat som syns på platsen", n: `${data?.observations.length ?? 0} observationer` },
+          { to: "/journal?filter=obs", icon: Eye, title: "Obser\u00ADvationer", text: "Djur, växter, väder och annat som syns på platsen", n: `${data?.observations.length ?? 0} observationer` },
         ].map(({ to, icon: Icon, title, text, n }) => (
           <li key={to}>
             <Link to={to} className="card flex h-full flex-col gap-1 p-3 hover:bg-kalk-2/60 sm:gap-2 sm:p-4">
               <Icon size={24} strokeWidth={1.5} className="text-falu" aria-hidden="true" />
-              <span className="truncate font-serif text-[15px] font-semibold sm:text-lg">{title}</span>
+              <span className="font-serif text-[15px] font-semibold leading-tight sm:text-lg">{title}</span>
               <span className="hidden flex-1 text-sm text-sot-3 sm:block">{text}</span>
               <span className="mt-auto text-[12px] font-semibold text-sot-2">{n}</span>
             </Link>
@@ -214,7 +238,7 @@ export function OnSitePlaces() {
           </div>
           <div>
             <p className="kicker mb-2">Visa</p>
-            {([["zoner", "Zoner"], ["byggnader", "Byggnader och anläggningar"], ["liv", "Nytt liv"], ["obs", "Observationer"]] as [keyof typeof show, string][]).map(([k, l]) => (
+            {([["zoner", "Zoner"], ["byggnader", "Byggnader och anläggningar"], ["projekt", "Projekt"], ["liv", "Nytt liv"], ["obs", "Observationer"]] as [keyof typeof show, string][]).map(([k, l]) => (
               <label key={k} className="flex items-center gap-2 py-1 text-sm">
                 <input type="checkbox" className="accent-[#4F5E3A]" checked={show[k]} onChange={(e) => setShow((s) => ({ ...s, [k]: e.target.checked }))} /> {l}
               </label>
@@ -255,12 +279,12 @@ export function OnSitePlaces() {
       {selected && mode.kind === "view" && (
         <div className="card mb-4 flex flex-wrap items-center gap-3 p-4">
           <div className="flex-1">
-            <p className="kicker">{selected.kind === "zone" ? "Zon" : "Byggnad"} · {formatArea(areaM2(selected.geom))}</p>
+            <p className="kicker">{{ zone: "Zon", structure: "Byggnad", project: "Projekt" }[selected.kind]} · {formatArea(areaM2(selected.geom))}</p>
             <p className="font-serif text-lg font-semibold">{selected.name}</p>
-            <p className="text-sm text-sot-3">{count(selected.kind === "zone" ? "zone_id" : "structure_id", selected.id)} objekt i bruk</p>
+            <p className="text-sm text-sot-3">{selected.kind === "project" ? inProject(selected.id) : count(selected.kind === "zone" ? "zone_id" : "structure_id", selected.id)} objekt i bruk</p>
           </div>
           {canWrite && <button className="btn-secondary" onClick={() => setMode({ kind: "edit", target: selected, vertices: selected.geom.coordinates[0].slice(0, -1) as LngLat[] })}>Flytta hörn</button>}
-          {selected.kind === "zone" && <button className="btn-primary" onClick={() => navigate(`/zon/${selected.id}`)}>Öppna <ChevronRight size={18} aria-hidden="true" /></button>}
+          {selected.kind !== "structure" && <button className="btn-primary" onClick={() => navigate(selected.kind === "zone" ? `/zon/${selected.id}` : `/projekt/${selected.id}`)}>Öppna <ChevronRight size={18} aria-hidden="true" /></button>}
           <button className="btn-ghost" onClick={() => setSelected(null)} aria-label="Stäng"><X size={18} /></button>
         </div>
       )}

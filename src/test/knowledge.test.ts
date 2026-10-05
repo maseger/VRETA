@@ -165,3 +165,36 @@ describe("härdning (M5)", () => {
     await expect(buildExport(withImages)).rejects.toThrow(/ägaren/);
   }, 30000);
 });
+
+describe("Fråga Vreta om projekt, behov och platser (M6–M7)", () => {
+  it("tolkar frågor om projekt, behov och platser", () => {
+    const t = "2026-10-05";
+    expect(planQuestion("Vilka projekt pågår?", none, t)).toEqual({ tool: "projects", input: {} });
+    expect(planQuestion("Vad behöver vi till orangeriet?", none, t)).toEqual({ tool: "open_needs", input: { project: "orangeriet" } });
+    expect(planQuestion("Hur går det med jordkällaren?", none, t)).toEqual({ tool: "project_overview", input: { project: "jordkällaren" } });
+    expect(planQuestion("Vad har vi köpt på Återbruket?", none, t)).toEqual({ tool: "place_overview", input: { place: "återbruket" } });
+    expect(planQuestion("Vad behöver projektet?", { type: "project", id: "p", title: "Orangeriet" }, t)).toEqual({ tool: "open_needs", input: { project: "Orangeriet" } });
+  });
+  it("svarar om ett projekt med behov, saker och människor", async () => {
+    const a = await askLocal(repo, "owner", "Hur går det med orangeriet?", none);
+    expect(a.text).toContain("Tegel till södra muren 250 av 400 st");
+    expect(a.text).toContain("Erik");
+    expect(a.cards[0]).toMatchObject({ type: "project", href: expect.stringMatching(/^\/projekt\//) });
+  });
+  it("visar öppna behov och vad i lager som kan fylla dem", async () => {
+    const a = await askLocal(repo, "owner", "Vad behöver vi till orangeriet?", none);
+    expect(a.text).toContain("Fönster till långsidan 0 av 12 st");
+    expect(a.text).toMatch(/Tegel till södra muren 250 av 400 st – i lager: .*tegel/);
+  });
+  it("berättar vad som kommit från en plats, men aldrig adressen", async () => {
+    const place = (await repo.externalPlaces()).find((p) => p.name === "Återbruket")!;
+    await repo.updateExternalPlace(place.id, { address: "Hemliga vägen 1" });
+    const a = await askLocal(repo, "owner", "Vad har vi köpt på Återbruket?", none);
+    expect(a.text).toContain("gjutjärnsradiatorer");
+    expect(a.text).not.toContain("Hemliga");
+    expect(a.cards[0]).toMatchObject({ type: "place" });
+    // "från" faller tillbaka på platsen när ingen person heter så
+    expect((await askLocal(repo, "owner", "Vad har jag från Återbruket?", none)).cards[0]).toMatchObject({ type: "place" });
+  });
+});
+

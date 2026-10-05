@@ -197,4 +197,15 @@ export async function seedDemo(repo: LocalRepo, withImages = true): Promise<void
   const radAcq = (await repo.acquisitionsFor(radId))[0];
   if (radAcq) await repo.setAcquisitionPlace(radAcq.id, atervinning.id);
   await repo.createExternalPlace({ name: "Kyrkans loppis", kind: "loppis", locality: "Sandviken", notes: "Öppet lördagar 10–14.", address: "" });
+
+  // M7: orangeriets behov och yta på kartan
+  const orangeriet = (await repo.projects()).find((p) => p.name === "Orangeriet");
+  if (orangeriet) {
+    await repo.setProjectGeom(orangeriet.id, DEMO_GEOM.orangerietBygge);
+    const tegelBehov = await repo.createNeed({ project_id: orangeriet.id, title: "Tegel till södra muren", quantity: 400, unit: "st", notes: "" });
+    if (tegel) await repo.fulfillNeed({ need_id: tegelBehov.id, quantity: 250, object_id: tegel.id, contribution_id: null, note: "Första skiftet" });
+    const fonster = await repo.createNeed({ project_id: orangeriet.id, title: "Fönster till långsidan", quantity: 12, unit: "st", notes: "Gärna spröjsade, minst 60 cm breda" });
+    await repo.updateNeed(fonster.id, { listing_id: sokes.id });
+    await repo.createNeed({ project_id: orangeriet.id, title: "Kalkbruk", quantity: null, unit: "säckar", notes: "" });
+  }
 }

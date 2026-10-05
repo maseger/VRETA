@@ -534,6 +534,35 @@ export interface Project extends Base {
   structure_id: string | null;
   started_on: string | null;
   finished_on: string | null;
+  /** Projektets yta på Vretakartan (M7). */
+  geom?: PolygonGeom | null;
+}
+
+/** Ett behov i ett projekt: "1 500 tegel". Uppfyllt räknas fram ur NeedFulfillment (6.4). */
+export interface Need extends Base {
+  project_id: string;
+  title: string;
+  /** Tomt = "några" – uppfyllt av första bidraget. */
+  quantity: number | null;
+  unit: string;
+  notes: string;
+  status: "open" | "dropped";
+  /** Efterlysning. */
+  listing_id: string | null;
+}
+
+export interface NeedFulfillment {
+  id: string;
+  site_id: string;
+  need_id: string;
+  quantity: number;
+  object_id: string | null;
+  contribution_id: string | null;
+  note: string;
+  occurred_at: string;
+  event_id: string | null;
+  created_at: string;
+  created_by: string;
 }
 
 /** Plats utanför Vreta där saker hämtas, köps och lämnas. */

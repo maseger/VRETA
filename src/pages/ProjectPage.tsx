@@ -1,11 +1,13 @@
-import { Pencil } from "lucide-react";
+import { Map as MapIcon, Pencil } from "lucide-react";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useApp, useData } from "../app/AppContext";
 import { CONTRIBUTION_LABEL, PROJECT_KINDS, PROJECT_STATUS_LABEL, USAGE_LABEL } from "../domain/labels";
 import type { Project, ProjectStatus } from "../domain/types";
 import { EmptyState, MediaImage, PageHeader, Section, StatusStamp, formatDate } from "../ui/bits";
+import { areaM2, formatArea } from "../geo/geo";
 import { JournalList } from "../ui/JournalList";
+import { ProjectNeeds } from "../ui/ProjectNeeds";
 
 const STATUSES: ProjectStatus[] = ["idea", "planned", "active", "paused", "done"];
 
@@ -18,9 +20,10 @@ export function ProjectPage() {
   const { data } = useData(async (r) => {
     const project = (await r.projects()).find((p) => p.id === id);
     if (!project) return null;
-    const [usageAll, contribsAll, objects, zones, structures, persons, events] = await Promise.all([
-      r.allUsageEvents(), r.contributions(), r.objects(), r.zones(), r.structures(), r.persons(), r.eventsFor("project", id!),
+    const [usageAll, contribsAll, objects, zones, structures, persons, events, needs, listings] = await Promise.all([
+      r.allUsageEvents(), r.contributions(), r.objects(), r.zones(), r.structures(), r.persons(), r.eventsFor("project", id!), r.needs(id!), r.listings(),
     ]);
+    const fulfillments = await r.needFulfillments(needs.map((n) => n.id));
     const usage = usageAll.filter((u) => u.project_id === id);
     const contributions = contribsAll.filter((c) => c.project_id === id);
     const things = [...new Set(usage.map((u) => u.object_id))].map((oid) => objects.find((o) => o.id === oid)).filter((o): o is NonNullable<typeof o> => !!o);
@@ -29,7 +32,7 @@ export function ProjectPage() {
     const names: Record<string, string> = {};
     for (const o of objects) names[o.id] = o.title;
     for (const x of [...zones, ...structures, ...persons]) names[x.id] = x.name;
-    return { project, usage, contributions, things: things.map((o, i) => ({ o, cover: covers[i] })), zones, structures, events, links, names };
+    return { project, usage, contributions, things: things.map((o, i) => ({ o, cover: covers[i] })), zones, structures, events, links, names, needs, fulfillments, objects, listings };
   }, [id]);
 
   if (data === null) return <EmptyState title="Projektet finns inte" />;
@@ -62,11 +65,27 @@ export function ProjectPage() {
         </>
       )}
 
-      <div className="mb-8 flex flex-wrap gap-2" role="group" aria-label="Status">
+      <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label="Status">
         {STATUSES.map((s) => (
           <button key={s} disabled={!canWrite} aria-pressed={p.status === s} className={`chip ${p.status === s ? "chip-on" : ""}`} onClick={() => p.status !== s && setStatus(s)}>{PROJECT_STATUS_LABEL[s]}</button>
         ))}
       </div>
+
+      <p className="mb-8 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+        <MapIcon size={16} className="text-sot-3" aria-hidden="true" />
+        {p.geom ? (
+          <>
+            <span className="text-sot-3">Ytan på kartan: {formatArea(areaM2(p.geom))}</span>
+            <Link to={`/platser?visa=project:${p.id}`} className="font-semibold text-falu">Visa på kartan</Link>
+          </>
+        ) : canWrite ? (
+          <Link to={`/platser?rita=project:${p.id}`} className="font-semibold text-falu">Rita projektets yta på Vretakartan</Link>
+        ) : <span className="text-sot-3">Ingen yta inritad</span>}
+      </p>
+
+      <Section title="Behov">
+        <ProjectNeeds projectId={p.id} needs={data.needs} fulfillments={data.fulfillments} objects={data.objects} listings={data.listings} canWrite={canWrite} />
+      </Section>
 
       <Section title="Saker">
         {things.length ? (

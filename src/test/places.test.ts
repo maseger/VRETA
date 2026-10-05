@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { localityKey, sortProjects, summarizeProjects } from "../domain/places";
-import type { Contribution, Project, UsageEvent } from "../domain/types";
+import { localityKey, needProgress, sortProjects, stockForNeed, summarizeProjects } from "../domain/places";
+import type { Contribution, Need, NeedFulfillment, Project, UsageEvent, VObject } from "../domain/types";
 
 const project = (o: Partial<Project>): Project => ({ id: "p", site_id: "s", created_at: "", created_by: "", updated_at: "2026-01-01", archived_at: null, name: "", kind: "", status: "active", description: "", zone_id: null, structure_id: null, started_on: null, finished_on: null, ...o });
 const usage = (o: Partial<UsageEvent>): UsageEvent => ({ id: "u", site_id: "s", object_id: "o1", allocation_id: null, type: "built_in", occurred_at: "2026-05-01", zone_id: null, structure_id: null, quantity: null, project: "", project_id: null, note: "", geom: null, event_id: null, created_at: "", created_by: "", ...o });
@@ -30,5 +30,19 @@ describe("projekt", () => {
   it("jämför orter utan hänsyn till skiftläge och mellanslag", () => {
     expect(localityKey(" Sandviken ")).toBe(localityKey("sandviken"));
     expect(localityKey(undefined)).toBe("");
+  });
+
+  it("räknar fram behovets uppfyllelse ur summan", () => {
+    const need = { id: "n", quantity: 1500, unit: "st", title: "Tegel" } as Need;
+    const f = (q: number) => ({ need_id: "n", quantity: q }) as NeedFulfillment;
+    expect(needProgress(need, [f(1000), f(20)])).toMatchObject({ done: 1020, covered: false, label: "1\u00a0020 av 1\u00a0500 st" });
+    expect(needProgress(need, [f(1500), f(10)])).toMatchObject({ covered: true, share: 1 });
+    expect(needProgress({ ...need, quantity: null }, [])).toMatchObject({ covered: false, label: "Inget ännu" });
+    expect(needProgress({ ...need, quantity: null }, [f(3)]).covered).toBe(true);
+  });
+  it("föreslår saker i lager som passar behovet", () => {
+    const o = (title: string, status: VObject["status"]) => ({ id: title, title, category: "", material: "", status, quantity: 1 }) as VObject;
+    const hits = stockForNeed({ title: "Tegel till muren", notes: "" } as Need, [o("Handslaget tegel", "stored"), o("Tegelpannor", "sold"), o("Kakelugn", "stored"), o("Tegel i bruk", "in_use")]);
+    expect(hits.map((x) => x.title)).toEqual(["Handslaget tegel"]);
   });
 });

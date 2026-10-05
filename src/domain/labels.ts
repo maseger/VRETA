@@ -87,6 +87,8 @@ export const EVENT_LABEL: Record<string, string> = {
   "disposal.exchanged": "Bytt",
   "disposal.lent": "Utlånad",
   "disposal.discarded": "Kasserad",
+  "need.fulfilled": "Behov",
+  "need.covered": "Behov uppfyllt",
 };
 
 export const CATEGORIES = [
@@ -188,6 +190,7 @@ export const JOURNAL_FILTERS: { key: string; label: string; match: (t: string) =
   { key: "in", label: "Fynd och hämtningar", match: (t) => t === "object.discovered" || t === "pickup.completed" },
   { key: "ut", label: "Sålt och skänkt", match: (t) => t.startsWith("disposal.") },
   { key: "bidrag", label: "Bidrag", match: (t) => t.startsWith("contribution.") },
+  { key: "behov", label: "Projektbehov", match: (t) => t.startsWith("need.") },
   { key: "berattat", label: "Berättat", match: (t) => t === "content.shared" || t === "story.moment" },
 ];
 

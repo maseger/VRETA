@@ -311,7 +311,7 @@ describe("M4: utflöde, intressenter och bidrag", () => {
     expect(usage.length).toBeGreaterThan(0);
     expect(contribs.length).toBe(2);
     expect((await repo.projects()).filter((p) => p.name.toLowerCase() === "orangeriet")).toHaveLength(1);
-    expect((await repo.eventsFor("project", orangeriet.id)).length).toBe(usage.length + contribs.length);
+    expect((await repo.eventsFor("project", orangeriet.id)).filter((e) => /^(usage|contribution)\./.test(e.event_type)).length).toBe(usage.length + contribs.length);
     await expect(repo.createProject({ name: " orangeriet ", kind: "", status: "idea", description: "", zone_id: null, structure_id: null, started_on: null, finished_on: null })).rejects.toThrow(/redan/);
     await repo.updateProject(orangeriet.id, { name: "Orangeriet i söder", status: "done" });
     const done = (await repo.projects()).find((p) => p.id === orangeriet.id)!;
@@ -333,5 +333,24 @@ describe("M4: utflöde, intressenter och bidrag", () => {
     await repo.setDemoRole("viewer");
     expect((await repo.externalPlaces()).find((p) => p.id === place.id)!.address).toBeUndefined();
     await expect(repo.setDisposalPlace(disposal.id, null)).rejects.toThrow();
+  });
+
+  it("räknar fram hur långt ett behov kommit och skriver det i projektjournalen (M7)", async () => {
+    const orangeriet = (await repo.projects()).find((p) => p.name === "Orangeriet")!;
+    expect(orangeriet.geom?.type).toBe("Polygon");
+    const needs = await repo.needs(orangeriet.id);
+    const tegel = needs.find((n) => n.title === "Tegel till södra muren")!;
+    const sum = async () => (await repo.needFulfillments([tegel.id])).reduce((s, f) => s + f.quantity, 0);
+    expect(await sum()).toBe(250);
+    const f = await repo.fulfillNeed({ need_id: tegel.id, quantity: 150, object_id: null, contribution_id: null, note: "Från rivningen" });
+    expect(await sum()).toBe(400);
+    const covered = (await repo.eventsFor("project", orangeriet.id)).find((e) => e.event_type === "need.covered");
+    expect(covered?.summary).toBe("Tegel till södra muren: 400 av 400 st");
+    await repo.removeFulfillment(f.id);
+    expect(await sum()).toBe(250);
+    await expect(repo.fulfillNeed({ need_id: tegel.id, quantity: 0, object_id: null, contribution_id: null, note: "" })).rejects.toThrow(/större än noll/);
+    expect(needs.find((n) => n.title === "Fönster till långsidan")!.listing_id).toBeTruthy();
+    await repo.setDemoRole("viewer");
+    await expect(repo.createNeed({ project_id: orangeriet.id, title: "Smygbehov", quantity: 1, unit: "st", notes: "" })).rejects.toThrow();
   });
 });

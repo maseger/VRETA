@@ -16,18 +16,23 @@ export interface KAllocation { object_id: string; id: string; quantity: number; 
 export interface KNamed { id: string; name: string }
 export interface KLocation extends KNamed { parent_id: string | null }
 export interface KPerson extends KNamed { locality: string; roles: string[]; notes?: string; contact?: string }
-export interface KAcquisition { id: string; object_id: string; person_id: string | null; type: string; status: string; price?: number | null; created_at: string }
-export interface KDisposal { id: string; object_id: string; person_id: string | null; type: string; quantity: number | null; occurred_at: string; price?: number | null }
-export interface KContribution { id: string; person_id: string; kind: string; description: string; occurred_at: string; thanked_at: string | null; object_id: string | null }
+export interface KAcquisition { id: string; object_id: string; person_id: string | null; type: string; status: string; price?: number | null; created_at: string; place_id?: string | null }
+export interface KDisposal { id: string; object_id: string; person_id: string | null; type: string; quantity: number | null; occurred_at: string; price?: number | null; place_id?: string | null }
+export interface KContribution { id: string; person_id: string; kind: string; description: string; occurred_at: string; thanked_at: string | null; object_id: string | null; project_id?: string | null; hours?: number | null }
 export interface KListing { id: string; object_id: string | null; title: string; type: string; status: string }
 export interface KLead { id: string; listing_id: string; person_id: string | null; status: string; message: string; queue_position: number; created_at: string }
 export interface KTask { id: string; title: string; due: string | null; status: string; entity_type: string; entity_id: string | null }
-export interface KPickup { id: string; title: string; scheduled_date: string | null; status: string }
+export interface KPickup { id: string; title: string; scheduled_date: string | null; status: string; place_id?: string | null }
 export interface KInteraction { id: string; person_id: string | null; summary: string; follow_up: string | null; occurred_at: string }
 export interface KEvent { id: string; event_type: string; summary: string; occurred_at: string; story_worthy: boolean }
 export interface KNote { entity_type: string; entity_id: string; kind: string; text: string }
 export interface KContent { source_type: string; source_id: string; status: string; goal: string }
 export interface KObservation { id: string; kind: string; text: string; zone_id: string | null; occurred_at: string }
+export interface KProject { id: string; name: string; kind: string; status: string; description: string; zone_id: string | null; structure_id: string | null; started_on: string | null; finished_on: string | null }
+export interface KNeed { id: string; project_id: string; title: string; quantity: number | null; unit: string; status: string; listing_id: string | null }
+export interface KFulfillment { id: string; need_id: string; quantity: number; object_id: string | null }
+export interface KPlace { id: string; name: string; kind: string; locality: string }
+export interface KUsage { id: string; object_id: string; type: string; occurred_at: string; zone_id: string | null; structure_id: string | null; quantity: number | null; project_id?: string | null }
 export interface KDecision { id: string; question: string; choice: string; rationale: string; zone_id: string | null; decided_on: string }
 
 /** Behörighetsfiltrerad läsning. Implementeras av datalagret i webbläsaren och av Supabase på servern. */
@@ -55,10 +60,16 @@ export interface KStore {
   observations(): Promise<KObservation[]>;
   decisions(): Promise<KDecision[]>;
   proposalsWaiting(): Promise<number>;
+  // M6–M7
+  projects(): Promise<KProject[]>;
+  needs(): Promise<KNeed[]>;
+  needFulfillments(): Promise<KFulfillment[]>;
+  externalPlaces(): Promise<KPlace[]>;
+  usage(): Promise<KUsage[]>;
 }
 
 export interface SourceCard {
-  type: "object" | "person" | "listing" | "pickup" | "zone" | "storage" | "task" | "journal";
+  type: "object" | "person" | "listing" | "pickup" | "zone" | "storage" | "task" | "journal" | "project" | "place";
   id: string;
   title: string;
   subtitle: string;
@@ -174,7 +185,10 @@ async function findPerson(s: KStore, name: string): Promise<KPerson | null> {
 
 export async function objectsFromPerson(s: KStore, name: string, inStockOnly: boolean): Promise<ToolResult> {
   const p = await findPerson(s, name);
-  if (!p) return { facts: null, cards: [], answer: `Jag hittar ingen person som heter ${name}.` };
+  if (!p) {
+    if (await findPlace(s, name)) return placeOverview(s, name);
+    return { facts: null, cards: [], answer: `Jag hittar ingen person eller plats som heter ${name}.` };
+  }
   const [acqs, objects] = await Promise.all([s.acquisitions(), s.objects()]);
   const mine = acqs.filter((a) => a.person_id === p.id).map((a) => ({ a, o: objects.find((o) => o.id === a.object_id) })).filter((x) => x.o) as { a: KAcquisition; o: KObject }[];
   const allocs = await s.allocations();
@@ -334,7 +348,12 @@ export async function storyIdeas(s: KStore): Promise<ToolResult> {
 export async function zoneOverview(s: KStore, name: string): Promise<ToolResult> {
   const zones = await s.zones();
   const z = best(zones, (x) => x.name, name, 2)[0];
-  if (!z) return { facts: null, cards: [], answer: `Jag hittar ingen zon som heter ${name}.` };
+  if (!z) {
+    // "Vad har hänt i orangeriet?" kan gälla ett projekt eller en plats utanför Vreta
+    if (await findProject(s, name)) return projectOverview(s, name);
+    if (await findPlace(s, name)) return placeOverview(s, name);
+    return { facts: null, cards: [], answer: `Jag hittar ingen zon, inget projekt och ingen plats som heter ${name}.` };
+  }
   const [objects, allocs, obs, decs] = await Promise.all([s.objects(), s.allocations(), s.observations(), s.decisions()]);
   const here = objects.filter((o) => o.zone_id === z.id || allocs.some((a) => a.object_id === o.id && a.zone_id === z.id && a.status === "in_use"));
   const o = obs.filter((x) => x.zone_id === z.id).slice(0, 3);
@@ -348,6 +367,12 @@ export async function zoneOverview(s: KStore, name: string): Promise<ToolResult>
 
 /** Lagerobjekt som passar ett ändamål: "Vad har jag i lager som passar orangeriet?" */
 export async function stockMatching(s: KStore, purpose: string): Promise<ToolResult> {
+  // Gäller det ett projekt söks det som passar projektets öppna behov
+  const project = await findProject(s, purpose);
+  if (project) {
+    const needs = (await s.needs()).filter((n) => n.project_id === project.id && n.status === "open");
+    if (needs.length) return openNeeds(s, project.name);
+  }
   const [objects, notes, allocs] = await Promise.all([s.objects(), s.notes(), s.allocations()]);
   const inStock = objects.filter((o) => o.status === "stored" || allocs.some((a) => a.object_id === o.id && a.status === "stored"));
   const text = (o: KObject) => `${o.title} ${o.category} ${o.description} ${notes.filter((n) => n.entity_id === o.id).map((n) => n.text).join(" ")}`;
@@ -387,21 +412,135 @@ export async function objectHistory(s: KStore, objectId: string): Promise<ToolRe
 }
 
 export async function search(s: KStore, query: string): Promise<ToolResult> {
-  const [objects, persons, events, obs] = await Promise.all([s.objects(), s.persons(), s.events(), s.observations()]);
+  const [objects, persons, events, obs, projects, places] = await Promise.all([s.objects(), s.persons(), s.events(), s.observations(), s.projects(), s.externalPlaces()]);
+  const pr = best(projects, (x) => `${x.name} ${x.kind} ${x.description}`, query).slice(0, 2);
+  const pl = best(places, (x) => `${x.name} ${x.locality}`, query).slice(0, 2);
   const o = best(objects, (x) => `${x.title} ${x.category} ${x.material} ${x.description}`, query).slice(0, 3);
   const p = best(persons, (x) => `${x.name} ${x.roles.join(" ")}`, query).slice(0, 3);
   const e = best(events, (x) => x.summary, query).slice(0, 3);
   const ob = best(obs, (x) => x.text, query).slice(0, 3);
   const cards = [
+    ...pr.map((x) => projectCard(x, PROJECT_STATUS_SV[x.status])),
+    ...pl.map((x) => placeCard(x, x.locality)),
     ...o.map((x) => objCard(x, STATUS_SV[x.status])),
     ...p.map((x) => personCard(x, x.roles.join(", "))),
     ...e.map((x): SourceCard => ({ type: "journal", id: x.id, title: x.summary, subtitle: x.occurred_at.slice(0, 10), href: "/journal" })),
     ...ob.map((x): SourceCard => ({ type: "journal", id: x.id, title: x.text, subtitle: `Observation ${x.occurred_at.slice(0, 10)}`, href: "/journal" })),
   ];
   return {
-    facts: { objects: o.map((x) => x.title), persons: p.map((x) => x.name), events: e.map((x) => x.summary), observations: ob.map((x) => x.text) },
+    facts: { projects: pr.map((x) => x.name), places: pl.map((x) => x.name), objects: o.map((x) => x.title), persons: p.map((x) => x.name), events: e.map((x) => x.summary), observations: ob.map((x) => x.text) },
     cards,
     answer: cards.length ? `Det här hittade jag om ”${query}”:` : "Jag hittar inget om det.",
+  };
+}
+
+// ---------------------------------------------------------------- projekt, behov och platser utanför Vreta (M6–M7)
+const PROJECT_STATUS_SV: Record<string, string> = { idea: "idé", planned: "planerat", active: "pågår", paused: "vilar", done: "klart" };
+const n0 = (n: number) => n.toLocaleString("sv-SE", { maximumFractionDigits: 2 });
+const projectCard = (p: KProject, subtitle: string): SourceCard => ({ type: "project", id: p.id, title: p.name, subtitle, href: `/projekt/${p.id}` });
+const placeCard = (p: KPlace, subtitle: string): SourceCard => ({ type: "place", id: p.id, title: p.name, subtitle, href: `/plats/${p.id}` });
+
+async function findProject(s: KStore, name: string): Promise<KProject | null> {
+  const ps = await s.projects();
+  return ps.find((p) => p.name.toLowerCase() === name.toLowerCase().trim()) ?? best(ps, (p) => p.name, name, 2)[0] ?? null;
+}
+async function findPlace(s: KStore, name: string): Promise<KPlace | null> {
+  const ps = await s.externalPlaces();
+  return ps.find((p) => p.name.toLowerCase() === name.toLowerCase().trim()) ?? best(ps, (p) => `${p.name} ${p.locality}`, name, 2)[0] ?? null;
+}
+
+function progress(n: KNeed, fs: KFulfillment[]) {
+  const done = fs.filter((f) => f.need_id === n.id).reduce((x, f) => x + f.quantity, 0);
+  const covered = n.quantity == null ? done > 0 : done >= n.quantity;
+  return { done, covered, label: n.quantity == null ? (done ? `${n0(done)} ${n.unit}` : "inget ännu") : `${n0(done)} av ${n0(n.quantity)} ${n.unit}` };
+}
+
+export async function projectsList(s: KStore): Promise<ToolResult> {
+  const [projects, needs, fs] = await Promise.all([s.projects(), s.needs(), s.needFulfillments()]);
+  const live = projects.filter((p) => p.status !== "done");
+  const rows = live.map((p) => {
+    const open = needs.filter((n) => n.project_id === p.id && n.status === "open");
+    const left = open.filter((n) => !progress(n, fs).covered).length;
+    return { p, open: open.length, left };
+  });
+  return {
+    facts: rows.map(({ p, open, left }) => ({ name: p.name, status: PROJECT_STATUS_SV[p.status], kind: p.kind, needs: open, needs_left: left })),
+    cards: rows.map(({ p, left }) => projectCard(p, `${PROJECT_STATUS_SV[p.status]}${left ? ` · ${left} behov kvar` : ""}`)),
+    answer: rows.length ? `${rows.map(({ p, left }) => `${p.name} (${PROJECT_STATUS_SV[p.status]}${left ? `, ${left} behov kvar` : ""})`).join("; ")}.` : "Det finns inga projekt som pågår eller är planerade.",
+  };
+}
+
+export async function projectOverview(s: KStore, name: string): Promise<ToolResult> {
+  const p = await findProject(s, name);
+  if (!p) return { facts: null, cards: [], answer: `Jag hittar inget projekt som heter ${name}.` };
+  const [needs, fs, usage, contribs, objects, persons, zones, structures, events] = await Promise.all([
+    s.needs(), s.needFulfillments(), s.usage(), s.contributions(), s.objects(), s.persons(), s.zones(), s.structures(), s.eventsFor("project", p.id),
+  ]);
+  const where = zones.find((z) => z.id === p.zone_id)?.name ?? structures.find((x) => x.id === p.structure_id)?.name ?? null;
+  const things = [...new Set(usage.filter((u) => u.project_id === p.id).map((u) => u.object_id))].map((id) => objects.find((o) => o.id === id)).filter((o): o is KObject => !!o);
+  const helpers = contribs.filter((c) => c.project_id === p.id);
+  const people = [...new Set(helpers.map((c) => c.person_id))].map((id) => persons.find((x) => x.id === id)).filter((x): x is KPerson => !!x);
+  const hours = helpers.reduce((x, c) => x + (c.hours ?? 0), 0);
+  const ns = needs.filter((n) => n.project_id === p.id && n.status === "open").map((n) => ({ n, ...progress(n, fs) }));
+  const recent = [...events].sort((a, b) => b.occurred_at.localeCompare(a.occurred_at)).slice(0, 3);
+  return {
+    facts: {
+      project: p.name, status: PROJECT_STATUS_SV[p.status], kind: p.kind, where, description: p.description, started_on: p.started_on, finished_on: p.finished_on,
+      needs: ns.map((x) => ({ title: x.n.title, progress: x.label, covered: x.covered })),
+      objects: things.map((o) => o.title), people: people.map((x) => x.name), hours,
+      recent: recent.map((e) => `${e.occurred_at.slice(0, 10)}: ${e.summary}`),
+    },
+    cards: [projectCard(p, [PROJECT_STATUS_SV[p.status], where].filter(Boolean).join(" · ")), ...things.slice(0, 3).map((o) => objCard(o, STATUS_SV[o.status])), ...people.slice(0, 2).map((x) => personCard(x, "har bidragit"))],
+    answer: [
+      `${p.name} (${PROJECT_STATUS_SV[p.status]}${where ? `, ${where}` : ""}).`,
+      ns.length ? `Behov: ${ns.map((x) => `${x.n.title} ${x.label}${x.covered ? " ✓" : ""}`).join("; ")}.` : "",
+      things.length ? `Saker: ${things.map((o) => o.title.toLowerCase()).join(", ")}.` : "",
+      people.length ? `Har hjälpt till: ${people.map((x) => x.name).join(", ")}${hours ? ` (${n0(hours)} timmar)` : ""}.` : "",
+      recent.length ? `Senast: ${recent[0].summary}.` : "",
+    ].filter(Boolean).join(" "),
+  };
+}
+
+/** Öppna behov (för ett projekt eller alla) och vad i lager som kan fylla dem. */
+export async function openNeeds(s: KStore, projectName?: string): Promise<ToolResult> {
+  const [projects, needs, fs, objects, allocs] = await Promise.all([s.projects(), s.needs(), s.needFulfillments(), s.objects(), s.allocations()]);
+  const only = projectName ? await findProject(s, projectName) : null;
+  if (projectName && !only) return { facts: null, cards: [], answer: `Jag hittar inget projekt som heter ${projectName}.` };
+  const live = new Set(projects.filter((p) => p.status !== "done" && (!only || p.id === only.id)).map((p) => p.id));
+  const inStock = objects.filter((o) => o.status === "stored" || o.status === "collected" || allocs.some((a) => a.object_id === o.id && a.status === "stored"));
+  const rows = needs.filter((n) => n.status === "open" && live.has(n.project_id)).map((n) => ({ n, ...progress(n, fs) })).filter((x) => !x.covered).map((x) => ({
+    ...x,
+    project: projects.find((p) => p.id === x.n.project_id)!,
+    stock: best(inStock, (o) => `${o.title} ${o.category} ${o.material}`, x.n.title, 1).slice(0, 3),
+  }));
+  if (!rows.length) return { facts: [], cards: only ? [projectCard(only, "inga öppna behov")] : [], answer: only ? `${only.name} har inga behov kvar att fylla.` : "Inga projekt har behov kvar att fylla." };
+  return {
+    facts: rows.map((r) => ({ project: r.project.name, need: r.n.title, progress: r.label, wanted_listing: !!r.n.listing_id, in_stock: r.stock.map((o) => o.title) })),
+    cards: [...new Map(rows.map((r) => [r.project.id, projectCard(r.project, "behov kvar")])).values(), ...rows.flatMap((r) => r.stock).slice(0, 3).map((o) => objCard(o, "i lager – kan passa"))],
+    answer: rows.map((r) => `${only ? "" : `${r.project.name}: `}${r.n.title} ${r.label}${r.stock.length ? ` – i lager: ${r.stock.map((o) => o.title.toLowerCase()).join(", ")}` : r.n.listing_id ? " – efterlyst" : ""}`).join("; ") + ".",
+  };
+}
+
+/** En plats utanför Vreta: vad som kommit därifrån och lämnats där. Adresser lämnas aldrig ut här. */
+export async function placeOverview(s: KStore, name: string): Promise<ToolResult> {
+  const place = await findPlace(s, name);
+  if (!place) return { facts: null, cards: [], answer: `Jag hittar ingen plats som heter ${name}.` };
+  const [acqs, disps, pickups, objects] = await Promise.all([s.acquisitions(), s.disposals(), s.pickups(), s.objects()]);
+  const title = (id: string) => objects.find((o) => o.id === id);
+  const inn = acqs.filter((a) => a.place_id === place.id).map((a) => ({ a, o: title(a.object_id) })).filter((x): x is { a: KAcquisition; o: KObject } => !!x.o);
+  const out = disps.filter((d) => d.place_id === place.id).map((d) => ({ d, o: title(d.object_id) })).filter((x): x is { d: KDisposal; o: KObject } => !!x.o);
+  const visits = pickups.filter((k) => k.place_id === place.id);
+  const spent = inn.reduce((x, { a }) => x + (a.price ?? 0), 0);
+  const priced = inn.some(({ a }) => a.price !== undefined);
+  return {
+    facts: { place: place.name, kind: place.kind, locality: place.locality, came_from_here: inn.map(({ o }) => o.title), left_here: out.map(({ o }) => o.title), pickups: visits.map((k) => k.title), ...(priced ? { spent } : {}) },
+    cards: [placeCard(place, place.locality), ...inn.slice(0, 3).map(({ o }) => objCard(o, "kom härifrån")), ...out.slice(0, 2).map(({ o }) => objCard(o, "lämnades här"))],
+    answer: [
+      `${place.name}${place.locality ? ` i ${place.locality}` : ""}.`,
+      inn.length ? `Därifrån: ${inn.map(({ o }) => o.title.toLowerCase()).join(", ")}${priced && spent ? ` (${kr(spent)})` : ""}.` : "Inget har kommit därifrån ännu.",
+      out.length ? `Lämnat där: ${out.map(({ o }) => o.title.toLowerCase()).join(", ")}.` : "",
+      visits.length ? `${visits.length} hämtning${visits.length === 1 ? "" : "ar"}.` : "",
+    ].filter(Boolean).join(" "),
   };
 }
 
@@ -466,7 +605,11 @@ export const TOOL_DEFS = [
   { name: "stock_matching", description: "Lagerobjekt som passar ett ändamål, en zon eller ett projekt.", input_schema: { type: "object", properties: { purpose: { type: "string" } }, required: ["purpose"] } },
   { name: "period_summary", description: "Sammanfatta vad som hänt mellan två datum (ÅÅÅÅ-MM-DD).", input_schema: { type: "object", properties: { from: { type: "string" }, to: { type: "string" } }, required: ["from", "to"] } },
   { name: "object_history", description: "Ett objekts resa och var det är nu, med objektets id.", input_schema: { type: "object", properties: { object_id: { type: "string" } }, required: ["object_id"] } },
-  { name: "search", description: "Fritextsökning i objekt, personer, journal och observationer.", input_schema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } },
+  { name: "projects", description: "Projekten på Vreta som pågår, är planerade eller vilar, med hur många behov som är kvar.", input_schema: { type: "object", properties: {} } },
+  { name: "project_overview", description: "Ett projekt: status, var, behov med hur långt de kommit, saker som tagits i bruk, vilka som hjälpt till och senaste händelser.", input_schema: { type: "object", properties: { project: { type: "string" } }, required: ["project"] } },
+  { name: "open_needs", description: "Behov som inte är uppfyllda (för ett projekt eller alla) och vad i lager som kan fylla dem.", input_schema: { type: "object", properties: { project: { type: "string" } } } },
+  { name: "place_overview", description: "En plats utanför Vreta (loppis, återvinningscentral, hämtställe): vad som kommit därifrån, lämnats där och hämtningar.", input_schema: { type: "object", properties: { place: { type: "string" } }, required: ["place"] } },
+  { name: "search", description: "Fritextsökning i projekt, platser, objekt, personer, journal och observationer.", input_schema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } },
   { name: "propose_move", description: "Föreslå att flytta ett objekt eller partiets lagerdel till en lagerplats. Utförs först när användaren bekräftar.", input_schema: { type: "object", properties: { object: { type: "string" }, location: { type: "string" } }, required: ["object", "location"] } },
   { name: "propose_task", description: "Föreslå en ny uppgift med valfritt förfallodatum (ÅÅÅÅ-MM-DD). Utförs först efter bekräftelse.", input_schema: { type: "object", properties: { title: { type: "string" }, due: { type: "string" } }, required: ["title"] } },
   { name: "start_listing", description: "Öppna annonsstudion för ett objekt.", input_schema: { type: "object", properties: { object: { type: "string" } }, required: ["object"] } },
@@ -491,6 +634,10 @@ export async function runTool(s: KStore, name: string, input: Record<string, unk
     case "period_summary": return periodSummary(s, str("from"), str("to"));
     case "object_history": return objectHistory(s, str("object_id"));
     case "search": return search(s, str("query"));
+    case "projects": return projectsList(s);
+    case "project_overview": return projectOverview(s, str("project"));
+    case "open_needs": return openNeeds(s, str("project") || undefined);
+    case "place_overview": return placeOverview(s, str("place"));
     case "propose_move": return proposeMove(s, str("object"), str("location"));
     case "propose_task": return proposeTask(s, str("title"), str("due") || null);
     case "start_listing": return proposeListing(s, str("object"));
@@ -536,6 +683,14 @@ export function planQuestion(question: string, screen: Screen, today: string): P
   if (/^jag (fick|har fått|köpte|har köpt|hittade|hämtade)\b/.test(l)) return { tool: "propose_capture", input: { text: q } };
   if (screen.type === "object" && screen.id && /(den här|det här|detta|denna)/.test(l)) return { tool: "object_history", input: { object_id: screen.id } };
   if (screen.type === "zone" && screen.title && /(den här|här|zonen)/.test(l) && /vad|hänt|finns/.test(l)) return { tool: "zone_overview", input: { zone: screen.title } };
+  if (screen.type === "project" && screen.title && /behöver|behov|saknas/.test(l)) return { tool: "open_needs", input: { project: screen.title } };
+  if (screen.type === "project" && screen.title && /(den här|det här|projektet|här)/.test(l)) return { tool: "project_overview", input: { project: screen.title } };
+  if (screen.type === "place" && screen.title && /(den här|här|platsen|därifrån|där)/.test(l)) return { tool: "place_overview", input: { place: screen.title } };
+  if (/(vilka|vad för|vad har vi för) projekt|projekt(en)? (pågår|har vi)|pågående projekt/.test(l)) return { tool: "projects", input: {} };
+  if ((m = l.match(/vad (?:behöver|saknas|fattas) (?:vi |jag )?(?:till|för|i|på)\s+(.+)$/))) return { tool: "open_needs", input: { project: m[1] } };
+  if (/vad (behöver|saknas|fattas)( vi| jag)?( till projekten)?$|behov (kvar|som inte)|öppna behov/.test(l)) return { tool: "open_needs", input: {} };
+  if ((m = l.match(/hur (?:går|har det gått) (?:det )?(?:med|för)\s+(.+)$/))) return { tool: "project_overview", input: { project: m[1] } };
+  if ((m = l.match(/vad har (?:vi|jag) (?:köpt|fått|hämtat|hittat|lämnat)(?: på| hos| i| till)\s+(.+)$/))) return { tool: "place_overview", input: { place: m[1] } };
   if ((m = l.match(/vad har jag (?:i lager )?från\s+([\p{L}-]+)/u))) return { tool: "objects_from_person", input: { name: m[1], in_stock_only: /i lager/.test(l) } };
   if ((m = l.match(/vem (?:sålde|gav|skänkte)\s+(.+?)(?:\s+och\s+.*)?$/))) return { tool: "who_sold", input: { query: m[1] } };
   if ((m = l.match(/(?:vad har jag )?i lager som passar\s+(.+)$/))) return { tool: "stock_matching", input: { purpose: m[1] } };

@@ -386,7 +386,11 @@ Saker, människor och platser är tre olika delar som är beroende av varandra: 
 
 **Dator:** vänsterkolumn med Idag, Saker, Människor, Platser och Fråga samt Fånga och Inställningar. Listor och detaljer visas sida vid sida.
 
-**Projekt** (Project) är egna poster med namn, slag, status (idé, planerat, pågår, vilar, klart), zon eller byggnad och beskrivning. Nytt liv och bidrag kopplas med project_id; ett nytt projektnamn i formulären blir ett projekt. Projektsidan visar saker, människor och projektjournal. Behov (Need) är fortfarande P1.
+**Projekt** (Project) är egna poster med namn, slag, status (idé, planerat, pågår, vilar, klart), zon eller byggnad och beskrivning. Nytt liv och bidrag kopplas med project_id; ett nytt projektnamn i formulären blir ett projekt. Projektsidan visar behov, saker, människor och projektjournal, och projektets yta kan ritas på Vretakartan (eget lager "Projekt").
+
+**Behov** (Need) hör till ett projekt: rubrik, antal och enhet (antal kan lämnas tomt). NeedFulfillment kopplar en kvantitet till en sak (eller inget, t.ex. sten från egna marken). Hur långt behovet kommit räknas fram ur summan ("1 020 av 1 500 tegel") och lagras aldrig. Varje uppfyllelse blir en händelse i projektjournalen; när behovet är fyllt markeras händelsen som värd att berätta. Appen föreslår saker i lager som passar behovet, och ett behov kan efterlysas – annonsen kopplas tillbaka till behovet.
+
+**Fråga Vreta** har verktygen `projects`, `project_overview`, `open_needs` och `place_overview` ("Hur går det med orangeriet?", "Vad behöver vi till orangeriet?", "Vad har vi köpt på Återbruket?"). Adresser till platser utanför Vreta läses aldrig av chatboten.
 
 **Platser utanför Vreta** (ExternalPlace) har namn, slag, ort och en privat adress. Inköp, hämtningar och avslut kan kopplas till en plats (place_id), så att man ser vad som kom därifrån och vad som lämnades där. Orten är på kommunnivå och får synas; adressen syns bara för ägare och medhjälpare (INV-12, INV-13). Objektsidan har en flik Platser med var saken är på Vreta och var den kom ifrån och tog vägen.
 

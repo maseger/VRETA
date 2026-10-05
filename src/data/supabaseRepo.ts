@@ -2,7 +2,7 @@
 // audit, händelser vid statusbyten) upprätthålls i databasen; klienten anropar bara.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type {
-  ExternalPlace, Project,
+  ExternalPlace, Need, NeedFulfillment, Project,
   BatchAllocation, Decision, EventLink, MapLayer, Observation, UsageEvent,
   AskThread, ChannelPost, ContentConsent, Contribution, Disposal, Lead, LeadStatus, Listing, ListingStatus, PublishMode, ReciprocityEntry,
   AcquisitionStatus, ChecklistItem, ChecklistTemplate, Interaction, Organization, Pickup, PickupItem, PickupStatus,
@@ -12,7 +12,7 @@ import type {
 } from "../domain/types";
 import type { StoryRows } from "../../supabase/functions/_shared/storyContext";
 import type { PolygonGeom } from "../geo/geo";
-import type { DisposalInput, ListingInput, ApproveInput, MediaInput, NewExternalPlace, NewMapLayer, NewPerson, NewProject, NewPickup, PlaceRef, Receipt, Repo, UsageInput } from "./repo";
+import type { DisposalInput, ListingInput, ApproveInput, MediaInput, NewExternalPlace, NewFulfillment, NewMapLayer, NewNeed, NewPerson, NewProject, NewPickup, PlaceRef, Receipt, Repo, UsageInput } from "./repo";
 
 function check<T>(res: { data: T | null; error: { message: string } | null }): T {
   if (res.error) throw new Error(res.error.message);
@@ -252,6 +252,7 @@ export class SupabaseRepo implements Repo {
       "listings", "channel_posts", "leads", "disposals", "disposal_private", "contributions", "reciprocity_entries", "content_consents",
       "ask_threads",
       "projects", "external_places", "external_place_private",
+      "needs", "need_fulfillments",
     ];
     const out: Record<string, unknown[]> = {};
     for (const t of tables) out[t] = check(await this.client.from(t).select("*")) as unknown[];
@@ -537,6 +538,36 @@ export class SupabaseRepo implements Repo {
   }
   async setDisposalPlace(id: string, placeId: string | null): Promise<void> {
     check(await this.client.rpc("set_disposal_place", { p_disposal: id, p_place: placeId }));
+  }
+
+  // ------------------------------------------------------------ M7: behov och projektytor
+  async needs(projectId?: string): Promise<Need[]> {
+    let q = this.client.from("needs").select("*").is("archived_at", null).order("created_at");
+    if (projectId) q = q.eq("project_id", projectId);
+    return check(await q) as Need[];
+  }
+  async createNeed(input: NewNeed): Promise<Need> {
+    return check(await this.client.from("needs").insert({ ...input, title: input.title.trim(), unit: input.unit.trim() || "st", site_id: await this.siteId() }).select().single()) as Need;
+  }
+  async updateNeed(id: string, patch: Partial<Pick<Need, "title" | "quantity" | "unit" | "notes" | "status" | "listing_id">>): Promise<void> {
+    check(await this.client.from("needs").update(patch).eq("id", id));
+  }
+  async needFulfillments(needIds?: string[]): Promise<NeedFulfillment[]> {
+    let q = this.client.from("need_fulfillments").select("*").order("occurred_at");
+    if (needIds) {
+      if (!needIds.length) return [];
+      q = q.in("need_id", needIds);
+    }
+    return check(await q) as NeedFulfillment[];
+  }
+  async fulfillNeed(input: NewFulfillment): Promise<NeedFulfillment> {
+    return check(await this.client.from("need_fulfillments").insert({ ...input, site_id: await this.siteId() }).select().single()) as NeedFulfillment;
+  }
+  async removeFulfillment(id: string): Promise<void> {
+    check(await this.client.from("need_fulfillments").delete().eq("id", id));
+  }
+  async setProjectGeom(id: string, geom: PolygonGeom | null): Promise<void> {
+    check(await this.client.from("projects").update({ geom }).eq("id", id));
   }
 
   async markThanked(ids: string[]): Promise<void> {

@@ -139,7 +139,18 @@ Gamla adresser (`/samla`, `/vreta`) skickas vidare till de nya.
 | Fliken Platser på objektsidan; plats på ny hämtning; projektförslag i formulären | `src/pages/ObjectPage.tsx`, `src/ui/ExternalPlaceSelect.tsx`, `src/ui/ProjectInput.tsx` |
 | Databastester | `supabase/tests/m6_rls_test.sql` |
 
-Med Supabase: kör `supabase db push` för att lägga in migrationen.
+### M7: behov, projektytor och Fråga Vreta om projekt och platser
+
+| Del | Var |
+| --- | --- |
+| `needs` och `need_fulfillments` med RLS; uppfyllelse blir händelse i projektjournalen; `need_fulfilled()`; projektyta (`projects.geom` + PostGIS) | `supabase/migrations/20261011000000_m7_behov_projektytor.sql` |
+| Behov på projektsidan: förlopp, fyll på (med förslag från lagret), efterlys, stryk | `src/ui/ProjectNeeds.tsx`, `src/domain/places.ts` |
+| Efterlysning från ett behov kopplas tillbaka till behovet | `src/pages/NewListingPage.tsx` (`?behov=`) |
+| Projektytor på Vretakartan: rita, flytta hörn, visa från projektsidan | `src/pages/platser/OnSitePlaces.tsx` (`?rita=` / `?visa=`) |
+| Fråga Vreta: `projects`, `project_overview`, `open_needs`, `place_overview`, och sökning i projekt och platser | `supabase/functions/_shared/knowledge.ts` |
+| Databastester | `supabase/tests/m7_rls_test.sql` |
+
+Med Supabase: kör `supabase db push` för att lägga in migrationerna och driftsätt `ask-vreta` igen (`supabase functions deploy ask-vreta`).
 
 ## Vad M5 innehåller (kunskap och härdning)
 
