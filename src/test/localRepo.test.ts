@@ -123,3 +123,71 @@ describe("M2: inflöde och lager", () => {
     expect((await repo.audit()).some((a) => a.action === "moved_in_storage")).toBe(true);
   });
 });
+
+describe("M3: nytt liv, partier och journal", () => {
+  const usage = (over: Partial<import("../data/repo").UsageInput> = {}) => ({ type: "built_in" as const, zone_id: null, structure_id: null, quantity: null, project: "", note: "", occurred_at: null, geom: null, from_allocation_id: null, ...over });
+
+  it("delar ett parti och summan stämmer alltid (AC-04)", async () => {
+    const tegel = (await repo.objects()).find((o) => o.title === "Tegel")!;
+    let allocs = await repo.allocations(tegel.id);
+    expect(allocs.map((a) => [a.quantity, a.status])).toEqual([[250, "in_use"], [150, "stored"]]);
+    expect((await repo.object(tegel.id))!.status).toBe("in_use");
+
+    const zone = (await repo.zones()).find((z) => z.name === "Trädgården")!;
+    await expect(repo.recordUsage(tegel.id, usage({ zone_id: zone.id, quantity: 200 }))).rejects.toThrow(/inte 200/);
+    await repo.recordUsage(tegel.id, usage({ zone_id: zone.id, quantity: 120 }));
+    allocs = await repo.allocations(tegel.id);
+    expect(allocs.reduce((s, a) => s + a.quantity, 0)).toBe(400);
+    expect(allocs.find((a) => a.status === "stored")!.quantity).toBe(30);
+    await expect(repo.changeStatus(tegel.id, "stored")).rejects.toThrow(/uppdelat/);
+
+    const inUse = allocs.find((a) => a.zone_id === zone.id)!;
+    const loc = (await repo.storageLocations())[0];
+    await repo.storeAllocation(inUse.id, 20, loc.id);
+    allocs = await repo.allocations(tegel.id);
+    expect(allocs.reduce((s, a) => s + a.quantity, 0)).toBe(400);
+    expect(allocs.filter((a) => a.status === "stored").reduce((s, a) => s + a.quantity, 0)).toBe(50);
+  });
+
+  it("nytt liv syns i objekt-, zon- och platsjournal från en händelse (AC-05)", async () => {
+    const kakel = (await repo.objects()).find((o) => o.title === "Vit kakelugn")!;
+    await repo.changeStatus(kakel.id, "collected");
+    const zone = (await repo.zones()).find((z) => z.name === "Orangeriet")!;
+    await expect(repo.recordUsage(kakel.id, usage({ type: "installed" }))).rejects.toThrow(/plats/);
+    await repo.recordUsage(kakel.id, usage({ type: "installed", zone_id: zone.id }));
+    const site = (await repo.site())!;
+    const inObject = (await repo.eventsFor("object", kakel.id)).find((e) => e.event_type === "usage.installed")!;
+    expect((await repo.eventsFor("zone", zone.id)).map((e) => e.id)).toContain(inObject.id);
+    expect((await repo.eventsFor("site", site.id)).map((e) => e.id)).toContain(inObject.id);
+    expect((await repo.object(kakel.id))!.status).toBe("in_use");
+  });
+
+  it("ett objekt i bruk kan demonteras, lagras och säljas med hela resan kvar (AC-06)", async () => {
+    const rhodo = (await repo.objects()).find((o) => o.title === "Rhododendron")!;
+    expect(rhodo.status).toBe("in_use");
+    await repo.recordUsage(rhodo.id, usage({ type: "removed" }));
+    await repo.storeObject(rhodo.id, (await repo.storageLocations())[0].id);
+    await repo.changeStatus(rhodo.id, "listed");
+    await repo.changeStatus(rhodo.id, "reserved_out");
+    await repo.changeStatus(rhodo.id, "sold");
+    const types = (await repo.eventsFor("object", rhodo.id)).map((e) => e.event_type);
+    expect(types).toEqual(expect.arrayContaining(["object.discovered", "usage.planted", "usage.removed", "object.status_changed"]));
+    expect((await repo.usageEvents(rhodo.id)).map((u) => u.type)).toEqual(expect.arrayContaining(["planted", "removed"]));
+  });
+
+  it("observationer och beslut hamnar i zon- och platsjournal", async () => {
+    const zone = (await repo.zones()).find((z) => z.name === "Odlingen")!;
+    const zoneEvents = await repo.eventsFor("zone", zone.id);
+    expect(zoneEvents.some((e) => e.event_type === "observation.vatten")).toBe(true);
+    const site = (await repo.site())!;
+    expect((await repo.eventsFor("site", site.id)).some((e) => e.event_type === "decision")).toBe(true);
+  });
+
+  it("Vretakartan har grundbild och inritade zoner i demoläget", async () => {
+    const [layer] = await repo.mapLayers();
+    expect(layer.kind).toBe("base");
+    expect(layer.corners).toHaveLength(4);
+    expect(await repo.mapImage(layer)).toBeTruthy();
+    expect((await repo.zones()).filter((z) => z.geom).length).toBe(4);
+  });
+});

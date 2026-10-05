@@ -1,3 +1,5 @@
+import type { PointGeom, PolygonGeom } from "../geo/geo";
+
 // Domäntyper för R1 milstolpe M1. Namnen följer specifikationen (docs/spec-r1.md, avsnitt 5–6).
 
 export type Visibility = "private" | "internal" | "shareable" | "public";
@@ -53,6 +55,7 @@ export interface Zone extends Base {
   kind: string;
   status: PlaceStatus;
   notes: string;
+  geom: PolygonGeom | null;
 }
 
 export interface Structure extends Base {
@@ -61,6 +64,7 @@ export interface Structure extends Base {
   zone_id: string | null;
   status: PlaceStatus;
   notes: string;
+  geom: PolygonGeom | null;
 }
 
 export interface VObject extends Base {
@@ -322,4 +326,73 @@ export interface ChecklistItem {
 export interface ChecklistTemplate extends Base {
   name: string;
   items: string[];
+}
+
+export interface MapLayer extends Base {
+  kind: "base" | "overlay";
+  name: string;
+  taken_on: string | null;
+  image_path: string;
+  corners: [number, number][];
+  source_crs: string;
+  opacity: number;
+}
+
+export interface BatchAllocation {
+  id: string;
+  site_id: string;
+  object_id: string;
+  quantity: number;
+  status: ObjectStatus;
+  storage_location_id: string | null;
+  zone_id: string | null;
+  structure_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type UsageType = "installed" | "planted" | "built_in" | "renovated" | "reused" | "moved" | "removed" | "replanted" | "decommissioned";
+
+export interface UsageEvent {
+  id: string;
+  site_id: string;
+  object_id: string;
+  allocation_id: string | null;
+  type: UsageType;
+  occurred_at: string;
+  zone_id: string | null;
+  structure_id: string | null;
+  quantity: number | null;
+  project: string;
+  note: string;
+  geom: PointGeom | null;
+  event_id: string | null;
+  created_at: string;
+  created_by: string;
+}
+
+export interface Observation extends Base {
+  kind: string;
+  text: string;
+  zone_id: string | null;
+  structure_id: string | null;
+  object_id: string | null;
+  geom: PointGeom | null;
+  follow_up: string | null;
+  visibility: Visibility;
+  event_id: string | null;
+  occurred_at: string;
+}
+
+export interface Decision extends Base {
+  question: string;
+  options: string;
+  choice: string;
+  rationale: string;
+  outcome: string;
+  zone_id: string | null;
+  object_id: string | null;
+  visibility: Visibility;
+  event_id: string | null;
+  decided_on: string;
 }

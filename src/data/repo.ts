@@ -3,7 +3,9 @@ import type {
   Person, Profile, Proposal, ProposalContent, Role, Site, StoryNote, Structure, Task, VObject, Zone, FieldMeta,
   AcquisitionStatus, ChecklistItem, ChecklistTemplate, Interaction, Organization, Pickup, PickupItem, PickupStatus,
   ReceiptStatus, StorageLocation,
+  BatchAllocation, Decision, EventLink, MapLayer, Observation, UsageEvent, UsageType,
 } from "../domain/types";
+import type { PointGeom, PolygonGeom } from "../geo/geo";
 import type { StoryRows } from "../../supabase/functions/_shared/storyContext";
 
 export interface MediaInput {
@@ -123,6 +125,24 @@ export interface Repo {
   toggleChecklistItem(item: ChecklistItem, done: boolean): Promise<void>;
   completePickup(id: string, receipts: Receipt[], locationId: string | null): Promise<void>;
 
+  // ---- M3: nytt liv, partier, journal och karta
+  allocations(objectId: string): Promise<BatchAllocation[]>;
+  recordUsage(objectId: string, input: UsageInput): Promise<void>;
+  storeAllocation(allocationId: string, quantity: number, locationId: string): Promise<void>;
+  usageEvents(objectId: string): Promise<UsageEvent[]>;
+  allUsageEvents(): Promise<UsageEvent[]>;
+  createObservation(input: Pick<Observation, "kind" | "text" | "zone_id" | "structure_id" | "object_id" | "geom" | "follow_up" | "visibility">): Promise<Observation>;
+  observations(): Promise<Observation[]>;
+  createDecision(input: Pick<Decision, "question" | "options" | "choice" | "rationale" | "zone_id" | "object_id" | "visibility">): Promise<Decision>;
+  decisions(): Promise<Decision[]>;
+  eventLinks(eventIds: string[]): Promise<EventLink[]>;
+  setZoneGeom(id: string, geom: PolygonGeom | null): Promise<void>;
+  setStructureGeom(id: string, geom: PolygonGeom | null): Promise<void>;
+  mapLayers(): Promise<MapLayer[]>;
+  addMapLayer(input: NewMapLayer): Promise<MapLayer>;
+  updateMapLayer(id: string, patch: Partial<Pick<MapLayer, "opacity" | "name" | "taken_on" | "archived_at">>): Promise<void>;
+  mapImage(layer: MapLayer): Promise<Blob | null>;
+
   /** Antal ändringar som väntar på att synkas (bara Supabase). */
   pendingSync?(): Promise<number>;
   flushOutbox?(): Promise<number>;
@@ -159,6 +179,28 @@ export interface Receipt {
   object_id: string;
   receipt: ReceiptStatus;
   note: string;
+}
+
+export interface UsageInput {
+  type: UsageType;
+  zone_id: string | null;
+  structure_id: string | null;
+  quantity: number | null;
+  project: string;
+  note: string;
+  occurred_at: string | null;
+  geom: PointGeom | null;
+  from_allocation_id: string | null;
+}
+
+export interface NewMapLayer {
+  kind: MapLayer["kind"];
+  name: string;
+  taken_on: string | null;
+  image: Blob;
+  corners: [number, number][];
+  source_crs: string;
+  opacity: number;
 }
 
 export class PermissionError extends Error {}

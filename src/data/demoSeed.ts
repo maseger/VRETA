@@ -1,9 +1,11 @@
 // Demodata för att prova appen utan Supabase. Personer och platser är påhittade.
 import type { Media } from "../domain/types";
 import { parseCaptureText } from "../../supabase/functions/_shared/captureHeuristics";
+import { rasterizeIfSvg } from "../services/images";
 import { fromHeuristics } from "../services/proposalMapping";
 import type { LocalRepo } from "./localRepo";
 import { DEMO_ILLUSTRATIONS, svgToJpeg } from "./demoIllustrations";
+import { DEMO_BASEMAP_SVG, DEMO_CORNERS, DEMO_GEOM, px } from "./demoMap";
 
 type Illustration = keyof typeof DEMO_ILLUSTRATIONS;
 
@@ -17,17 +19,30 @@ export async function seedDemo(repo: LocalRepo, withImages = true): Promise<void
   await repo.bootstrapSite("Vreta", "Ägaren (demo)");
 
   const tradgard = await repo.createZone({ name: "Trädgården", kind: "Trädgård", notes: "" });
-  await repo.createZone({ name: "Odlingen", kind: "Odling", notes: "" });
-  await repo.createZone({ name: "Lagerzonen", kind: "Lager", notes: "Under tak vid garaget" });
+  const odlingen = await repo.createZone({ name: "Odlingen", kind: "Odling", notes: "" });
+  const lagerzonZ = await repo.createZone({ name: "Lagerzonen", kind: "Lager", notes: "Under tak vid garaget" });
   const orangeriZon = await repo.createZone({ name: "Orangeriet", kind: "Byggnad", notes: "Byggs med återbrukade fönster" });
-  await repo.createStructure({ name: "Villan", kind: "Bostad", notes: "", zone_id: null });
-  await repo.createStructure({ name: "Garaget", kind: "Förråd", notes: "Lager för byggnadsdelar", zone_id: null });
-  await repo.createStructure({ name: "Orangeriet", kind: "Växthus", notes: "", zone_id: orangeriZon.id });
+  const villan = await repo.createStructure({ name: "Villan", kind: "Bostad", notes: "", zone_id: null });
+  const garagetS = await repo.createStructure({ name: "Garaget", kind: "Förråd", notes: "Lager för byggnadsdelar", zone_id: null });
+  const orangeriS = await repo.createStructure({ name: "Orangeriet", kind: "Växthus", notes: "", zone_id: orangeriZon.id });
+
+  // Vretakartan (demo): påhittad grundbild och inritade ytor
+  await repo.addMapLayer({
+    kind: "base", name: "Fastighetskarta (demo)", taken_on: "2021-06-07", image: await rasterizeIfSvg(new Blob([DEMO_BASEMAP_SVG], { type: "image/svg+xml" })),
+    corners: DEMO_CORNERS, source_crs: "Demo", opacity: 1,
+  });
+  await repo.setZoneGeom(tradgard.id, DEMO_GEOM.tradgarden);
+  await repo.setZoneGeom(odlingen.id, DEMO_GEOM.odlingen);
+  await repo.setZoneGeom(lagerzonZ.id, DEMO_GEOM.lagerzonen);
+  await repo.setZoneGeom(orangeriZon.id, DEMO_GEOM.orangerietZon);
+  await repo.setStructureGeom(villan.id, DEMO_GEOM.villan);
+  await repo.setStructureGeom(garagetS.id, DEMO_GEOM.garaget);
+  await repo.setStructureGeom(orangeriS.id, DEMO_GEOM.orangeriet);
 
   const items: { text: string; why: string; key: Illustration; status: ("collected" | "stored" | "in_use")[] }[] = [
     { text: "Sex gjutjärnsfönster, Anders i Ockelbo, 200 kr styck, måste hämtas före november, behöver släp", why: "Från ett torp byggt på 1890-talet – perfekta till orangeriets södervägg", key: "fonster", status: ["collected", "stored"] },
     { text: "400 tegel gratis från Karin i Gävle, rivning av gammal mur", why: "Handslaget tegel med fina färgskiftningar", key: "tegel", status: ["collected"] },
-    { text: "12 rhododendron gratis från Lena i Storvik, ska bort vid husbygge", why: "Över trettio år gamla buskar som annars hade slängts", key: "rhododendron", status: ["collected", "in_use"] },
+    { text: "12 rhododendron gratis från Lena i Storvik, ska bort vid husbygge", why: "Över trettio år gamla buskar som annars hade slängts", key: "rhododendron", status: ["collected"] },
   ];
 
   for (const it of items) {
@@ -70,7 +85,17 @@ export async function seedDemo(repo: LocalRepo, withImages = true): Promise<void
   const fonster = objects.find((o) => o.title === "Gjutjärnsfönster");
   if (fonster) await repo.storeObject(fonster.id, hylla3.id);
   const tegel = objects.find((o) => o.title === "Tegel");
-  if (tegel) await repo.storeObject(tegel.id, pallA.id);
+  if (tegel) {
+    await repo.storeObject(tegel.id, pallA.id);
+    await repo.recordUsage(tegel.id, { type: "built_in", zone_id: orangeriZon.id, structure_id: null, quantity: 250, project: "Orangeriet", note: "Södra muren, första skiftet", occurred_at: null, geom: null, from_allocation_id: null });
+  }
+  const rhodo = objects.find((o) => o.title === "Rhododendron");
+  if (rhodo) {
+    await repo.recordUsage(rhodo.id, { type: "planted", zone_id: tradgard.id, structure_id: null, quantity: null, project: "", note: "Planterade i rad längs västra gränsen", occurred_at: null, geom: { type: "Point", coordinates: px(170, 560) }, from_allocation_id: null });
+  }
+  await repo.createObservation({ kind: "vatten", text: "Stående vatten i nedre delen av odlingen efter tre dagars regn", zone_id: odlingen.id, structure_id: null, object_id: null, geom: { type: "Point", coordinates: px(820, 650) }, follow_up: null, visibility: "shareable" });
+  await repo.createObservation({ kind: "blomning", text: "Första blomningen på de flyttade rhododendronbuskarna", zone_id: tradgard.id, structure_id: null, object_id: rhodo?.id ?? null, geom: { type: "Point", coordinates: px(200, 600) }, follow_up: null, visibility: "shareable" });
+  await repo.createDecision({ question: "Var ska kakelugnen stå?", options: "Villan eller orangeriets vinterdel", choice: "Orangeriets vinterdel", rationale: "Värmen gör att citrus kan övervintra där", zone_id: orangeriZon.id, object_id: null, visibility: "internal" });
 
   const people = await repo.persons();
   const anders = people.find((p) => p.name === "Anders");

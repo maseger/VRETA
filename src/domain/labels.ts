@@ -1,4 +1,4 @@
-import type { AcquisitionStatus, AcquisitionType, InteractionChannel, PickupStatus, ReceiptStatus, Channel, ContentGoal, ObjectStatus, Visibility } from "./types";
+import type { UsageType, AcquisitionStatus, AcquisitionType, InteractionChannel, PickupStatus, ReceiptStatus, Channel, ContentGoal, ObjectStatus, Visibility } from "./types";
 
 export const STATUS_LABEL: Record<ObjectStatus, string> = {
   discovered: "Upptäckt",
@@ -72,6 +72,16 @@ export const EVENT_LABEL: Record<string, string> = {
   "content.shared": "Berättat",
   "story.moment": "Ögonblick",
   "pickup.completed": "Hämtat",
+  "usage.installed": "Installerad",
+  "usage.planted": "Planterad",
+  "usage.built_in": "Inbyggd",
+  "usage.renovated": "Renoverad",
+  "usage.reused": "Återanvänd",
+  "usage.moved": "Flyttad",
+  "usage.removed": "Demonterad",
+  "usage.replanted": "Omplanterad",
+  "usage.decommissioned": "Tagen ur bruk",
+  "decision": "Beslut",
 };
 
 export const CATEGORIES = [
@@ -127,3 +137,45 @@ export const CHANNEL_INTERACTION_LABEL: Record<InteractionChannel, string> = {
 export const PERSON_ROLES = ["Leverantör", "Givare", "Medskapare", "Hantverkare", "Kunskapsbärare", "Transportör", "Köpare", "Följare", "Tipsare"];
 
 export const RESOURCES = ["Släp", "Skåpbil", "Bärhjälp", "Spännband", "Verktyg", "Filtar"];
+
+export const USAGE_LABEL: Record<UsageType, string> = {
+  installed: "Installerad",
+  planted: "Planterad",
+  built_in: "Inbyggd",
+  renovated: "Renoverad",
+  reused: "Återanvänd",
+  moved: "Flyttad",
+  removed: "Demonterad",
+  replanted: "Omplanterad",
+  decommissioned: "Tagen ur bruk",
+};
+
+export const OBSERVATION_KINDS: { key: string; label: string }[] = [
+  { key: "vatten", label: "Vatten" },
+  { key: "blomning", label: "Blomning" },
+  { key: "skord", label: "Skörd" },
+  { key: "djurliv", label: "Djurliv" },
+  { key: "skada", label: "Skada" },
+  { key: "vader", label: "Väder" },
+  { key: "byggnation", label: "Byggnation" },
+  { key: "annat", label: "Annat" },
+];
+
+export function eventLabel(type: string): string {
+  if (EVENT_LABEL[type]) return EVENT_LABEL[type];
+  if (type.startsWith("observation.")) {
+    const k = OBSERVATION_KINDS.find((o) => o.key === type.slice(12));
+    return `Observation${k ? ` · ${k.label}` : ""}`;
+  }
+  return type;
+}
+
+/** Grupper för filter i journalen. */
+export const JOURNAL_FILTERS: { key: string; label: string; match: (t: string) => boolean }[] = [
+  { key: "allt", label: "Allt", match: () => true },
+  { key: "liv", label: "Nytt liv", match: (t) => t.startsWith("usage.") },
+  { key: "obs", label: "Observationer", match: (t) => t.startsWith("observation.") },
+  { key: "beslut", label: "Beslut", match: (t) => t === "decision" },
+  { key: "in", label: "Fynd och hämtningar", match: (t) => t === "object.discovered" || t === "pickup.completed" },
+  { key: "berattat", label: "Berättat", match: (t) => t === "content.shared" || t === "story.moment" },
+];

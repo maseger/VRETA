@@ -40,3 +40,25 @@ export async function toAgentImage(blob: Blob): Promise<{ media_type: "image/jpe
   for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
   return { media_type: "image/jpeg", data: btoa(bin) };
 }
+
+/** Kartlager måste vara rasterbilder (MapLibre kan inte avkoda SVG). SVG ritas om till PNG. */
+export async function rasterizeIfSvg(blob: Blob, width = 2400): Promise<Blob> {
+  if (blob.type !== "image/svg+xml" || typeof document === "undefined") return blob;
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = new Image();
+    await new Promise<void>((res, rej) => {
+      img.onload = () => res();
+      img.onerror = () => rej(new Error("Kunde inte läsa SVG-bilden"));
+      img.src = url;
+    });
+    const ratio = (img.naturalHeight || 1) / (img.naturalWidth || 1);
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = Math.round(width * ratio);
+    canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return await new Promise<Blob>((res, rej) => canvas.toBlob((b) => (b ? res(b) : rej(new Error("png"))), "image/png"));
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}

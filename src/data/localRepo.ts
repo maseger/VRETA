@@ -3,13 +3,15 @@
 import { openDB, type IDBPDatabase } from "idb";
 import { ACQUISITION_TRANSITIONS, PICKUP_TRANSITIONS, assertTransition } from "../domain/stateMachine";
 import type {
+  BatchAllocation, Decision, MapLayer, Observation, UsageEvent,
   AcquisitionStatus, ChecklistItem, ChecklistTemplate, Interaction, Organization, Pickup, PickupItem, PickupStatus,
   StorageLocation,
   Acquisition, AuditEntry, Capture, CaptureInput, ContentItem, EventLink, EventRec, Media, ObjectStatus, Person,
   Profile, Proposal, ProposalContent, Role, Site, StoryNote, Structure, Task, VObject, Zone,
 } from "../domain/types";
 import type { StoryRows } from "../../supabase/functions/_shared/storyContext";
-import { PermissionError, type ApproveInput, type MediaInput, type NewPerson, type NewPickup, type PlaceRef, type Receipt, type Repo } from "./repo";
+import type { PolygonGeom } from "../geo/geo";
+import { PermissionError, type NewMapLayer, type UsageInput, type ApproveInput, type MediaInput, type NewPerson, type NewPickup, type PlaceRef, type Receipt, type Repo } from "./repo";
 
 const STORES = [
   "sites", "zones", "structures", "objects", "persons", "person_private", "acquisitions", "acquisition_private",
@@ -18,6 +20,8 @@ const STORES = [
   // M2
   "organizations", "organization_private", "interactions", "storage_locations", "checklist_templates", "pickups",
   "pickup_private", "pickup_items", "checklist_items",
+  // M3
+  "map_layers", "batch_allocations", "usage_events", "observations", "decisions",
 ] as const;
 
 const KEY_PATHS: Partial<Record<string, string | null>> = {
@@ -50,7 +54,7 @@ export class LocalRepo implements Repo {
   private dbp: Promise<IDBPDatabase>;
 
   constructor(dbName = "vreta-demo") {
-    this.dbp = openDB(dbName, 2, {
+    this.dbp = openDB(dbName, 3, {
       upgrade(db) {
         for (const s of STORES) {
           if (db.objectStoreNames.contains(s)) continue;
@@ -103,9 +107,12 @@ export class LocalRepo implements Repo {
     const entry: AuditEntry = { id: uuid(), site_id: await this.siteId(), at: now(), actor: me.id, action, entity_type, entity_id, before, after };
     await this.put("audit_entries", entry);
   }
-  private async event(me: Profile, event_type: string, summary: string, links: { type: string; id: string; role?: string }[], story_worthy = false) {
-    const ev: EventRec = { ...(await this.base(me)), event_type, occurred_at: now(), summary, notes: "", story_worthy, visibility: "shareable" };
+  private async event(me: Profile, event_type: string, summary: string, links: { type: string; id: string; role?: string }[], story_worthy = false, extra: Partial<EventRec> = {}) {
+    const ev: EventRec = { ...(await this.base(me)), event_type, occurred_at: now(), summary, notes: "", story_worthy, visibility: "shareable", ...extra };
     await this.put("events", ev);
+    if (links.some((l) => ["object", "zone", "structure"].includes(l.type)) && !links.some((l) => l.type === "site")) {
+      links = [...links, { type: "site", id: ev.site_id, role: "place" }];
+    }
     for (const l of links) {
       const link: EventLink = { id: uuid(), event_id: ev.id, entity_type: l.type, entity_id: l.id, role: l.role ?? "subject" };
       await this.put("event_links", link);
@@ -144,7 +151,7 @@ export class LocalRepo implements Repo {
   }
   async createZone(input: Pick<Zone, "name" | "kind" | "notes">): Promise<Zone> {
     const me = await this.requireWriter();
-    const z: Zone = { ...(await this.base(me)), ...input, status: "existing" };
+    const z: Zone = { ...(await this.base(me)), ...input, status: "existing", geom: null };
     await this.put("zones", z);
     return z;
   }
@@ -153,7 +160,7 @@ export class LocalRepo implements Repo {
   }
   async createStructure(input: Pick<Structure, "name" | "kind" | "notes" | "zone_id">): Promise<Structure> {
     const me = await this.requireWriter();
-    const s: Structure = { ...(await this.base(me)), ...input, status: "existing" };
+    const s: Structure = { ...(await this.base(me)), ...input, status: "existing", geom: null };
     await this.put("structures", s);
     return s;
   }
@@ -184,6 +191,8 @@ export class LocalRepo implements Repo {
     const me = await this.requireWriter();
     const o = await this.get<VObject>("objects", id);
     if (!o) throw new Error("Objektet finns inte");
+    const allocs = await this.allocations(id);
+    if (o.is_batch && allocs.length > 1) throw new Error("Partiet är uppdelat – ändra status per del");
     assertTransition(o.status, to);
     const next: VObject = { ...o, status: to, updated_at: now() };
     if (to !== "stored" && to !== "processing") next.storage_location_id = null;
@@ -195,6 +204,9 @@ export class LocalRepo implements Repo {
       throw new Error("Ett objekt i bruk måste ha en plats (zon eller byggnad).");
     }
     await this.put("objects", next);
+    if (allocs.length === 1) {
+      await this.put("batch_allocations", { ...allocs[0], status: to, zone_id: next.zone_id, structure_id: next.structure_id, storage_location_id: next.storage_location_id, updated_at: now() });
+    }
     await this.event(me, "object.status_changed", `${o.title}: ${o.status} → ${to}`, [{ type: "object", id }]);
     await this.audit_(me, "status_change", "object", id, { status: o.status }, { status: to });
   }
@@ -535,6 +547,14 @@ export class LocalRepo implements Repo {
     const me = await this.requireWriter();
     const o = await this.get<VObject>("objects", objectId);
     if (!o) throw new Error("Objektet finns inte");
+    const allocs = await this.allocations(objectId);
+    if (o.is_batch && allocs.length > 1) {
+      for (const a of allocs.filter((a) => ["collected", "stored", "processing", "in_use", "listed", "lent"].includes(a.status))) {
+        await this.put("batch_allocations", { ...a, status: "stored", storage_location_id: locationId, zone_id: null, structure_id: null, updated_at: now() });
+      }
+      await this.syncBatch(me, objectId);
+      return;
+    }
     if (o.status === "stored") {
       await this.put("objects", { ...o, storage_location_id: locationId, updated_at: now() });
       await this.audit_(me, "moved_in_storage", "object", objectId, { storage_location_id: o.storage_location_id }, { storage_location_id: locationId });
@@ -542,6 +562,7 @@ export class LocalRepo implements Repo {
     }
     assertTransition(o.status, "stored");
     await this.put("objects", { ...o, status: "stored", storage_location_id: locationId, zone_id: null, structure_id: null, updated_at: now() });
+    if (allocs.length === 1) await this.put("batch_allocations", { ...allocs[0], status: "stored", storage_location_id: locationId, zone_id: null, structure_id: null, updated_at: now() });
     await this.event(me, "object.status_changed", `${o.title}: ${o.status} → stored`, [{ type: "object", id: objectId }]);
     await this.audit_(me, "status_change", "object", objectId, { status: o.status }, { status: "stored" });
   }
@@ -635,6 +656,169 @@ export class LocalRepo implements Repo {
       const a2 = await this.get<Acquisition>("acquisitions", p.acquisition_id);
       if (a2?.status === "agreed") await this.setAcquisitionStatus(a2.id, "received");
     }
+  }
+
+  // ------------------------------------------------------------ M3: partier och nytt liv
+  async allocations(objectId: string): Promise<BatchAllocation[]> {
+    return (await this.all<BatchAllocation>("batch_allocations")).filter((a) => a.object_id === objectId).sort((a, b) => b.quantity - a.quantity);
+  }
+  private async ensureAllocations(o: VObject): Promise<BatchAllocation[]> {
+    const existing = await this.allocations(o.id);
+    if (existing.length || !o.is_batch) return existing;
+    const a: BatchAllocation = {
+      id: uuid(), site_id: o.site_id, object_id: o.id, quantity: o.quantity, status: o.status, storage_location_id: o.storage_location_id,
+      zone_id: o.zone_id, structure_id: o.structure_id, created_at: now(), updated_at: now(),
+    };
+    await this.put("batch_allocations", a);
+    return [a];
+  }
+  private async syncBatch(me: Profile, objectId: string): Promise<void> {
+    const o = (await this.get<VObject>("objects", objectId))!;
+    const allocs = await this.allocations(objectId);
+    const sum = allocs.reduce((s, a) => s + a.quantity, 0);
+    if (Math.abs(sum - o.quantity) > 1e-9) throw new Error("Fördelningen av partiet stämmer inte med totalen (INV-11)");
+    const terminal = ["declined", "lost", "sold", "donated", "exchanged", "discarded"];
+    const top = [...allocs].sort((a, b) => Number(terminal.includes(a.status)) - Number(terminal.includes(b.status)) || b.quantity - a.quantity || b.updated_at.localeCompare(a.updated_at))[0];
+    if (!top) return;
+    const changed = top.status !== o.status;
+    await this.put("objects", { ...o, status: top.status, zone_id: top.zone_id, structure_id: top.structure_id, storage_location_id: top.storage_location_id, updated_at: now() });
+    if (changed) {
+      await this.event(me, "object.status_changed", `${o.title}: ${o.status} → ${top.status}`, [{ type: "object", id: objectId }]);
+      await this.audit_(me, "status_derived", "object", objectId, { status: o.status }, { status: top.status });
+    }
+  }
+  async recordUsage(objectId: string, input: UsageInput): Promise<void> {
+    const me = await this.requireWriter();
+    const o = await this.get<VObject>("objects", objectId);
+    if (!o) throw new Error("Objektet finns inte");
+    if (input.type !== "removed" && !input.zone_id && !input.structure_id) throw new Error("Nytt liv kräver plats (zon eller byggnad)");
+    let allocationId: string | null = null;
+    if (input.type !== "removed" && o.is_batch && input.quantity != null && input.quantity < o.quantity) {
+      const allocs = await this.ensureAllocations(o);
+      const usable = ["collected", "stored", "processing", "in_use", "listed"];
+      const src = input.from_allocation_id
+        ? allocs.find((a) => a.id === input.from_allocation_id)
+        : [...allocs].filter((a) => usable.includes(a.status)).sort((a, b) => Number(b.status === "stored") - Number(a.status === "stored") || b.quantity - a.quantity)[0];
+      if (!src || src.quantity < input.quantity) throw new Error(`Det finns inte ${input.quantity} ${o.unit} att använda`);
+      assertTransition(src.status, "in_use");
+      if (src.quantity === input.quantity) {
+        await this.put("batch_allocations", { ...src, status: "in_use", zone_id: input.zone_id, structure_id: input.structure_id, storage_location_id: null, updated_at: now() });
+        allocationId = src.id;
+      } else {
+        await this.put("batch_allocations", { ...src, quantity: src.quantity - input.quantity, updated_at: now() });
+        allocationId = uuid();
+        await this.put("batch_allocations", { id: allocationId, site_id: o.site_id, object_id: o.id, quantity: input.quantity, status: "in_use", storage_location_id: null, zone_id: input.zone_id, structure_id: input.structure_id, created_at: now(), updated_at: now() } satisfies BatchAllocation);
+      }
+      await this.syncBatch(me, objectId);
+    } else if (input.type !== "removed") {
+      const allocs = await this.allocations(objectId);
+      if (allocs.length > 1) throw new Error("Partiet är uppdelat – välj hur många som används");
+      await this.changeStatus(objectId, "in_use", { zone_id: input.zone_id, structure_id: input.structure_id });
+    }
+    const zones = await this.zones();
+    const structures = await this.structures();
+    const place = zones.find((z) => z.id === input.zone_id)?.name ?? structures.find((s) => s.id === input.structure_id)?.name ?? "";
+    const verb: Record<string, string> = { installed: "Installerad", planted: "Planterad", built_in: "Inbyggd", renovated: "Renoverad", reused: "Återanvänd", moved: "Flyttad", removed: "Demonterad", replanted: "Omplanterad", decommissioned: "Tagen ur bruk" };
+    const qty = o.is_batch && input.quantity != null ? `${input.quantity} ${o.unit} ` : "";
+    const links: { type: string; id: string; role?: string }[] = [{ type: "object", id: objectId }];
+    if (input.zone_id) links.push({ type: "zone", id: input.zone_id, role: "place" });
+    if (input.structure_id) links.push({ type: "structure", id: input.structure_id, role: "place" });
+    const ev = await this.event(me, `usage.${input.type}`, `${verb[input.type]}: ${qty}${o.title.toLowerCase()}${place ? ` – ${place}` : ""}`, links, true,
+      { occurred_at: input.occurred_at ?? now(), notes: input.note });
+    const u: UsageEvent = {
+      id: uuid(), site_id: o.site_id, object_id: objectId, allocation_id: allocationId, type: input.type, occurred_at: input.occurred_at ?? now(),
+      zone_id: input.zone_id, structure_id: input.structure_id, quantity: input.quantity, project: input.project, note: input.note, geom: input.geom,
+      event_id: ev.id, created_at: now(), created_by: me.id,
+    };
+    await this.put("usage_events", u);
+  }
+  async storeAllocation(allocationId: string, quantity: number, locationId: string): Promise<void> {
+    const me = await this.requireWriter();
+    const a = await this.get<BatchAllocation>("batch_allocations", allocationId);
+    if (!a) throw new Error("Delen finns inte");
+    if (quantity > a.quantity) throw new Error("För stort antal");
+    if (a.status !== "stored") assertTransition(a.status, "stored");
+    if (quantity === a.quantity) {
+      await this.put("batch_allocations", { ...a, status: "stored", storage_location_id: locationId, zone_id: null, structure_id: null, updated_at: now() });
+    } else {
+      await this.put("batch_allocations", { ...a, quantity: a.quantity - quantity, updated_at: now() });
+      await this.put("batch_allocations", { id: uuid(), site_id: a.site_id, object_id: a.object_id, quantity, status: "stored", storage_location_id: locationId, zone_id: null, structure_id: null, created_at: now(), updated_at: now() } satisfies BatchAllocation);
+    }
+    await this.syncBatch(me, a.object_id);
+  }
+  async usageEvents(objectId: string): Promise<UsageEvent[]> {
+    return (await this.allUsageEvents()).filter((u) => u.object_id === objectId);
+  }
+  async allUsageEvents(): Promise<UsageEvent[]> {
+    return (await this.all<UsageEvent>("usage_events")).sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
+  }
+
+  // ------------------------------------------------------------ M3: observationer, beslut, journal
+  async createObservation(input: Pick<Observation, "kind" | "text" | "zone_id" | "structure_id" | "object_id" | "geom" | "follow_up" | "visibility">): Promise<Observation> {
+    const me = await this.requireWriter();
+    const links: { type: string; id: string; role?: string }[] = [{ type: "site", id: await this.siteId(), role: "place" }];
+    if (input.zone_id) links.push({ type: "zone", id: input.zone_id, role: "place" });
+    if (input.object_id) links.push({ type: "object", id: input.object_id });
+    const ev = await this.event(me, `observation.${input.kind}`, input.text, links, true, { visibility: input.visibility });
+    const o: Observation = { ...(await this.base(me)), ...input, event_id: ev.id, occurred_at: ev.occurred_at };
+    await this.put("observations", o);
+    return o;
+  }
+  async observations(): Promise<Observation[]> {
+    const me = await this.me();
+    return (await this.all<Observation>("observations")).filter((o) => !o.archived_at && (o.visibility !== "private" || this.seesPrivate(me, o.created_by))).sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
+  }
+  async createDecision(input: Pick<Decision, "question" | "options" | "choice" | "rationale" | "zone_id" | "object_id" | "visibility">): Promise<Decision> {
+    const me = await this.requireWriter();
+    const links: { type: string; id: string; role?: string }[] = [{ type: "site", id: await this.siteId(), role: "place" }];
+    if (input.zone_id) links.push({ type: "zone", id: input.zone_id, role: "place" });
+    if (input.object_id) links.push({ type: "object", id: input.object_id });
+    const ev = await this.event(me, "decision", `Beslut: ${input.question} – ${input.choice}`, links, false, { notes: input.rationale, visibility: input.visibility });
+    const d: Decision = { ...(await this.base(me)), ...input, outcome: "", event_id: ev.id, decided_on: now().slice(0, 10) };
+    await this.put("decisions", d);
+    return d;
+  }
+  async decisions(): Promise<Decision[]> {
+    const me = await this.me();
+    return (await this.all<Decision>("decisions")).filter((d) => d.visibility !== "private" || this.seesPrivate(me, d.created_by));
+  }
+  async eventLinks(eventIds: string[]): Promise<EventLink[]> {
+    const ids = new Set(eventIds);
+    return (await this.all<EventLink>("event_links")).filter((l) => ids.has(l.event_id));
+  }
+
+  // ------------------------------------------------------------ M3: Vretakartan
+  async setZoneGeom(id: string, geom: PolygonGeom | null): Promise<void> {
+    await this.requireWriter();
+    const z = await this.get<Zone>("zones", id);
+    if (z) await this.put("zones", { ...z, geom, updated_at: now() });
+  }
+  async setStructureGeom(id: string, geom: PolygonGeom | null): Promise<void> {
+    await this.requireWriter();
+    const s = await this.get<Structure>("structures", id);
+    if (s) await this.put("structures", { ...s, geom, updated_at: now() });
+  }
+  async mapLayers(): Promise<MapLayer[]> {
+    return (await this.all<MapLayer>("map_layers")).filter((l) => !l.archived_at).sort((a, b) => (a.taken_on ?? "").localeCompare(b.taken_on ?? "") || a.created_at.localeCompare(b.created_at));
+  }
+  async addMapLayer(input: NewMapLayer): Promise<MapLayer> {
+    const me = await this.requireWriter();
+    const b = await this.base(me);
+    const path = `${b.site_id}/${b.id}.img`;
+    await this.put("blobs", input.image, `maps/${path}`);
+    const { image: _img, ...rest } = input;
+    void _img;
+    const l: MapLayer = { ...b, ...rest, image_path: path };
+    await this.put("map_layers", l);
+    return l;
+  }
+  async updateMapLayer(id: string, patch: Partial<Pick<MapLayer, "opacity" | "name" | "taken_on" | "archived_at">>): Promise<void> {
+    await this.requireWriter();
+    const l = await this.get<MapLayer>("map_layers", id);
+    if (l) await this.put("map_layers", { ...l, ...patch, updated_at: now() });
+  }
+  async mapImage(layer: MapLayer): Promise<Blob | null> {
+    return (await this.get<Blob>("blobs", `maps/${layer.image_path}`)) ?? null;
   }
 
   /** Används av demodata och tester. */

@@ -4,10 +4,11 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useApp, useData } from "../app/AppContext";
 import { ACQ_STATUS_LABEL, ACQUISITION_LABEL, EVENT_LABEL, PICKUP_STATUS_LABEL, PIPELINE, STATUS_LABEL, VISIBILITY_LABEL, humanizeSummary } from "../domain/labels";
 import { OBJECT_TRANSITIONS, nextAcquisitionStep, nextStep } from "../domain/stateMachine";
-import type { Acquisition, ObjectStatus, Person, Pickup, Visibility } from "../domain/types";
+import type { Acquisition, BatchAllocation, ObjectStatus, Person, Pickup, StorageLocation, Structure, VObject, Visibility, Zone } from "../domain/types";
 import { prepareImage } from "../services/images";
 import { EmptyState, MediaImage, StatusStamp, VisibilityIcon, formatDate } from "../ui/bits";
 import { LocationSelect, locationPath } from "../ui/location";
+import { UsageForm } from "../ui/UsageForm";
 
 type Tab = "resa" | "fakta" | "manniskor" | "ekonomi";
 
@@ -18,24 +19,27 @@ export function ObjectPage() {
   const [tab, setTab] = useState<Tab>("resa");
   const [pending, setPending] = useState<ObjectStatus | null>(null);
   const [place, setPlace] = useState("");
+  const [usage, setUsage] = useState<{ from: string | null; max: number | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const { data } = useData(async (r) => {
     const object = await r.object(id!);
     if (!object) return null;
-    const [media, events, notes, acquisitions, people, content, zones, structures, locations, pickups] = await Promise.all([
+    const [media, events, notes, acquisitions, people, content, zones, structures, locations, pickups, allocations] = await Promise.all([
       r.mediaFor("object", id!), r.eventsFor("object", id!), r.storyNotesFor("object", id!), r.acquisitionsFor(id!),
-      r.persons(), r.contentFor("object", id!), r.zones(), r.structures(), r.storageLocations(), r.pickups(),
+      r.persons(), r.contentFor("object", id!), r.zones(), r.structures(), r.storageLocations(), r.pickups(), r.allocations(id!),
     ]);
     const linked = acquisitions.map((a) => ({ a, person: people.find((p) => p.id === a.person_id) ?? null }));
     const mine: Pickup[] = [];
     for (const p of pickups) if ((await r.pickupItems(p.id)).some((i) => i.object_id === id)) mine.push(p);
-    return { object, media, events, notes, linked, content, zones, structures, locations, pickups: mine };
+    return { object, media, events, notes, linked, content, zones, structures, locations, pickups: mine, allocations };
   }, [id]);
 
   if (data === null) return <EmptyState title="Objektet finns inte">Det kan vara arkiverat eller privat.</EmptyState>;
   if (!data) return null;
-  const { object, media, events, notes, linked, content, zones, structures, locations, pickups } = data;
+  const { object, media, events, notes, linked, content, zones, structures, locations, pickups, allocations } = data;
+  const split = object.is_batch && allocations.length > 1;
+  const usable = split ? allocations.filter((a) => ["collected", "stored", "processing"].includes(a.status)).reduce((s, a) => s + a.quantity, 0) : object.quantity;
   const where = locationPath(locations, object.storage_location_id);
   const canWrite = profile?.role !== "viewer";
   const step = nextStep(object.status);
@@ -45,12 +49,20 @@ export function ObjectPage() {
 
   async function go(to: ObjectStatus) {
     setError(null);
+    if (to === "in_use") {
+      setUsage({ from: null, max: object.is_batch ? usable : null });
+      return;
+    }
     if (to === "stored" && !place) {
       setPending("stored");
       return;
     }
     if (to === "stored") {
       try {
+        if (object.status === "in_use") {
+          // Demontering (AC-06): historiken över det tidigare livet finns kvar
+          await repo.recordUsage(object.id, { type: "removed", zone_id: null, structure_id: null, quantity: null, project: "", note: "", occurred_at: null, geom: null, from_allocation_id: null });
+        }
         await repo.storeObject(object.id, place);
         setPending(null);
         setPlace("");
@@ -59,10 +71,6 @@ export function ObjectPage() {
       } catch (e) {
         setError((e as Error).message);
       }
-      return;
-    }
-    if (to === "in_use" && !place && !object.zone_id && !object.structure_id) {
-      setPending(to);
       return;
     }
     try {
@@ -121,7 +129,15 @@ export function ObjectPage() {
 
       {linked.length > 0 && <Inflow object={object} acquisition={linked[0].a} pickups={pickups} canWrite={canWrite} />}
 
-      {canWrite && (step || others.length > 0) && (
+      {split && <Allocations object={object} allocations={allocations} locations={locations} zones={zones} structures={structures} canWrite={canWrite} onUse={(from, max) => setUsage({ from, max })} />}
+
+      {canWrite && usage && (
+        <div className="mb-8">
+          <UsageForm object={object} zones={zones} structures={structures} maxQty={usage.max} fromAllocation={usage.from} onDone={() => setUsage(null)} onCancel={() => setUsage(null)} />
+        </div>
+      )}
+
+      {canWrite && !usage && (step || others.length > 0) && (
         <div className="mb-8 space-y-3">
           {pending === "stored" ? (
             <div className="card space-y-3 p-4">
@@ -133,19 +149,6 @@ export function ObjectPage() {
                 <button className="btn-primary flex-1" disabled={!place} onClick={() => go("stored")}>Lägg i lager</button>
               </div>
             </div>
-          ) : pending === "in_use" ? (
-            <div className="card space-y-3 p-4">
-              <label className="field-label" htmlFor="place">Var får det nytt liv?</label>
-              <select id="place" className="input" value={place} onChange={(e) => setPlace(e.target.value)}>
-                <option value="">Välj zon eller byggnad</option>
-                <optgroup label="Zoner">{zones.map((z) => <option key={z.id} value={`z:${z.id}`}>{z.name}</option>)}</optgroup>
-                <optgroup label="Byggnader">{structures.map((s) => <option key={s.id} value={`s:${s.id}`}>{s.name}</option>)}</optgroup>
-              </select>
-              <div className="flex gap-2">
-                <button className="btn-secondary" onClick={() => setPending(null)}>Avbryt</button>
-                <button className="btn-moss flex-1" disabled={!place} onClick={() => go("in_use")}>Bekräfta nytt liv</button>
-              </div>
-            </div>
           ) : (
             <div className="flex flex-wrap gap-2">
               {step && (
@@ -153,10 +156,10 @@ export function ObjectPage() {
                   {step.label} <ArrowRight size={18} aria-hidden="true" />
                 </button>
               )}
-              {others.length > 0 && (
+              {others.length > 0 && !split && (
                 <select className="input w-auto min-w-[160px] flex-none" value="" onChange={(e) => e.target.value && go(e.target.value as ObjectStatus)} aria-label="Annan status">
                   <option value="">Annan status …</option>
-                  {others.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+                  {others.map((s) => <option key={s} value={s}>{object.status === "in_use" && s === "stored" ? "Demontera – tillbaka i lager" : object.status === "in_use" && s === "in_use" ? "Flytta" : STATUS_LABEL[s]}</option>)}
                 </select>
               )}
             </div>
@@ -364,6 +367,60 @@ function Inflow({ object, acquisition, pickups, canWrite }: { object: { id: stri
           </Link>
         )}
       </div>
+    </section>
+  );
+}
+
+const ALLOC_COLOR: Partial<Record<ObjectStatus, string>> = { in_use: "bg-linolja", stored: "bg-sot-2", processing: "bg-jarn", collected: "bg-jarn-light", listed: "bg-falu", reserved_out: "bg-falu-light", sold: "bg-ockra", donated: "bg-ockra-light" };
+
+/** Partiets fördelning (6.3, FR-009): stapel och åtgärder per del. */
+function Allocations({ object, allocations, locations, zones, structures, canWrite, onUse }: {
+  object: VObject; allocations: BatchAllocation[]; locations: StorageLocation[]; zones: Zone[]; structures: Structure[]; canWrite: boolean;
+  onUse: (from: string, max: number) => void;
+}) {
+  const { repo, refresh, toast } = useApp();
+  const [storing, setStoring] = useState<BatchAllocation | null>(null);
+  const [qty, setQty] = useState("");
+  const [loc, setLoc] = useState("");
+  const total = allocations.reduce((s, a) => s + a.quantity, 0);
+  const where = (a: BatchAllocation) => zones.find((z) => z.id === a.zone_id)?.name ?? structures.find((s) => s.id === a.structure_id)?.name ?? locationPath(locations, a.storage_location_id);
+
+  return (
+    <section className="card mb-6 p-4">
+      <p className="kicker mb-2">Partiet · {total} {object.unit}</p>
+      <div className="mb-3 flex h-3 overflow-hidden rounded-full bg-kalk-3" role="img" aria-label={allocations.map((a) => `${a.quantity} ${STATUS_LABEL[a.status]}`).join(", ")}>
+        {allocations.map((a) => <span key={a.id} className={ALLOC_COLOR[a.status] ?? "bg-jarn"} style={{ width: `${(a.quantity / total) * 100}%` }} />)}
+      </div>
+      <ul className="divide-y divide-dashed divide-lera-light">
+        {allocations.map((a) => (
+          <li key={a.id} className="flex flex-wrap items-center gap-2 py-2">
+            <span className={`h-3 w-3 shrink-0 rounded-full ${ALLOC_COLOR[a.status] ?? "bg-jarn"}`} aria-hidden="true" />
+            <span className="font-semibold">{a.quantity} {object.unit}</span>
+            <StatusStamp status={a.status} />
+            <span className="min-w-0 flex-1 truncate text-sm text-sot-3">{where(a)}</span>
+            {canWrite && ["collected", "stored", "processing"].includes(a.status) && <button className="btn-ghost min-h-[36px] text-sm text-linolja" onClick={() => onUse(a.id, a.quantity)}>Använd</button>}
+            {canWrite && ["collected", "in_use", "processing"].includes(a.status) && <button className="btn-ghost min-h-[36px] text-sm" onClick={() => { setStoring(a); setQty(String(a.quantity)); }}>{a.status === "in_use" ? "Demontera" : "Lägg i lager"}</button>}
+          </li>
+        ))}
+      </ul>
+      {storing && (
+        <div className="mt-3 space-y-3 rounded-md bg-kalk-2/70 p-3">
+          <div className="grid grid-cols-[1fr_2fr] gap-2">
+            <input type="number" className="input" min={1} max={storing.quantity} value={qty} onChange={(e) => setQty(e.target.value)} aria-label="Antal" />
+            <LocationSelect locations={locations} value={loc} onChange={setLoc} />
+          </div>
+          <div className="flex gap-2">
+            <button className="btn-secondary" onClick={() => setStoring(null)}>Avbryt</button>
+            <button className="btn-primary flex-1" disabled={!loc || !Number(qty)} onClick={async () => {
+              if (storing.status === "in_use") await repo.recordUsage(object.id, { type: "removed", zone_id: null, structure_id: null, quantity: Number(qty), project: "", note: "", occurred_at: null, geom: null, from_allocation_id: storing.id });
+              await repo.storeAllocation(storing.id, Number(qty), loc);
+              setStoring(null);
+              await refresh();
+              toast(`${qty} ${object.unit} i lager`);
+            }}>Lägg i lager</button>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

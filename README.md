@@ -71,3 +71,26 @@ Formspråket hämtar färger från byggnadsvårdens material – kalkputs, linol
 | Lagerträd, lagerplats med QR-kod och utskrivbara etiketter | `src/pages/StoragePage.tsx`, `StorageLocationPage.tsx`, `LabelsPage.tsx` |
 
 QR-koderna innehåller en länk till lagerplatsen, så telefonens vanliga kamera öppnar rätt hylla direkt i appen.
+
+## Vad M3 innehåller (nytt liv och journal)
+
+| Del | Var |
+| --- | --- |
+| Partier med fördelning (INV-11 kontrolleras vid commit), nytt liv, demontering, observationer, beslut, kartlager, PostGIS | `supabase/migrations/20261007000000_m3_nytt_liv_journal.sql` |
+| `record_usage` och `store_allocation`: nytt liv för hela objekt eller delar av partier, en händelse i objekt-, zon- och platsjournal (AC-04, AC-05, AC-06) | migrationen |
+| Vretakartan: egna grundbilder och överlägg, zoner och byggnader, nålar för nytt liv och observationer, "Här" med GPS, rita och flytta hörn, area – helt offline | `src/geo/VretaMap.tsx`, `src/pages/VretaPage.tsx` |
+| Lägg till kartlager med hörnfil eller tre stödpunkter | `src/pages/MapLayerPage.tsx`, `src/geo/geo.ts` |
+| Nytt liv-formulär, partiets fördelning och demontering på objektsidan | `src/ui/UsageForm.tsx`, `src/pages/ObjectPage.tsx` |
+| Platsjournal med filter, zonsida, observationer och beslut | `src/pages/JournalPage.tsx`, `src/pages/ZonePage.tsx`, `src/ui/JournalForms.tsx` |
+
+### Lägga in fastighetens baskarta
+
+Kartfilerna visar fastighetens läge och ska aldrig ligga i repot.
+
+```bash
+python3.12 scripts/prepare-basemap.py baskarta.pdf ut/    # GeoPDF eller GeoTIFF → ut/baskarta.png + ut/baskarta.json
+```
+
+Ladda sedan upp båda filerna under **Vreta → Lager → Lägg till kartlager → Jag har en hörnfil**. Skriptet läser kartans inbäddade georeferens (t.ex. SWEREF 99 18 00), räknar om till Web Mercator och klipper vid kartramen. Ritningar utan georeferens placeras i appen med tre stödpunkter mot grundbilden.
+
+Databastesterna kräver PostGIS: `apt-get install postgresql-16-postgis-3`.

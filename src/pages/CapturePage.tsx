@@ -1,7 +1,8 @@
 import { Camera, ImagePlus, Loader2, Mic, MicOff, X } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useApp } from "../app/AppContext";
+import { useApp, useData } from "../app/AppContext";
+import { ObservationForm } from "../ui/JournalForms";
 import type { CaptureInput } from "../domain/types";
 import { proposeForCapture } from "../services/captureAgent";
 import { prepareImage, type PreparedImage } from "../services/images";
@@ -25,6 +26,7 @@ export function CapturePage() {
   const [kind, setKind] = useState<CaptureInput["kind"]>("find");
   const [busy, setBusy] = useState<null | "photo" | "saving" | "thinking">(null);
   const [error, setError] = useState<string | null>(null);
+  const { data: zones } = useData((r) => r.zones());
 
   const appendText = useCallback((t: string) => setText((prev) => (prev ? `${prev} ${t}` : t)), []);
   const dictation = useDictation(appendText);
@@ -77,7 +79,20 @@ export function CapturePage() {
 
   return (
     <div className="mx-auto max-w-xl">
-      <PageHeader kicker="Fånga" title="Vad har du hittat?" />
+      <PageHeader kicker="Fånga" title={kind === "observation" ? "Vad ser du?" : "Vad har du hittat?"} />
+      <p className="field-label">Vad fångar du?</p>
+      <div className="mb-6 flex flex-wrap gap-2">
+        {KINDS.map((k) => (
+          <button key={k.value} type="button" onClick={() => setKind(k.value)} className={`chip ${kind === k.value ? "chip-on" : ""}`}>
+            {k.label}
+          </button>
+        ))}
+      </div>
+
+      {kind === "observation" ? (
+        zones && <ObservationForm zones={zones} onDone={() => navigate("/journal")} />
+      ) : (
+      <>
 
       <input ref={cameraRef} type="file" accept="image/*" capture="environment" multiple hidden onChange={(e) => addFiles(e.target.files)} />
       <input ref={galleryRef} type="file" accept="image/*" multiple hidden onChange={(e) => addFiles(e.target.files)} />
@@ -127,21 +142,14 @@ export function CapturePage() {
       />
       <p className="mb-6 text-[12px] text-sot-3">Klistra gärna in en annonslänk eller annonstext. Bilder delas aldrig med platsdata.</p>
 
-      <p className="field-label">Vad är det?</p>
-      <div className="mb-8 flex flex-wrap gap-2">
-        {KINDS.map((k) => (
-          <button key={k.value} type="button" onClick={() => setKind(k.value)} className={`chip ${kind === k.value ? "chip-on" : ""}`}>
-            {k.label}
-          </button>
-        ))}
-      </div>
-
       {error && <p className="mb-4 text-sm text-falu">{error}</p>}
       <button type="button" onClick={save} disabled={!canSave} className="btn-primary w-full text-base">
         {busy === "saving" && <Loader2 className="animate-spin" size={18} />}
         {busy === "thinking" && <Loader2 className="animate-spin" size={18} />}
         {busy === "saving" ? "Sparar …" : busy === "thinking" ? "Tolkar fyndet …" : online ? "Spara och tolka" : "Spara (tolkas när du har nät)"}
       </button>
+      </>
+      )}
     </div>
   );
 }

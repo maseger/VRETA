@@ -2,13 +2,15 @@
 // audit, händelser vid statusbyten) upprätthålls i databasen; klienten anropar bara.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type {
+  BatchAllocation, Decision, EventLink, MapLayer, Observation, UsageEvent,
   AcquisitionStatus, ChecklistItem, ChecklistTemplate, Interaction, Organization, Pickup, PickupItem, PickupStatus,
   StorageLocation,
   Acquisition, AuditEntry, Capture, CaptureInput, ContentItem, EventRec, Media, ObjectStatus, Person, Profile,
   Proposal, ProposalContent, Site, StoryNote, Structure, Task, VObject, Zone,
 } from "../domain/types";
 import type { StoryRows } from "../../supabase/functions/_shared/storyContext";
-import type { ApproveInput, MediaInput, NewPerson, NewPickup, PlaceRef, Receipt, Repo } from "./repo";
+import type { PolygonGeom } from "../geo/geo";
+import type { ApproveInput, MediaInput, NewMapLayer, NewPerson, NewPickup, PlaceRef, Receipt, Repo, UsageInput } from "./repo";
 
 function check<T>(res: { data: T | null; error: { message: string } | null }): T {
   if (res.error) throw new Error(res.error.message);
@@ -342,5 +344,64 @@ export class SupabaseRepo implements Repo {
   }
   async flushOutbox(): Promise<number> {
     return 0;
+  }
+
+  // ------------------------------------------------------------ M3: partier, nytt liv, journal, karta
+  async allocations(objectId: string): Promise<BatchAllocation[]> {
+    return check(await this.client.from("batch_allocations").select("*").eq("object_id", objectId).order("quantity", { ascending: false })) as BatchAllocation[];
+  }
+  async recordUsage(objectId: string, input: UsageInput): Promise<void> {
+    check(await this.client.rpc("record_usage", { p_object: objectId, p_input: input }));
+  }
+  async storeAllocation(allocationId: string, quantity: number, locationId: string): Promise<void> {
+    check(await this.client.rpc("store_allocation", { p_allocation: allocationId, p_quantity: quantity, p_location: locationId }));
+  }
+  async usageEvents(objectId: string): Promise<UsageEvent[]> {
+    return check(await this.client.from("usage_events").select("*").eq("object_id", objectId).order("occurred_at", { ascending: false })) as UsageEvent[];
+  }
+  async allUsageEvents(): Promise<UsageEvent[]> {
+    return check(await this.client.from("usage_events").select("*").order("occurred_at", { ascending: false })) as UsageEvent[];
+  }
+  async createObservation(input: Pick<Observation, "kind" | "text" | "zone_id" | "structure_id" | "object_id" | "geom" | "follow_up" | "visibility">): Promise<Observation> {
+    return check(await this.client.from("observations").insert({ ...input, site_id: await this.siteId() }).select().single()) as Observation;
+  }
+  async observations(): Promise<Observation[]> {
+    return check(await this.client.from("observations").select("*").is("archived_at", null).order("occurred_at", { ascending: false })) as Observation[];
+  }
+  async createDecision(input: Pick<Decision, "question" | "options" | "choice" | "rationale" | "zone_id" | "object_id" | "visibility">): Promise<Decision> {
+    return check(await this.client.from("decisions").insert({ ...input, site_id: await this.siteId() }).select().single()) as Decision;
+  }
+  async decisions(): Promise<Decision[]> {
+    return check(await this.client.from("decisions").select("*").is("archived_at", null)) as Decision[];
+  }
+  async eventLinks(eventIds: string[]): Promise<EventLink[]> {
+    if (!eventIds.length) return [];
+    return check(await this.client.from("event_links").select("*").in("event_id", eventIds)) as EventLink[];
+  }
+  async setZoneGeom(id: string, geom: PolygonGeom | null): Promise<void> {
+    check(await this.client.from("zones").update({ geom }).eq("id", id));
+  }
+  async setStructureGeom(id: string, geom: PolygonGeom | null): Promise<void> {
+    check(await this.client.from("structures").update({ geom }).eq("id", id));
+  }
+  async mapLayers(): Promise<MapLayer[]> {
+    return check(await this.client.from("map_layers").select("*").is("archived_at", null).order("taken_on", { nullsFirst: true }).order("created_at")) as MapLayer[];
+  }
+  async addMapLayer(input: NewMapLayer): Promise<MapLayer> {
+    const site_id = await this.siteId();
+    const id = crypto.randomUUID();
+    const path = `${site_id}/${id}.img`;
+    const up = await this.client.storage.from("maps").upload(path, input.image, { contentType: input.image.type || "image/png" });
+    if (up.error) throw new Error(up.error.message);
+    const { image: _img, ...rest } = input;
+    void _img;
+    return check(await this.client.from("map_layers").insert({ ...rest, id, site_id, image_path: path }).select().single()) as MapLayer;
+  }
+  async updateMapLayer(id: string, patch: Partial<Pick<MapLayer, "opacity" | "name" | "taken_on" | "archived_at">>): Promise<void> {
+    check(await this.client.from("map_layers").update(patch).eq("id", id));
+  }
+  async mapImage(layer: MapLayer): Promise<Blob | null> {
+    const { data } = await this.client.storage.from("maps").download(layer.image_path);
+    return data ?? null;
   }
 }

@@ -1,5 +1,5 @@
 // Supabase-läget med utkorg och läscache, så att fångst och hämtning fungerar utan nät.
-import type { Capture, CaptureInput, ChecklistItem, Media, Pickup, PickupItem, StorageLocation, VObject } from "../domain/types";
+import type { Capture, CaptureInput, ChecklistItem, MapLayer, Media, Observation, Pickup, PickupItem, StorageLocation, Structure, UsageEvent, VObject, Zone } from "../domain/types";
 import { Outbox, isNetworkError, type OutboxOp } from "./outbox";
 import type { MediaInput, Receipt } from "./repo";
 import { SupabaseRepo } from "./supabaseRepo";
@@ -102,6 +102,21 @@ export class OfflineSupabaseRepo extends SupabaseRepo {
   override checklist(id: string): Promise<ChecklistItem[]> { return this.cached(`checklist:${id}`, () => super.checklist(id)); }
   override storageLocations(): Promise<StorageLocation[]> { return this.cached("storage_locations", () => super.storageLocations()); }
   override objects(): Promise<VObject[]> { return this.cached("objects", () => super.objects()); }
+
+  // ---- Vretakartan fungerar offline (FR-076): grundbilder, zoner, byggnader och kartlager cachas
+  override zones(): Promise<Zone[]> { return this.cached("zones", () => super.zones()); }
+  override structures(): Promise<Structure[]> { return this.cached("structures", () => super.structures()); }
+  override mapLayers(): Promise<MapLayer[]> { return this.cached("map_layers", () => super.mapLayers()); }
+  override allUsageEvents(): Promise<UsageEvent[]> { return this.cached("usage_events", () => super.allUsageEvents()); }
+  override observations(): Promise<Observation[]> { return this.cached("observations", () => super.observations()); }
+  override async mapImage(layer: MapLayer): Promise<Blob | null> {
+    const key = `map_image:${layer.id}:${layer.updated_at}`;
+    const hit = await this.outbox.cacheGet<Blob>(key);
+    if (hit) return hit;
+    const blob = await super.mapImage(layer);
+    if (blob) await this.outbox.cachePut(key, blob);
+    return blob;
+  }
 
   // ---- synk
   override async pendingSync(): Promise<number> {
