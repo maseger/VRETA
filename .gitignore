@@ -10,3 +10,8 @@ media/
 .env.*
 node_modules/
 dist/
+dev-dist/
+!.env.example
+# Säkerhetskopior och exporter innehåller privata uppgifter
+backups/
+vreta-export-*.zip

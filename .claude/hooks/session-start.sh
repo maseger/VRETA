@@ -1,10 +1,15 @@
 #!/bin/bash
-# Installs GDAL (command-line tools + Python bindings) for map work on VRETA
-# in Claude Code cloud sessions. Idempotent: skips when GDAL is already present.
+# Installs npm dependencies and GDAL (command-line tools + Python bindings) for VRETA
+# in Claude Code cloud sessions. Idempotent: skips GDAL when it is already present.
 set -euo pipefail
 
 if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
   exit 0
+fi
+
+# Node-beroenden för appen (vite, vitest, typescript)
+if [ -f "$CLAUDE_PROJECT_DIR/package.json" ]; then
+  (cd "$CLAUDE_PROJECT_DIR" && npm install --no-audit --no-fund --silent)
 fi
 
 if command -v gdalinfo >/dev/null 2>&1; then
