@@ -1,8 +1,8 @@
-# VRETA – Specifikation R1
+# VRETA – Specifikation R1.1
 
-5 oktober 2026 · Mattias Seger
+6 oktober 2026 · Mattias Seger
 
-> Exporterad från Claude Docs-dokumentet *VRETA – Specifikation R1*. Vid skillnad gäller den senast uppdaterade versionen; uppdatera denna fil när specen ändras.
+> Exporterad från Claude Docs-dokumentet *VRETA – Specifikation R1.1*. Vid skillnad gäller den senast uppdaterade versionen; uppdatera denna fil när specen ändras.
 
 ## 0. Om dokumentet
 
@@ -27,6 +27,26 @@ Dokumentet beskriver **vad** som ska byggas och **hur det ska upplevas**, inte e
 
 Tillagt efter första utkastet: en egen fastighetskarta för Vreta med Google Maps för omvärlden (7.6), fullt talstöd med röstläge (7.5) och chatboten Fråga Vreta som känner till allt innehåll (11.6).
 
+### Ändringar i R1.1
+
+R1.1 beskriver R1 som den är byggd, med det som tillkommit sedan första versionen den 5 oktober 2026. Projekt och behov, som var P1, är byggda. Nytt är platser utanför Vreta, relationer mellan människor, gästlänkar, foto på personer och automatisk driftsättning. Tillägg i texten är märkta (R1.1).
+
+| Datum | Ändring | Avsnitt |
+| --- | --- | --- |
+| 2026-10-06 | Delning: texten kopieras redan vid knapptrycket, och appen påminner om att klistra in den där kanalen bara tar emot bilderna (Facebook, Instagram) | 8.4, S9 |
+| 2026-10-06 | Foto på personer när de skapas och senare; fotots synlighet följer bildsamtycket. Namn och ort kan ändras på personkortet | S5, 6.4, 12.1 |
+| 2026-10-06 | Fångsttolkningen håller ihop för- och efternamn och gör aldrig en del av namnet till ort | 11.2 |
+| 2026-10-06 | AI-funktionerna driftsätts automatiskt med GitHub Actions och röktestas efter varje ändring; databasfunktionerna från M6–M9 härdas (M10) | 14.1, 14.4, 15.2 |
+| 2026-10-06 | Gästlänkar: familj och vänner tittar utan konto och kan inte ändra något (M9) | 7.1, 12.4, S15 |
+| 2026-10-06 | 75 platstyper för områden och byggnader, var och en med typisk permakulturzon | S10 |
+| 2026-10-06 | Ny plats: områden, byggnader, lagerplatser och platser utanför Vreta läggs till utan karta | S10 |
+| 2026-10-06 | Fånga känner igen plats utanför Vreta, projekt och vem som tipsade | 4.1, 11.2, S3 |
+| 2026-10-06 | Relationer mellan människor och organisationssidor (M8) | 10.8, S14 |
+| 2026-10-05 | Behov i projekt, projektytor på Vretakartan och Fråga Vreta om projekt och platser (M7) | 4.10, 7.6, 11.6 |
+| 2026-10-05 | Projekt och platser utanför Vreta som egna poster (M6) | 4.10, 6.2, S13 |
+| 2026-10-05 | Navigeringen delas i Saker, Människor och Platser i stället för Samla och Vreta | 7.1 |
+| 2026-10-05 | Inloggning med lösenord som alternativ till länk, felruta i stället för tom sida, kartpaket, och appen kan ligga under en undersökväg (GitHub Pages) | S12, 7.6, 13.2, 14.1 |
+
 ## 1. Produktdefinition
 
 VRETA är ett digitalt operativsystem för en regenerativ plats: ett inköps- och lagersystem för återbruk, ett relations-CRM och ett berättarverktyg i samma app. Allt bygger på samma data: det som registreras en gång kan följas, planeras och berättas om.
@@ -49,6 +69,7 @@ VRETA är ett digitalt operativsystem för en regenerativ plats: ett inköps- oc
 | Ägare | Du – driver Vreta och återbruket | Allt, inklusive publicering och samtycken |
 | Medhjälpare | Familj eller nära vänner som hjälper till | Registrera fynd, hämtningar, observationer och bidrag; inga publiceringar |
 | Läsare | Den som vill följa arbetet internt | Läsa internt material |
+| Gäst (R1.1) | Familj och vänner som vill följa arbetet | Via gästlänk utan konto; ser utvalt innehåll och kan inte ändra något (12.4) |
 | Bidragsgivare (extern) | Givare, säljare, köpare, följare | Ingen inloggning; nås via sociala medier och en publik "Bidra"-sida |
 
 ### 1.3 Kontext: privat verksamhet
@@ -107,10 +128,12 @@ Fem produktprinciper styr alla designval; de invarianta reglerna är tvingande o
 | INV-11 | Summan av kvantiteter i ett partis fördelning är alltid lika med partiets totala kvantitet. |
 | INV-12 | En annons publiceras aldrig med exakt adress, givarens namn eller lagerplats. Platsen anges på ortsnivå. |
 | INV-13 | Kontaktuppgifter och CRM-anteckningar är `private` som standard och kan inte sättas till `public`. |
+| INV-14 | En gäst ändrar aldrig något och ser aldrig priser, kontaktuppgifter, adresser, relationer, inköp, hämtningar, uppgifter eller vad Vreta gett tillbaka. En person som nämns syns för gäster bara med personens samtycke. (R1.1) |
+| INV-15 | Ett foto på en person har aldrig högre synlighet än personens bildsamtycke: `private` tills personen sagt ja, och synligheten följer med när samtycket ändras. (R1.1) |
 
 ## 3. Omfattning i R1
 
-R1 bygger hela kärnflödet **inflöde → objektets liv → utflöde**, med CRM och berättande längs hela vägen. Plats- och systemplanering finns i en enkel form; den fulla regenerativa modellen kommer i R2.
+R1 bygger hela kärnflödet **inflöde → objektets liv → utflöde**, med CRM och berättande längs hela vägen. Plats- och systemplanering finns i en enkel form; den fulla regenerativa modellen kommer i R2. R1.1 lägger till projekt med behov, platser utanför Vreta, relationer mellan människor, foto på personer och gästlänkar.
 
 ### 3.1 Prioritering
 
@@ -122,21 +145,21 @@ R1 bygger hela kärnflödet **inflöde → objektets liv → utflöde**, med CRM
 | Hämtning och lager | Pickup med checklista; hierarkisk lagerplats; QR-etikett per lagerplats | Ruttförslag för flera hämtningar | Tiptapp-integration |
 | Nytt liv | UsageEvent: monterad, planterad, installerad, flyttad, demonterad | Påminnelse om uppföljning ("ett år senare") | Fasta fotopunkter med automatisk jämförelse |
 | Utflöde | Annons (sälja, skänka, byta, söker); annonspaket; manuell publicering; intressentkö | Webbläsaragent via MCP | Direktintegration där API finns |
-| CRM | Person, organisation, roller, kontakthistorik, bidrag, samtycke, sociala profiler | Tack-påminnelser, ömsesidighet | Publik bidragsportal med inloggning |
+| CRM | Person, organisation, roller, kontakthistorik, bidrag, samtycke, sociala profiler; relationer mellan människor och foto (R1.1) | Tack-påminnelser, ömsesidighet | Publik bidragsportal med inloggning |
 | Berätta | Berätta-knapp överallt; utkast per kanal; delningsmeny; Privacy Guard | Berättelseförslag från AI; innehållskalender | Direktpublicering till Facebooksida och Instagram |
-| Plats | Site, zoner, byggnader; egen fastighetskarta (Vretakartan) med eget ortofoto, zoner, byggnader och nålar, offline; Google Maps för hämtningar och navigering | Projekt med behov (Need) och efterlysning | Systemfunktioner med bedömning, NU/PLAN-karta |
+| Plats | Site, zoner, byggnader; egen fastighetskarta (Vretakartan) med eget ortofoto, zoner, byggnader och nålar, offline; Google Maps för hämtningar och navigering; platser utanför Vreta med ort (R1.1) | Projekt med behov (Need) och efterlysning – byggt i R1.1 | Systemfunktioner med bedömning, NU/PLAN-karta |
 | AI | Capture, chatboten Fråga Vreta med källor och röstläge, annonstext, berättelseutkast | Dubblettförslag | Planeringsagent |
-| Drift | Auth, roller, audit, export, backup | Årssammanställning köp/försäljning | – |
+| Drift | Auth med länk eller lösenord, roller, gästlänkar (R1.1), audit, export, backup | Årssammanställning köp/försäljning | – |
 
 ### 3.2 Vad som medvetet väntar
 
 - **Systemfunktioner och bedömningar** (mat, vatten, energi m.fl.) väntar till R2. R1 sparar ändå zon och byggnad på allt, så att historiken kan kopplas till funktioner i efterhand.
-- **Projekt och behov** är P1. Om de inte hinns med kan objekt ändå taggas med ett projektnamn som senare blir en riktig Project-entitet.
+- **Projekt och behov** var P1 och är byggda i R1.1 (M6–M7). Ett nytt projektnamn i formulären blir en riktig Project-post.
 - **Direktpublicering via API** väntar. R1 löser publicering med delningsmeny och, i P1, webbläsaragent.
 
 ## 4. Kärnprocesser
 
-R1 har nio kärnprocesser. Var och en slutar i ett tydligt tillstånd och skapar en Event, så att den syns i journaler och kan berättas om.
+R1.1 har tio kärnprocesser. Var och en slutar i ett tydligt tillstånd och skapar en Event, så att den syns i journaler och kan berättas om.
 
 ```mermaid
 flowchart LR
@@ -155,7 +178,7 @@ Ett objekt kan gå tillbaka från nytt liv till lager och vidare ut. Varje steg 
 
 1. Användaren trycker på **+** och tar foto, spelar in röst, skriver eller klistrar in en annonslänk eller skärmdump.
 2. Inspelningen sparas lokalt direkt, även offline, som ett **Capture**.
-3. När nät finns tolkar Capture Agent innehållet och föreslår entiteter: objekt eller parti, person, plats, pris, antal, mått, deadline, transportbehov.
+3. När nät finns tolkar Capture Agent innehållet och föreslår entiteter: objekt eller parti, person, plats, pris, antal, mått, deadline, transportbehov – och sedan R1.1 även plats utanför Vreta, projekt och vem som tipsade (11.2).
 4. Appen visar förslaget direkt om nät finns; annars hamnar det i **Att granska**.
 5. Användaren godkänner, ändrar eller avvisar per fält. Osäkra fält är markerade.
 6. Vid godkännande skapas entiteterna, en Event och vid behov en uppföljningsuppgift.
@@ -163,7 +186,7 @@ Ett objekt kan gå tillbaka från nytt liv till lager och vidare ut. Varje steg 
 
 ### 4.2 Anskaffning (inköp, gåva, byte)
 
-1. Ett fynd blir en **Acquisition** kopplad till objekt eller parti och motpart (person eller organisation).
+1. Ett fynd blir en **Acquisition** kopplad till objekt eller parti och motpart (person eller organisation) och, sedan R1.1, platsen där det hittades eller köptes (t.ex. en loppis).
 2. Användaren för dialogen: kontaktad → förhandlar → överenskommet. Meddelanden kan klistras in eller dikteras och kopplas till personen.
 3. Vid överenskommelse sparas typ (köp, gåva, byte, lån, arbete mot material), pris, betalsätt och tidsfönster för hämtning.
 4. En Pickup skapas automatiskt med objekten och motpartens adress.
@@ -187,7 +210,7 @@ Ett objekt kan gå tillbaka från nytt liv till lager och vidare ut. Varje steg 
 ### 4.5 Nytt liv
 
 1. Från objektet väljer användaren **Använd** och typ: monterad, planterad, installerad, inbyggd, renoverad, flyttad, demonterad.
-2. Plats (zon eller byggnad) och datum krävs; projekt, foto och anteckning är valfria.
+2. Plats (zon eller byggnad) och datum krävs; projekt, foto och anteckning är valfria. Projektet väljs bland befintliga eller skapas med ett nytt namn (R1.1).
 3. För ett parti anges kvantitet; resten ligger kvar i lager.
 4. Objektet får status `in_use`, en UsageEvent och en Event skapas och syns i objekt-, plats- och projektjournal.
 5. Appen föreslår en berättelse ("Före/efter") och, för växter, en uppföljning om tre månader.
@@ -209,7 +232,7 @@ Ett objekt kan gå tillbaka från nytt liv till lager och vidare ut. Varje steg 
 2. Användaren väljer mål (t.ex. före/efter, tacka, efterlys, visa vad som hänt) och kanaler.
 3. Privacy Guard bygger en rensad kontext; Story Agent skriver utkast per kanal och föreslår bilder.
 4. Publiceringsgranskningen visar källor, personer som nämns eller syns och deras samtycke.
-5. Användaren redigerar och godkänner, och delar via delningsmenyn med text och bilder.
+5. Användaren redigerar och godkänner, och delar via delningsmenyn med text och bilder. Texten kopieras redan vid knapptrycket, eftersom Facebook och Instagram bara tar emot bilderna (8.4, R1.1).
 6. Användaren markerar inlägget som delat och klistrar gärna in länken. Inlägget syns i journalen.
 
 ### 4.8 Relation och tack
@@ -226,6 +249,14 @@ Ett objekt kan gå tillbaka från nytt liv till lager och vidare ut. Varje steg 
 2. Observationen syns i plats- och zonjournal och kan kopplas till objekt eller projekt.
 3. Beslut kan journalföras med bakgrund, alternativ och motiv.
 4. Journalen kan sammanfattas per vecka, månad eller säsong och bli en berättelse.
+
+### 4.10 Projekt och behov (R1.1)
+
+1. Ett projekt (bygge, plantering, renovering, anläggning, odling) skapas under Platser → Projekt, eller när ett nytt projektnamn skrivs i ett formulär. Det får slag, status, zon eller byggnad och beskrivning, och kan få en yta på Vretakartan.
+2. Behov läggs till med rubrik, antal och enhet ("1 500 tegel"). Antal kan lämnas tomt; då räcker första bidraget.
+3. Behovet fylls av saker som används i projektet, av bidrag eller utan källa (t.ex. sten från egna marken). Uppfyllelsegraden räknas fram och lagras aldrig ("1 020 av 1 500 tegel").
+4. Appen föreslår saker i lager som passar behovet, och ett behov kan efterlysas. Annonsen kopplas tillbaka till behovet.
+5. Varje uppfyllelse blir en händelse i projektjournalen. När behovet är fyllt markeras händelsen som värd att berätta.
 
 ## 5. Tillståndsmaskiner
 
@@ -295,9 +326,21 @@ Avbrott: `no_show`, `lost`, `rejected`. Leads i en annons har köordning; när e
 
 `expired` efter 30 dagar utan åtgärd; originalinspelningen finns kvar.
 
+### 5.9 Projekt (Project, R1.1)
+
+`idea` (Idé) · `planned` (Planerat) · `active` (Pågår) · `paused` (Vilar) · `done` (Klart)
+
+Statusen väljs fritt bland dessa fem. I projektlistan kommer pågående projekt först, sedan planerade, idéer, vilande och klara.
+
+### 5.10 Behov (Need, R1.1)
+
+`open → dropped`
+
+Om ett behov är uppfyllt räknas fram ur uppfyllelserna och lagras aldrig som status.
+
 ## 6. Domänmodell
 
-R1 har drygt 30 entiteter i sex grupper; alla delar gemensamma metadata och kopplas via länktabeller i stället för kopior. Relationsdatabasen är källa till sanningen för aktuellt tillstånd; Event är domänhistorik och AuditEntry teknisk logg.
+R1.1 har drygt 35 entiteter i sex grupper; alla delar gemensamma metadata och kopplas via länktabeller i stället för kopior. Relationsdatabasen är källa till sanningen för aktuellt tillstånd; Event är domänhistorik och AuditEntry teknisk logg.
 
 ### 6.1 Gemensamma fält på alla kärnentiteter
 
@@ -313,6 +356,7 @@ AI-extraherade fält sparas med `confidence` (0–1) och `verified` (sant/falskt
 | Plats | Zone | Delområde: trädgård, odling, lagerzon | namn, typ, geometri, status (existing/planned/removed) |
 | Plats | Structure | Byggnad eller anläggning | namn, typ, zone\_id, geometri, status |
 | Plats | StorageLocation | Hierarkisk lagerplats | namn, parent\_id, structure\_id, qr\_code |
+| Plats | ExternalPlace | Plats utanför Vreta: loppis, gård, återvinningscentral (R1.1) | namn, slag, ort, adress (private) |
 | Resurser | Object | Individuellt spårbar sak eller växt | titel, kategori, beskrivning, material, mått, vikt, ålder/period, skick (1–5), status, living\_material, art/sort, hälsostatus, uppskattat värde |
 | Resurser | ObjectBatch | Parti av likartat material | samma som Object + total\_quantity, unit |
 | Resurser | BatchAllocation | Del av ett parti med egen status och plats | batch\_id, quantity, status, storage\_location\_id eller zone/structure |
@@ -326,12 +370,13 @@ AI-extraherade fält sparas med `confidence` (0–1) och `verified` (sant/falskt
 | Flöde | ChannelPost | Annonsens version per kanal | listing\_id, kanal, text, bilder, extern URL, extern status, publiceringsväg |
 | Flöde | Lead | Intressent på en annons | listing\_id, person\_id, köplats, bud, status |
 | Flöde | Disposal | Hur en resurs gick ut | typ (sold/donated/exchanged/discarded), motpart, pris, betalsätt, datum |
-| Människor | Person | Människa i relation till Vreta | namn, smeknamn, kontaktuppgifter (private), ort, roller, hur vi träffades, sociala profiler |
+| Människor | Person | Människa i relation till Vreta | namn, smeknamn, kontaktuppgifter (private), ort, roller, hur vi träffades, sociala profiler, organisation, foto (R1.1) |
 | Människor | Organization | Företag, förening, kommun | namn, typ, kontakt (private) |
 | Människor | Interaction | Kontakthistorik: samtal, meddelande, möte | person\_id, kanal, datum, sammanfattning (private) |
 | Människor | Contribution | Bidrag till Vreta | person\_id, typ, beskrivning, mängd/tid, kopplingar |
 | Människor | ReciprocityEntry | Vad Vreta gett tillbaka | person\_id, typ, beskrivning, datum |
 | Människor | ConsentPolicy | Publiceringssamtycke | person\_id, namn, bild, bidrag (yes/no/ask), datum, hur samtycket gavs |
+| Människor | PersonRelation | Relation mellan två personer (R1.1) | person\_id, other\_id, slag (familj, partner, granne, van, kollega, samarbetar, introduced), anteckning |
 | Historik | Event | Faktisk händelse | event\_type, occurred\_at, recorded\_at, zon, sammanfattning, anteckning, berättarvärde (flagga) |
 | Historik | EventLink | Koppling Event ↔ valfri entitet | event\_id, entity\_type, entity\_id, roll |
 | Historik | Observation | Iakttagelse om plats eller natur | typ, zon, beskrivning, uppföljningsdatum |
@@ -343,7 +388,8 @@ AI-extraherade fält sparas med `confidence` (0–1) och `verified` (sant/falskt
 | Gemensamt | Capture / Proposal | Råinspelning och AI-förslag | rådata, föreslagna entiteter, status |
 | Gemensamt | Task | Uppgift med datum | titel, förfallodatum, kopplingar, status |
 | Gemensamt | AuditEntry | Teknisk logg | vem, vad, när, före/efter |
-| P1 | Project, Need, NeedFulfillment | Projekt och behov med uppfyllelsegrad | se 6.4 |
+| Gemensamt | GuestLink | Gästlänk för familj och vänner (R1.1) | etikett, nyckelns hash, antal användningar, senast använd, stängd |
+| Plats | Project, Need, NeedFulfillment | Projekt och behov med uppfyllelsegrad (byggt i R1.1) | namn, slag, status, zon/byggnad, yta; behov med antal och enhet; se 6.4 |
 
 ### 6.3 Partier och fördelning
 
@@ -363,7 +409,10 @@ När användaren registrerar nytt liv, flytt eller försäljning av en del delas
 - **UsageEvent, Pickup, Acquisition, Disposal och Contribution skapar alltid en Event** med EventLinks till alla berörda entiteter. De är specialiserade poster; Event är den gemensamma historiken.
 - **Person ↔ objekt**: via Acquisition (leverantör/givare), Disposal (köpare/mottagare) och Contribution.
 - **Media** kan länkas till valfri entitet och har egen synlighet. En bild på en person ärver aldrig högre synlighet än personens bildsamtycke.
-- **Project (P1)** kopplas till zon/byggnad och har Needs. NeedFulfillment kopplar en kvantitet till ett objekt, parti eller bidrag, och behovets status räknas fram från summan ("1 020 av 1 500 tegel").
+- **Project (R1.1)** kopplas till zon/byggnad, kan ha en yta på Vretakartan och har Needs. UsageEvent och Contribution kopplas till projektet med project\_id. NeedFulfillment kopplar en kvantitet till ett objekt, parti eller bidrag, och behovets status räknas fram från summan ("1 020 av 1 500 tegel").
+- **Plats utanför Vreta (R1.1):** Acquisition, Pickup och Disposal kan kopplas till en ExternalPlace, så att man ser vad som kom därifrån och vad som lämnades där. Orten är på kommunnivå och får synas; adressen är `private` (INV-12, INV-13).
+- **Person ↔ person (R1.1):** PersonRelation. Relationen "tipsade oss om" är riktad och visar via vem någon kom till Vreta. Relationer syns bara för ägare och medhjälpare.
+- **Foto på en person (R1.1):** Media kopplad till personen. Synligheten sätts från bildsamtycket – `internal` vid ja, annars `private` – och ändras när samtycket ändras (INV-15). Ett nytt foto ersätter det gamla, som arkiveras.
 
 ## 7. Användargränssnitt
 
@@ -371,36 +420,22 @@ Gränssnittet är byggt för tumme och fält på mobilen och för överblick på
 
 ### 7.1 Navigation
 
-**Mobil (nedre fält):** Idag · Saker · **+** · Människor · Platser. Fråga nås från den runda knappen som finns på alla skärmar.
+**Mobil (nedre fält):** Idag · Saker · **+** · Människor · Platser. Fråga nås från den runda knappen som finns på alla skärmar (R1.1).
 
-Saker, människor och platser är tre olika delar som är beroende av varandra: **saker** är det som hanteras, **människor** hanterar dem och har relationer med varandra och med Vreta, och **platser** är där det sker fysiskt. Detaljsidorna hör till sin del (objekt och hämtningar till Saker, personkort till Människor, lager, zoner och journal till Platser).
+Saker, människor och platser är tre delar som är beroende av varandra: **saker** är det som hanteras, **människor** hanterar dem och har relationer med varandra och med Vreta, och **platser** är där det sker fysiskt. Detaljsidorna hör till sin del: objekt och hämtningar till Saker, personkort och organisationer till Människor, lager, zoner, projekt och journal till Platser.
 
 | Flik | Innehåll |
 | --- | --- |
 | Idag | Nästa steg: att granska, hämtningar, förfallna uppgifter, intressenter som väntar svar, berättelseförslag |
-| Saker | Objekt och partier (lista/rutnät) med filter på status och plats; sakernas väg in och ut: inköp, hämtningar och annonser |
+| Saker | Objekt och partier (lista/rutnät) med filter på status och plats, och sakernas väg in och ut: inköp, hämtningar och annonser |
 | + | Global fångst, alltid tillgänglig |
-| Människor | Personer med roller, samtycke, kontakthistorik, bidrag och ömsesidighet; nätverk (relationer mellan människor); organisationer med medlemmar |
-| Platser | **På Vreta:** karta, zoner och byggnader, och det som sker där – förvaring (lager), projekt (byggen, planteringar) och observationer (djur, växter m.m.) med journal. **Utanför:** platser som loppisar, hämtställen och återvinningscentraler, och orterna där saker hämtas, köps och lämnas |
+| Människor | Personer med foto, roller, samtycke, kontakthistorik, bidrag och ömsesidighet; nätverk (relationer mellan människor); organisationer med medlemmar |
+| Platser | **På Vreta:** karta, zoner och byggnader, och det som sker där – förvaring (lager), projekt (byggen, planteringar) och observationer med journal. **Utanför:** loppisar, hämtställen och återvinningscentraler, och orterna där saker hämtas, köps och lämnas |
 | Fråga | Chatboten Fråga Vreta: sök, frågor och uppdrag i text eller tal (se 11.6) |
-
-**Lägga till platser:** knappen *Ny plats* under Platser lägger till ett område på Vreta, en byggnad eller anläggning, en lagerplats eller en plats utanför Vreta – utan att kartan behövs. Områden och byggnader kan ritas in på Vretakartan direkt efteråt eller senare ("Rita in").
-
-**Gäster:** ägaren skapar gästlänkar under Inställningar och skickar dem till familj och vänner. Den som öppnar länken loggas in anonymt och blir läsare med gästflagga – utan konto. Gäster ser en egen startsida (projekt, nytt liv, senaste fynden), kartan, saker, projekt och platser. De ser aldrig priser, kontaktuppgifter, adresser, relationer, inköp, hämtningar, uppgifter, citat eller vad Vreta gett tillbaka; människor, bidrag och journalhändelser som nämner en person syns bara med personens samtycke. Gäster kan inte ändra något och inte använda Fråga Vreta. En länk kan stängas, och då förlorar alla som använt den åtkomsten. Bara nyckelns hash sparas. Fritext som ägaren själv skrivit (t.ex. en objektbeskrivning med ett namn) filtreras inte.
 
 **Dator:** vänsterkolumn med Idag, Saker, Människor, Platser och Fråga samt Fånga och Inställningar. Listor och detaljer visas sida vid sida.
 
-**Projekt** (Project) är egna poster med namn, slag, status (idé, planerat, pågår, vilar, klart), zon eller byggnad och beskrivning. Nytt liv och bidrag kopplas med project_id; ett nytt projektnamn i formulären blir ett projekt. Projektsidan visar behov, saker, människor och projektjournal, och projektets yta kan ritas på Vretakartan (eget lager "Projekt").
-
-**Behov** (Need) hör till ett projekt: rubrik, antal och enhet (antal kan lämnas tomt). NeedFulfillment kopplar en kvantitet till en sak (eller inget, t.ex. sten från egna marken). Hur långt behovet kommit räknas fram ur summan ("1 020 av 1 500 tegel") och lagras aldrig. Varje uppfyllelse blir en händelse i projektjournalen; när behovet är fyllt markeras händelsen som värd att berätta. Appen föreslår saker i lager som passar behovet, och ett behov kan efterlysas – annonsen kopplas tillbaka till behovet.
-
-**Relationer mellan människor** (PersonRelation): familj, partner, granne, vän, kollega, arbetar ihop – och den riktade "tipsade oss om", som visar via vem någon kom till Vreta. Relationerna är personuppgifter och syns bara för ägare och medhjälpare. Personer kan kopplas till en organisation (förening, företag, kommun …), och organisationen har en egen sida med medlemmar och saker som kommit därifrån.
-
-**Fånga känner igen kopplingar.** Capture Agent (och den lokala tolkningen) föreslår plats utanför Vreta ("på Återbruket"), projekt ("till orangeriet") och vem som tipsade ("Anders tipsade") – aldrig tipsaren som säljare. Namnen matchas mot befintliga platser, projekt, behov och personer; agenten får namnen på kända projekt och platser. Den lokala tolkningen kopplar bara projekt som redan finns. Under Att granska visas kopplingarna som förslag; vid godkännande kopplas platsen till inköpet, saken räknas mot projektets behov (eller ett nytt behov) och tipset blir relationen "tipsade oss om" till säljaren eller givaren.
-
-**Fråga Vreta** har verktygen `person_network` ("Vem känner Erik?", "Vem tipsade om Göran?"), `projects`, `project_overview`, `open_needs` och `place_overview` ("Hur går det med orangeriet?", "Vad behöver vi till orangeriet?", "Vad har vi köpt på Återbruket?"). Adresser till platser utanför Vreta läses aldrig av chatboten.
-
-**Platser utanför Vreta** (ExternalPlace) har namn, slag, ort och en privat adress. Inköp, hämtningar och avslut kan kopplas till en plats (place_id), så att man ser vad som kom därifrån och vad som lämnades där. Orten är på kommunnivå och får synas; adressen syns bara för ägare och medhjälpare (INV-12, INV-13). Objektsidan har en flik Platser med var saken är på Vreta och var den kom ifrån och tog vägen.
+**Gäster (R1.1)** ser en egen startsida och en meny utan **+** och utan Fråga (S15, 12.4).
 
 ### 7.2 Designprinciper
 
@@ -434,6 +469,7 @@ Saker, människor och platser är tre olika delar som är beroende av varandra: 
 - Varje fält kan godkännas, ändras eller tas bort. Dubblettförslag visas som "Samma som Anders Lind?".
 - Botten: Godkänn alla · Spara utkast · Släng.
 - Efter godkännande: berättarfångst (varför, före-bild, markera ögonblick) som ett diskret, hoppbart steg.
+- **Kopplingar (R1.1):** förslag på plats utanför Vreta, projekt (med behov) och tipsare visas som ett eget kort. Vid godkännande kopplas platsen till inköpet, saken räknas mot projektets behov (eller ett nytt behov) och tipset blir relationen "tipsade oss om".
 
 **S4 Objektsida**
 
@@ -442,6 +478,7 @@ Saker, människor och platser är tre olika delar som är beroende av varandra: 
 - Primär knapp för nästa steg; sekundära: Använd, Lägg ut, Flytta, Berätta.
 - Flikar: **Resa** (tidslinje från fynd till nu, med bilder) · **Fakta** (mått, material, skick, värde) · **Människor** (från vem, till vem, vem hjälpte) · **Ekonomi** (köpt för, sålt för).
 - "Var finns den nu?" visas alltid med karta eller lagerväg.
+- Fliken **Platser** (R1.1) visar var saken är på Vreta och var den kom ifrån och tog vägen.
 
 **S5 Personkort**
 
@@ -450,6 +487,9 @@ Saker, människor och platser är tre olika delar som är beroende av varandra: 
 - Samtyckesrad: namn ✓ · bild ? · bidrag ✓, tryck för att ändra.
 - Flikar: **Relation** (tidslinje: första mötet, köp, bidrag, tack) · **Objekt** (från och till personen) · **Bidrag och ömsesidighet** · **Anteckningar** (privat).
 - "Nästa steg med personen": t.ex. "Visa Anders var fönstren hamnade".
+- **Foto (R1.1):** lägg till, byt eller ta bort foto på personkortet, eller redan när personen skapas. Fotot är privat tills personen sagt ja till bild (INV-15).
+- **Namn och ort** kan ändras direkt under rubriken (R1.1).
+- **Nätverk (R1.1):** relationer till andra personer och organisationen personen hör till (10.8).
 
 **S6 Hämtning**
 
@@ -478,13 +518,16 @@ Saker, människor och platser är tre olika delar som är beroende av varandra: 
 - Steg 2: välj kanaler (Facebook, Instagram, LinkedIn, privat meddelande).
 - Steg 3: utkast per kanal med föreslagna bilder; redigera fritt; ton (varm, saklig, kort).
 - Steg 4: granskning – källor, personer med samtyckesstatus, varningar i gult.
-- Steg 5: Dela (delningsmeny med text och bilder) och markera som delat.
+- Steg 5: Dela (delningsmeny med text och bilder) och markera som delat. Texten kopieras vid knapptrycket, och appen påminner om att klistra in den i Facebook och Instagram (8.4, R1.1).
 
-**S10 Vreta (karta och journal)**
+**S10 Platser (karta, platser och journal)**
 
 - Vretakartan: egen fastighetskarta med eget ortofoto som grund; fastighetsgräns, zoner och byggnader som ytor; nålar för objekt i bruk, observationer och fotopunkter; fungerar offline (se 7.6).
 - Tryck på zon: zonkort med objekt, senaste händelser, foton över tid.
 - Journalflöde med filter: allt, zon, typ, person, period.
+- **På Vreta och Utanför (R1.1)** är två flikar. Utanför visar orterna, som samlar personer, platser och flöden in och ut, och platser som loppisar, gårdar och återvinningscentraler, var och en med egen sida.
+- **Ny plats (R1.1):** område på Vreta, byggnad eller anläggning, lagerplats eller plats utanför Vreta – utan att kartan behövs. Områden och byggnader kan ritas in på Vretakartan direkt efteråt eller senare.
+- **Platstyper (R1.1):** 40 typer för områden och 35 för byggnader och anläggningar, i grupper som odling och mat, djur och pollinatörer, vatten, kretslopp och natur. Varje typ har en typisk permakulturzon, från 0 (huset) till 5 (vild natur). Typen sparas som text, så listan kan växa.
 
 **S11 Fråga Vreta (chatbot)**
 
@@ -494,6 +537,23 @@ Saker, människor och platser är tre olika delar som är beroende av varandra: 
 **S12 Inställningar**
 
 - Kategorier, checklistmallar, lagerplatser, kanaler (med vad varje kanal klarar), användare och roller, export, årssammanställning.
+- **Gästlänkar och lösenord (R1.1):** skapa, kopiera och stäng gästlänkar; byt lösenord. Inloggning sker med länk eller lösenord.
+
+**S13 Projekt (R1.1)**
+
+- Lista under Platser: pågående projekt först, sedan planerade, idéer, vilande och klara.
+- Projektsidan: behov med uppfyllelsegrad, saker som använts, människor som bidragit, projektjournal och projektets yta på kartan.
+- Behov läggs till och efterlyses direkt från projektet.
+
+**S14 Organisation (R1.1)**
+
+- Organisationens människor och saker som kommit därifrån.
+
+**S15 Gästvy (R1.1)**
+
+- Startsida för gäster: projekt som pågår, saker som fått nytt liv och de senaste fynden.
+- Ett band överst säger att man tittar som gäst; *Lämna* avslutar.
+- Gäster ser saker (objekt och annonser), människor med samtycke och platser med projekt. Menyn saknar + och Fråga, och inget går att ändra.
 
 ### 7.4 Tillgänglighet och ton
 
@@ -558,6 +618,8 @@ Vretakartan byggs på kommunens baskarta för Vreta 8:35 som grundlager, med sit
 - Originalfilerna sparas oändrade som `private` Media, så att importen kan göras om. Konverteringen (georeferens, vektorextraktion, rastrering) körs som bakgrundsjobb med GDAL på servern.
 - Kartorna visar fastighetens läge och är därför `private` (12.6).
 
+**Kartpaket (R1.1):** grundkarta och överlägg kan läsas in i ett steg från ett kartpaket – en JSON-fil med bilderna och deras hörnkoordinater, byggd med skriptet `kartpaket.py`. Grundkartan läses in först. Överlägg visas från start med sin sparade genomskinlighet.
+
 #### Lager
 
 | Lager | Innehåll | Prio |
@@ -571,7 +633,7 @@ Vretakartan byggs på kommunens baskarta för Vreta 8:35 som grundlager, med sit
 | Lager | Lagerplatsernas läge på fastigheten | P0 |
 | Växtlighet och träd | Enskilda träd, buskar, planteringar | P1 |
 | Vatten och ledningar | Dagvatten, bevattning, el, avlopp | P1 |
-| Projekt | Projektens ytor | P1 |
+| Projekt | Projektens ytor | Byggt (R1.1) |
 | PLAN | Planerade zoner och byggnader i eget lager (NU/PLAN) | R2 |
 
 #### Funktioner
@@ -645,7 +707,7 @@ API-publicering till Facebooksida och Instagram-företagskonto kräver att Meta 
 
 1. Användaren godkänner utkastet i Berätta-studion.
 2. Appen tar bort platsdata ur bilderna och skalar dem för kanalen.
-3. Telefonens delningsmeny öppnas med text och bilder (Web Share API). Om kanalen inte tar emot text kopieras texten automatiskt och appen säger det.
+3. Telefonens delningsmeny öppnas med text och bilder (Web Share API). Texten kopieras till urklipp redan vid knapptrycket, innan bilderna laddas – annars tillåter telefonen det inte. Facebook och Instagram tar bara emot bilderna, så appen säger före och efter delningen att texten ska klistras in, och har knappen Kopiera texten igen (R1.1). Samma sak gäller tack och annonser.
 4. Efter delning frågar appen "Delat?" och erbjuder att klistra in länken.
 5. Inlägget får status `shared` och syns i journalen och på källentiteterna ("Berättat 2 gånger").
 
@@ -734,7 +796,7 @@ CRM:et beskriver relationen till Vreta, inte bara kontaktuppgifter: varje person
 | Transportör | Contribution av transport | Någon som lånade ut släp |
 | Köpare / mottagare | Disposal | Köpare av dörrar |
 | Följare | Manuellt eller via Bidra-sidan | Någon som följer Vreta på Facebook |
-| Tipsare | Manuellt | Någon som tipsar om fynd |
+| Tipsare | Manuellt, eller när Fånga känner igen vem som tipsade (R1.1) | Någon som tipsar om fynd |
 
 Roller sätts automatiskt där det går och kan läggas till manuellt. Rollistan är konfigurerbar.
 
@@ -770,6 +832,12 @@ Person kan ha länkar till Facebook- och Instagramprofil, sparade bara om person
 
 Samtycke frågas vid första kontakten, när det är naturligt. Personkortet har en färdig mening att läsa upp eller skicka: *"Jag berättar gärna om Vreta på Facebook och Instagram. Okej om jag nämner dig vid namn, visar bild på dig eller berättar vad du bidragit med?"* Svaret och hur det gavs (muntligt, meddelande, formulär) sparas med datum.
 
+### 10.8 Relationer och organisationer (R1.1)
+
+Relationer mellan människor (PersonRelation) finns i slagen familj, partner, granne, vän, kollega och arbetar ihop, och den riktade *tipsade oss om*, som visar via vem någon kom till Vreta. Relationerna är personuppgifter och syns bara för ägare och medhjälpare.
+
+Personer kan kopplas till en organisation – förening, företag, kommun eller handelsträdgård. Organisationen har en egen sida med människorna och sakerna som kommit därifrån (S14). Fråga Vreta svarar på frågor som "Vem känner Erik?" och "Vem tipsade om Göran?".
+
 ## 11. AI-funktioner och agentkontrakt
 
 AI är ett lager ovanpå den verifierade datan: den tolkar, föreslår, söker och skriver, men databasen och användarens beslut är alltid auktoritativa. R1 har sex agenter, alla körs på servern med behörighetsstyrd data.
@@ -795,6 +863,8 @@ Privacy Guard är deterministisk kod med regler, inte en språkmodell. Den kan a
 4. Agenten matchar mot befintliga personer, platser och objekt och föreslår koppling eller ny post.
 5. Fält med confidence under 0,7 visas som osäkra; fält agenten inte hittar stöd för lämnas tomma.
 6. Kritiska fält kräver alltid mänskligt beslut: personidentitet, samtycke, pris och överenskommelser.
+7. **Kopplingar (R1.1):** agenten och den lokala tolkningen föreslår plats utanför Vreta ("på Återbruket"), projekt ("till orangeriet") och vem som tipsade ("Anders tipsade") – aldrig tipsaren som säljare. Agenten får namnen på kända projekt och platser; den lokala tolkningen kopplar bara projekt som redan finns.
+8. **Namn och ort (R1.1):** för- och efternamn hålls ihop ("hos Torsten Lindholm i Gävle"), och ett ord ur personens namn sparas aldrig som ort – varken från den lokala tolkningen eller från agentens svar.
 
 ### 11.3 Sök och frågor
 
@@ -844,6 +914,10 @@ Fråga Vreta är en chatbot som känner till allt innehåll i appen som använda
 | Inlägg och berättelser | Vad som redan berättats, vad som är bra att berätta nu |
 | Bilder och ljud | Via bildbeskrivningar och transkriptioner |
 | Uppgifter och påminnelser | Vad som är förfallet eller planerat |
+| Projekt, behov och platser utanför Vreta (R1.1) | Hur det går med orangeriet, vad som behövs till det, vad som köpts på Återbruket |
+| Relationer (R1.1) | Vem som känner Erik, vem som tipsade om Göran |
+
+I R1.1 har chatboten verktygen `person_network`, `projects`, `project_overview`, `open_needs` och `place_overview`. Adresser till platser utanför Vreta läses aldrig av chatboten, och gäster kan inte använda den.
 
 VRETA:s egen data är den enda källan för påståenden om Vreta. Allmänna frågor (t.ex. hur man renoverar ett gjutjärnsfönster) besvaras med modellens allmänna kunskap och märks tydligt som allmänna råd, inte som fakta om Vreta.
 
@@ -888,6 +962,8 @@ Allt i VRETA har en synlighetsnivå, och data får bara lämna appen om både ni
 
 En post får aldrig högre synlighet än sin känsligaste del. En bild med en person får högst den nivå som personens bildsamtycke tillåter.
 
+Ett foto på en person (R1.1) får sin nivå från bildsamtycket: `private` tills personen sagt ja, därefter `internal`. Nivån följer med när samtycket ändras (INV-15).
+
 ### 12.2 Samtycke
 
 | Typ | Värden | Standard |
@@ -908,18 +984,22 @@ En post får aldrig högre synlighet än sin känsligaste del. En bild med en pe
 
 ### 12.4 Behörighet
 
-| Åtgärd | Ägare | Medhjälpare | Läsare |
-| --- | --- | --- | --- |
-| Läsa `internal` och `shareable` | Ja | Ja | Ja |
-| Läsa `private` | Ja | Bara egna poster | Nej |
-| Registrera fynd, hämtning, observation, bidrag | Ja | Ja | Nej |
-| Ändra samtycke | Ja | Nej | Nej |
-| Skapa utkast i Berätta och annonsstudion | Ja | Ja | Nej |
-| Godkänna och publicera externt | Ja | Nej | Nej |
-| Arkivera kärndata | Ja | Bara egna poster | Nej |
-| Export och GDPR-radering | Ja | Nej | Nej |
+| Åtgärd | Ägare | Medhjälpare | Läsare | Gäst (R1.1) |
+| --- | --- | --- | --- | --- |
+| Läsa `internal` och `shareable` | Ja | Ja | Ja | Utvalt: saker, annonser, platser och projekt; människor bara med samtycke |
+| Läsa `private` | Ja | Bara egna poster | Nej | Nej |
+| Registrera fynd, hämtning, observation, bidrag | Ja | Ja | Nej | Nej |
+| Ändra samtycke | Ja | Nej | Nej | Nej |
+| Skapa utkast i Berätta och annonsstudion | Ja | Ja | Nej | Nej |
+| Godkänna och publicera externt | Ja | Nej | Nej | Nej |
+| Arkivera kärndata | Ja | Bara egna poster | Nej | Nej |
+| Export och GDPR-radering | Ja | Nej | Nej | Nej |
+| Skapa och stänga gästlänkar (R1.1) | Ja | Nej | Nej | Nej |
+| Använda Fråga Vreta | Ja | Ja | Ja | Nej |
 
 Behörighet kontrolleras alltid på servern (radnivåsäkerhet i databasen), aldrig bara i klienten.
+
+**Gäster (R1.1)** loggas in anonymt via en gästlänk och blir läsare med gästflagga, utan konto. Utöver INV-14 gäller att bara länkens hash sparas, och när ägaren stänger en länk förlorar alla som använt den åtkomsten direkt. Fritext som ägaren själv skrivit, till exempel en objektbeskrivning med ett namn, filtreras inte. Anonym inloggning måste vara påslagen i Supabase för att gästlänkarna ska fungera.
 
 ### 12.5 Gallring och radering
 
@@ -937,10 +1017,11 @@ Värdefullt material i lager är en stöldrisk. Lagerplatser, Vretas exakta adre
 - **Taltjänsten** får ljudet och ordlistan; leverantören ska inte spara eller träna på datan (kontrolleras i ADR-003).
 - **AI-leverantören** får bara den rensade data som verktygen släpper igenom för användarens behörighet; ingen träning på VRETA:s data.
 - Alla tre listas i inställningarna med vad som skickas, så att användaren kan se det.
+- **GitHub (R1.1)** är värd för appens filer (GitHub Pages) och driftsätter AI-funktionerna (GitHub Actions). Ingen data från VRETA skickas dit, så tjänsten listas inte i inställningarna.
 
 ## 13. Krav
 
-R1 har 76 funktionella krav och 16 icke-funktionella; varje krav har prioritet och hänvisning till process (avsnitt 4) eller skärm (avsnitt 7).
+R1.1 har 91 funktionella krav och 19 icke-funktionella – FR-077–FR-091 och NFR-017–NFR-019 är nya i R1.1; varje krav har prioritet och hänvisning till process (avsnitt 4) eller skärm (avsnitt 7).
 
 ### 13.1 Funktionella krav
 
@@ -1002,7 +1083,7 @@ R1 har 76 funktionella krav och 16 icke-funktionella; varje krav har prioritet o
 | FR-054 | Inkommande mejladress som gör vidarebefordrade annonser till fynd. | P1 | 9.5 |
 | FR-055 | Publik Bidra-sida med efterlysningar och formulär som skapar Leads. | P1 | 8.5 |
 | FR-056 | Berättelseförslag från AI i Idag. | P1 | S1 |
-| FR-057 | Project, Need och NeedFulfillment med uppfyllelsegrad och efterlysning. | P1 | 6.4 |
+| FR-057 | Project, Need och NeedFulfillment med uppfyllelsegrad och efterlysning. | P0 · byggt i R1.1 | 4.10, 6.4, S13 |
 | FR-058 | Årssammanställning av köp och försäljning per kalenderår. | P1 | 1.3 |
 | FR-059 | Klimatnytta (CO₂e) per objekt och totalt, baserat på kategori och vikt. | P1 | 6.2 |
 | FR-060 | Uppföljningspåminnelser ("ett år senare", växters etablering). | P1 | 4.5 |
@@ -1022,6 +1103,21 @@ R1 har 76 funktionella krav och 16 icke-funktionella; varje krav har prioritet o
 | FR-074 | Import av baskarta eller nybyggnadskarta (GeoPDF med inbäddad georeferens, DWG/DXF som vektorer, vanlig PDF via koordinatkryss) och georeferering av ritningar och andra bilder (PDF/JPG) med 3–4 stödpunkter; flera grundbilder och överlägg med datum. | P0 | 7.6 |
 | FR-075 | Rita och redigera punkter, linjer och ytor på Vretakartan, med area och längd. | P0 | 7.6 |
 | FR-076 | Vretakartan (grundbild och lager) laddas ner till telefonen och fungerar offline. | P0 | 7.6 |
+| FR-077 | Navigeringen delar upp innehållet i Saker, Människor och Platser; Fråga nås från en rund knapp på alla skärmar. | P0 | 7.1 |
+| FR-078 | Ett nytt projektnamn i ett formulär skapar projektet; projektets yta kan ritas på Vretakartan. | P0 | 4.10, 7.6 |
+| FR-079 | Platser utanför Vreta med slag, ort och privat adress; inköp, hämtningar och avslut kan kopplas till en plats, och orter samlar personer, platser och flöden. | P0 | 6.4, S10 |
+| FR-080 | Ny plats: område, byggnad eller anläggning, lagerplats eller plats utanför Vreta läggs till utan karta; område och byggnad kan ritas in direkt efteråt. | P0 | S10 |
+| FR-081 | Platstyper i grupper för områden och byggnader, var och en med typisk permakulturzon (0–5). | P1 | S10 |
+| FR-082 | Relationer mellan människor (familj, partner, granne, vän, kollega, arbetar ihop, tipsade oss om) och organisationer med egen sida. | P0 | 10.8, S14 |
+| FR-083 | Fånga föreslår plats utanför Vreta, projekt och tipsare; vid godkännande kopplas de till inköpet, behovet och relationen "tipsade oss om". | P0 | 4.1, 11.2, S3 |
+| FR-084 | Fråga Vreta svarar om nätverk, projekt, behov och platser utanför Vreta. | P0 | 11.6 |
+| FR-085 | Gästlänkar: ägaren skapar och stänger länkar; gästen loggas in utan konto, ser utvalt innehåll och kan inte ändra något. | P0 | 12.4, S15 |
+| FR-086 | Foto på personer när de skapas och senare (byt, ta bort); synligheten följer bildsamtycket. | P0 | S5, 12.1 |
+| FR-087 | Namn och ort kan ändras på personkortet. | P0 | S5 |
+| FR-088 | Fångsttolkningen håller ihop för- och efternamn och sparar aldrig en del av namnet som ort. | P0 | 11.2 |
+| FR-089 | Vid delning kopieras texten vid knapptrycket, och appen säger att den ska klistras in där kanalen bara tar emot bilder. | P0 | 8.4, S9 |
+| FR-090 | Inloggning med länk eller lösenord; lösenordet kan bytas under Inställningar. | P0 | S12 |
+| FR-091 | Kartpaket: grundkarta och överlägg läses in i ett steg; överlägg visas från start med sparad genomskinlighet. | P1 | 7.6 |
 
 ### 13.2 Icke-funktionella krav
 
@@ -1043,6 +1139,9 @@ R1 har 76 funktionella krav och 16 icke-funktionella; varje krav har prioritet o
 | NFR-014 | Driftkostnad för en användare med normal användning hålls låg; AI-kostnad mäts per funktion och kan begränsas med månadstak. |
 | NFR-015 | Röstläge: talat svar börjar inom 2 sekunder efter att användaren tystnat. |
 | NFR-016 | Taligenkänning på svenska testas på minst 20 inspelningar från Vreta; mål under 10 % felaktiga ord. |
+| NFR-017 | Ett fel i gränssnittet visar en felruta med en knapp för att ladda om, i stället för en tom sida. Webbläsarens automatiska översättning är avstängd, eftersom den förstör sidans text. |
+| NFR-018 | AI-funktionerna driftsätts automatiskt när de ändras och röktestas direkt efter: varje funktion ska starta och svara med sitt eget behörighetsfel för en inloggad användare utan medlemskap. |
+| NFR-019 | Databasens triggerfunktioner kan inte anropas direkt, och RPC:er bara av inloggade; funktionerna har fast sökväg (search\_path). |
 
 ## 14. Teknisk arkitektur
 
@@ -1063,6 +1162,7 @@ Rekommendationen för R1 är en React-PWA ovanpå Supabase, med AI och MCP som t
 | Karta | Vretakartan: MapLibre GL med egna kartplattor (t.ex. PMTiles i Supabase Storage) från eget ortofoto och vektorlager från PostGIS. Omvärldskartan: Google Maps Platform (Places, Geocoding, länk till vägbeskrivning) | Fastighetskartan ägs av systemet, fungerar offline och kan ha högre upplösning än Google; Google används bara där omvärlden behövs |
 | MCP-server | Liten tjänst (Edge Function eller Node) med OAuth mot Supabase Auth | Gör VRETA användbar från Claude och webbläsaragenter |
 | Observability | Strukturerade loggar, felspårning, jobbstatus, AI-kostnad per funktion | NFR-014 |
+| Drift och värd (R1.1) | Appen ligger som statiska filer på GitHub Pages under /VRETA/; Supabase i Stockholm (eu-north-1). AI-funktionerna driftsätts med GitHub Actions när de ändras på main och röktestas direkt efter | Ingen egen server att sköta; AI-funktionerna följer alltid koden på main |
 
 ### 14.2 Moduler
 
@@ -1099,6 +1199,9 @@ MCP-servern exponerar aldrig `private`-fält utom kontaktuppgifter för en Lead 
 | ADR-005 | Kartunderlag | Beslutat: Uppsala kommuns baskarta för Vreta 8:35 (GeoPDF) som grundlager i Vretakartan (MapLibre), ritningar som georefererade överlägg, ortofoto senare; Google Maps bara för adresser, hämtningar och navigering |
 | ADR-006 | MCP-autentisering | OAuth mot Supabase Auth; token per klient, kan återkallas |
 | ADR-007 | Kategoriträd och emissionsfaktorer | Startlista med ca 40 kategorier; källa för faktorer väljs i P1 |
+| ADR-008 | Värd och driftsättning (R1.1) | Beslutat: appen på GitHub Pages; data och AI-funktioner i Supabase (eu-north-1). Funktionerna driftsätts med GitHub Actions, med en personlig åtkomstnyckel som hemlighet i GitHub |
+| ADR-009 | Gäster utan konto (R1.1) | Beslutat: anonym inloggning i Supabase via gästlänk; bara länkens hash sparas, och länken kan stängas |
+| ADR-010 | Inloggning (R1.1) | Beslutat: inloggningslänk som standard och lösenord som alternativ, eftersom Supabase inbyggda e-post bara skickar två länkar i timmen |
 
 ## 15. Acceptanskriterier, test och mätetal
 
@@ -1133,6 +1236,12 @@ R1 är klar när alla P0-kriterier nedan går igenom i ett test från början ti
 | AC-23 | Vretakartan visar fastigheten med eget ortofoto och zoner, även i flygplansläge,, och en plantering registrerad med "Här" hamnar som nål i rätt zon. | P0 |
 | AC-24 | Från en hämtning öppnar Navigera vägbeskrivning till rätt adress i Google Maps-appen. | P0 |
 | AC-25 | "Vad har jag i lager från Anders?" ger korrekt svar med källkort; en medhjälpare som frågar samma sak får inga privata anteckningar eller priser. | P0 |
+| AC-26 | Fångsten "Tegel till orangeriet från Lena, Anders tipsade" kopplas vid godkännande till orangeriets behov, och Anders blir den som tipsade om Lena. | P0 |
+| AC-27 | Behovet "1 500 tegel" visar "1 020 av 1 500" när 1 020 tegel har använts i projektet, utan att något registrerats två gånger. | P0 |
+| AC-28 | En gäst ser projekt och saker men inga priser, adresser eller personer utan samtycke, och kan inte ändra något; när länken stängs förlorar gästen åtkomsten direkt. | P0 |
+| AC-29 | Ett foto på en ny person är privat; ja till bild gör det internt, och nej gör det privat igen. | P0 |
+| AC-30 | När en berättelse delas till Facebook ligger texten i urklipp när delningsmenyn öppnas, och appen säger att den ska klistras in. | P0 |
+| AC-31 | Efter en ändring av en AI-funktion på main är funktionen driftsätt och svarar inom några minuter, utan manuella steg. | P0 |
 
 ### 15.2 Testnivåer
 
@@ -1141,6 +1250,7 @@ R1 är klar när alla P0-kriterier nedan går igenom i ett test från början ti
 - **Behörighetstester:** varje API-anrop och MCP-verktyg mot alla roller och synlighetsnivåer.
 - **AI-utvärderingar:** 50 riktiga fångster från Vreta med facit; källförankrade svar; läckagetester; inga påhittade fakta i berättelser.
 - **Fälttest:** en vecka av verklig användning innan R1 betraktas som klar.
+- **Läget i R1.1:** 421 enhetstester, databastester för behörighet i M1–M9 (varje roll, även gäst) och ett röktest av alla AI-funktioner efter varje driftsättning.
 
 ### 15.3 Mätetal
 
@@ -1158,7 +1268,7 @@ R1 är klar när alla P0-kriterier nedan går igenom i ett test från början ti
 
 ## 16. Byggordning och öppna frågor
 
-R1 byggs i fem milstolpar, där varje milstolpe är användbar på riktigt och innehåller en bit berättande. Inga datum är satta; varje milstolpe har ett klart-kriterium i stället.
+R1 byggs i fem milstolpar och R1.1 i fem till (M6–M10), där varje milstolpe är användbar på riktigt och innehåller en bit berättande. Inga datum är satta; varje milstolpe har ett klart-kriterium i stället.
 
 ### 16.1 Milstolpar
 
@@ -1169,7 +1279,13 @@ R1 byggs i fem milstolpar, där varje milstolpe är användbar på riktigt och i
 | M3 Nytt liv och journal | UsageEvent, BatchAllocation, Event/EventLink, journaler, Observation/Decision, Vretakartan med ritverktyg och offline; Berätta för resa och före/efter | AC-04, AC-05, AC-06 |
 | M4 Utflöde och CRM | Listing, ChannelPost, kanaladaptrar, annonsstudio, Leads, Disposal; Contribution, tack-flöde, Berätta-studion komplett, Privacy Guard full testsvit | AC-07, AC-08, AC-10, AC-11 |
 | M5 Kunskap och härdning | chatboten Fråga Vreta med källor, åtgärder och röstläge, Idag-prioritering, export, backup, prestanda, tillgänglighet, fälttest en vecka | AC-13–AC-16, AC-21–AC-25 |
-| R1+ (P1) | MCP-server och webbläsaragent, bevakningsmejl, Bidra-sida, Project/Need, årssammanställning, klimatnytta | AC-18–AC-20 |
+| M6 Projekt och platser (R1.1) | Project som egna poster; ExternalPlace med ort och privat adress, och plats på inköp, hämtning och avslut; navigeringen Saker · Människor · Platser | AC-27 (grund) |
+| M7 Behov och projektytor (R1.1) | Need och NeedFulfillment med uppfyllelsegrad, förslag ur lager och efterlysning; projektytor på Vretakartan; Fråga Vreta om projekt och platser | AC-27 |
+| M8 Relationer (R1.1) | PersonRelation och organisationssidor | AC-26 (grund) |
+| M9 Gäster (R1.1) | Gästlänkar med anonym inloggning, gästvy och samtyckesfilter för gäster | AC-28 |
+| M10 Härdning och drift (R1.1) | Samma härdning för M6–M9 som för M1–M5; appen på GitHub Pages; AI-funktionerna driftsätts med röktest | AC-31 |
+| R1.1, övrigt | Fånga känner igen plats, projekt och tipsare; Ny plats och platstyper med permakulturzon; foto på personer; ändra namn och ort; kopiera text vid delning; inloggning med lösenord; felruta; kartpaket | AC-26, AC-29, AC-30 |
+| R1+ (P1) | MCP-server och webbläsaragent, bevakningsmejl, Bidra-sida, årssammanställning, klimatnytta | AC-18–AC-20 |
 
 ### 16.2 Arbetsströmmar om flera utvecklare eller AI-agenter bygger
 

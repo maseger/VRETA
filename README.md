@@ -6,7 +6,7 @@ VRETA följer resurser från fynd till nytt liv eller ny ägare, håller ihop m�
 
 ## Specifikation
 
-Gällande specifikation är [**VRETA – Specifikation R1**](docs/spec-r1.md), exporterad från Claude Docs. Den ersätter systemspecifikationerna V1 och V2.0.
+Gällande specifikation är [**VRETA – Specifikation R1.1**](docs/spec-r1.1.md), exporterad från Claude Docs. Den ersätter systemspecifikationerna V1 och V2.0.
 
 Kärnflöde i R1: fånga → anskaffning → hämtning → lager → nytt liv → utflöde, med CRM och Berätta längs hela vägen. Därtill Vretakartan (egen fastighetskarta), talstöd och chatboten Fråga Vreta.
 
