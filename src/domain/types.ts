@@ -1,6 +1,6 @@
 import type { PointGeom, PolygonGeom } from "../geo/geo";
 
-// Domäntyper för R1 milstolpe M1. Namnen följer specifikationen (docs/spec-r1.md, avsnitt 5–6).
+// Domäntyper för R1 milstolpe M1. Namnen följer specifikationen (docs/spec-r1.1.md, avsnitt 5–6).
 
 export type Visibility = "private" | "internal" | "shareable" | "public";
 export type Role = "owner" | "contributor" | "viewer";
