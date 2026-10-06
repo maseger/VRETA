@@ -5,7 +5,8 @@ import { useApp, useData } from "../app/AppContext";
 import { DISPOSAL_LABEL, LISTING_STATUS_LABEL, LISTING_TYPE_LABEL, PAYMENT_METHODS } from "../domain/labels";
 import type { ChannelPost, DisposalType, Listing, Media, Person, PublishMode } from "../domain/types";
 import { packagesForListing, rawListingContext } from "../services/marketplaceAgent";
-import { shareStory } from "../services/share";
+import { copyText, shareStory } from "../services/share";
+import { PasteHint } from "../ui/PasteHint";
 import { adaptersFor, type ChannelAdapter } from "../../supabase/functions/_shared/channels";
 import { guardListing, priceLabel, type ListingPackage, type PriceSuggestion } from "../../supabase/functions/_shared/listingPackage";
 import { MediaImage, PageHeader, Section } from "../ui/bits";
@@ -250,6 +251,7 @@ function ChannelPanel({ adapter: a, listing, post, pkg, priceText, media, editab
   const [url, setUrl] = useState(post?.external_url ?? "");
   const [mode, setMode] = useState<PublishMode>("manual");
   const [agentPrompt, setAgentPrompt] = useState(false);
+  const [pasteHint, setPasteHint] = useState<{ copied: boolean } | null>(null);
   const p = pkg ?? { channel: a.id, title: "", text: "", category: "", price_label: "", image_ids: [] };
   const titleOver = p.title.length > a.title_max_length;
   const textOver = p.text.length > a.text_max_length;
@@ -262,14 +264,18 @@ function ChannelPanel({ adapter: a, listing, post, pkg, priceText, media, editab
   }
 
   async function share() {
+    // Kopiera direkt vid knapptrycket – senare tillåter telefonen det inte
+    const copied = copyText(fullText);
     await persist();
     const files = [];
     for (const m of imgs) {
       const blob = await repo.mediaBlob(m);
       if (blob) files.push({ name: `annons-${files.length + 1}.jpg`, blob });
     }
-    const outcome = await shareStory(fullText, files);
-    if (outcome === "copied") toast(`Texten är kopierad${files.length ? " och bilderna nedladdade" : ""} – klistra in på ${a.name}`);
+    const { outcome, textCopied } = await shareStory(fullText, files, copied);
+    if (outcome === "copied") toast(textCopied ? `Texten är kopierad${files.length ? " och bilderna nedladdade" : ""} – klistra in på ${a.name}` : "Kunde inte kopiera texten – använd knappen nedan");
+    // Marknadsplatserna tar inte emot text tillsammans med bilder
+    if (outcome !== "cancelled" && files.length) setPasteHint({ copied: textCopied });
   }
 
   async function publish() {
@@ -331,6 +337,7 @@ function ChannelPanel({ adapter: a, listing, post, pkg, priceText, media, editab
         </div>
       ) : editable && p.text ? (
         <>
+          {pasteHint && <PasteHint text={fullText} where={a.name} copied={pasteHint.copied} />}
           <div className="flex flex-wrap gap-2">
             <button className="btn-primary flex-1 sm:flex-none" onClick={share}><Share2 size={18} aria-hidden="true" /> Dela eller kopiera</button>
             <a className="btn-secondary" href={a.new_listing_url} target="_blank" rel="noreferrer"><ExternalLink size={18} aria-hidden="true" /> Öppna {a.name}</a>
