@@ -19,6 +19,14 @@ create table guest_links (
 );
 alter table site_members add column guest_link_id uuid references guest_links(id) on delete cascade;
 
+-- Medlemskap via en stängd gästlänk räknas inte: gästen förlorar åtkomsten utan att något raderas
+create or replace function member_role_for(p_site uuid) returns member_role
+language sql stable security definer set search_path = public as $$
+  select m.role from site_members m
+   where m.site_id = p_site and m.user_id = auth.uid()
+     and (m.guest_link_id is null or exists (select 1 from guest_links g where g.id = m.guest_link_id and g.revoked_at is null))
+$$;
+
 create or replace function is_guest(p_site uuid) returns boolean
 language sql stable security definer set search_path = public as $$
   select coalesce((select is_guest from site_members where site_id = p_site and user_id = auth.uid()), false)
@@ -26,7 +34,8 @@ $$;
 
 -- Ägaren skapar en länk. Nyckeln returneras en gång och sparas bara som hash.
 create or replace function create_guest_link(p_label text) returns jsonb
-language plpgsql security definer set search_path = public as $$
+-- pgcrypto ligger i schemat extensions i Supabase
+language plpgsql security definer set search_path = public, extensions as $$
 declare v_site uuid; v_token text; v_id uuid;
 begin
   select site_id into v_site from site_members where user_id = auth.uid() and role = 'owner' limit 1;
@@ -41,7 +50,8 @@ end $$;
 
 -- Den som öppnar länken (anonymt inloggad) blir läsare med gästflagga. En medlem blir aldrig nedgraderad.
 create or replace function redeem_guest_link(p_token text) returns uuid
-language plpgsql security definer set search_path = public as $$
+-- pgcrypto ligger i schemat extensions i Supabase
+language plpgsql security definer set search_path = public, extensions as $$
 declare l guest_links%rowtype;
 begin
   if auth.uid() is null then raise exception 'Inte inloggad' using errcode = 'insufficient_privilege'; end if;
@@ -54,7 +64,7 @@ begin
   return l.site_id;
 end $$;
 
--- Stäng en länk: alla gäster som kom in via den förlorar åtkomsten direkt.
+-- Stäng en länk: alla gäster som kom in via den förlorar åtkomsten direkt (member_role_for).
 create or replace function revoke_guest_link(p_link uuid) returns void
 language plpgsql security definer set search_path = public as $$
 declare v_site uuid;
@@ -62,7 +72,6 @@ begin
   select site_id into v_site from guest_links where id = p_link;
   if v_site is null or not is_owner(v_site) then raise exception 'Bara ägaren kan stänga gästlänkar' using errcode = 'insufficient_privilege'; end if;
   update guest_links set revoked_at = now() where id = p_link and revoked_at is null;
-  delete from site_members where guest_link_id = p_link and is_guest;
   insert into audit_entries (site_id, actor, action, entity_type, entity_id, before, after)
   values (v_site, auth.uid(), 'guest_link_revoked', 'guest_link', p_link, null, null);
 end $$;
@@ -70,31 +79,22 @@ end $$;
 alter table guest_links enable row level security;
 create policy guest_links_owner on guest_links for select to authenticated using (is_owner(site_id));
 
--- Gäster ser bara människor som sagt ja till att namnges (12.2)
-drop policy persons_read on persons;
-create policy persons_read on persons for select to authenticated
+-- Gäster ser bara människor som sagt ja till att namnges (12.2). Reglerna ändras med alter policy.
+alter policy persons_read on persons
   using (is_member(site_id) and (not is_guest(site_id) or consent_name = 'yes'));
 
 -- Det operativa och det personliga är inte för gäster: hämtningar (rubrik med namn, adress), uppgifter,
 -- citat och anteckningar, vad Vreta gett tillbaka.
-drop policy pickups_read on pickups;
-create policy pickups_read on pickups for select to authenticated using (is_member(site_id) and not is_guest(site_id));
-drop policy pickup_items_read on pickup_items;
-create policy pickup_items_read on pickup_items for select to authenticated using (is_member(site_id) and not is_guest(site_id));
-drop policy checklist_items_read on checklist_items;
-create policy checklist_items_read on checklist_items for select to authenticated using (is_member(site_id) and not is_guest(site_id));
-drop policy tasks_read on tasks;
-create policy tasks_read on tasks for select to authenticated using (is_member(site_id) and not is_guest(site_id));
-drop policy story_notes_read on story_notes;
-create policy story_notes_read on story_notes for select to authenticated using (is_member(site_id) and not is_guest(site_id));
-drop policy reciprocity_read on reciprocity_entries;
-create policy reciprocity_read on reciprocity_entries for select to authenticated using (is_member(site_id) and not is_guest(site_id));
-drop policy content_consents_read on content_consents;
-create policy content_consents_read on content_consents for select to authenticated using (is_member(site_id) and not is_guest(site_id));
+alter policy pickups_read on pickups using (is_member(site_id) and not is_guest(site_id));
+alter policy pickup_items_read on pickup_items using (is_member(site_id) and not is_guest(site_id));
+alter policy checklist_items_read on checklist_items using (is_member(site_id) and not is_guest(site_id));
+alter policy tasks_read on tasks using (is_member(site_id) and not is_guest(site_id));
+alter policy story_notes_read on story_notes using (is_member(site_id) and not is_guest(site_id));
+alter policy reciprocity_read on reciprocity_entries using (is_member(site_id) and not is_guest(site_id));
+alter policy content_consents_read on content_consents using (is_member(site_id) and not is_guest(site_id));
 
 -- Bidrag syns för gäster bara när personen sagt ja till både namn och att bidraget beskrivs
-drop policy contributions_read on contributions;
-create policy contributions_read on contributions for select to authenticated
+alter policy contributions_read on contributions
   using (is_member(site_id) and (visibility <> 'private' or sees_private(site_id, created_by))
          and (not is_guest(site_id) or exists (select 1 from persons p where p.id = person_id and p.consent_name = 'yes' and p.consent_contribution = 'yes')));
 
@@ -104,7 +104,6 @@ language sql stable security definer set search_path = public as $$
   select exists (select 1 from event_links l join persons p on p.id = l.entity_id
                   where l.event_id = p_event and l.entity_type = 'person' and p.consent_name <> 'yes')
 $$;
-drop policy events_read on events;
-create policy events_read on events for select to authenticated
+alter policy events_read on events
   using (is_member(site_id) and (visibility <> 'private' or sees_private(site_id, created_by))
          and (not is_guest(site_id) or not event_names_unconsented(id)));

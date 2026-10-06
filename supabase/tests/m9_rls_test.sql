@@ -92,5 +92,7 @@ do $$ begin
   exception when insufficient_privilege then null; end;
 end $$;
 reset role;
-do $$ begin assert (select count(*) from site_members where is_guest) = 0, 'gästen borttagen'; end $$;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000d1', false);
+do $$ begin assert not is_member((select site_id from guest_links limit 1)), 'gästen är inte längre medlem'; end $$;
+reset role;
 select 'M9-TESTER GODKÄNDA' as resultat;
