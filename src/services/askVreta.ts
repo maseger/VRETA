@@ -47,6 +47,12 @@ export function repoStore(repo: Repo, role: Role, today = new Date().toISOString
     content: () => once("content", () => repo.allContent()),
     observations: () => once("obs", () => repo.observations()),
     decisions: () => once("decs", () => repo.decisions()),
+    projects: () => once("projects", () => repo.projects()),
+    needs: () => once("needs", () => repo.needs()),
+    needFulfillments: () => once("fulfillments", () => repo.needFulfillments()),
+    externalPlaces: () => once("places", async () => (await repo.externalPlaces()).map(({ address: _a, ...p }) => (void _a, p))),
+    usage: () => once("usage", () => repo.allUsageEvents()),
+    relations: () => once("relations", () => repo.relations()),
     proposalsWaiting: async () => (await repo.proposals()).length + (await repo.capturesWithoutProposal()).length,
   };
 }

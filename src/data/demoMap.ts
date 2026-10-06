@@ -22,6 +22,7 @@ export const DEMO_GEOM = {
   villan: poly([[250, 120], [520, 110], [530, 300], [260, 310]]),
   garaget: poly([[880, 290], [1060, 285], [1065, 420], [885, 425]]),
   orangeriet: poly([[650, 320], [840, 312], [845, 405], [655, 412]]),
+  orangerietBygge: poly([[630, 398], [868, 390], [872, 452], [634, 460]]),
 };
 
 export const DEMO_BASEMAP_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${DEMO_W} ${DEMO_H}" width="${DEMO_W}" height="${DEMO_H}">

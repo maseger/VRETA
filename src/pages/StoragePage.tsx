@@ -23,8 +23,8 @@ export function StoragePage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <Link to="/vreta" className="text-sm font-semibold text-falu">← Vreta</Link>
-      <PageHeader kicker="Lager" title="Var ligger allt?">
+      <Link to="/platser" className="text-sm font-semibold text-falu">← Platser</Link>
+      <PageHeader kicker="Förvaring på Vreta" title="Var ligger allt?">
         <Link to="/lager/etiketter" className="btn-secondary"><Printer size={18} aria-hidden="true" /> Etiketter</Link>
       </PageHeader>
       <p className="mb-6 flex items-start gap-2 text-sm text-sot-3"><QrIcon size={16} className="mt-0.5 shrink-0" aria-hidden="true" /> Sätt upp en QR-etikett på varje hylla eller låda. Skanna med telefonens kamera för att se vad som ligger där och lägga in nya saker.</p>

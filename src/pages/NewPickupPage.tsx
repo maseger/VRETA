@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useApp, useData } from "../app/AppContext";
 import { RESOURCES } from "../domain/labels";
+import { ExternalPlaceSelect } from "../ui/ExternalPlaceSelect";
 import { PageHeader } from "../ui/bits";
 
 /** Planera hämtning (FR-013, FR-014). Förifylls från objektets anskaffning. */
@@ -27,6 +28,7 @@ export function NewPickupPage() {
   const [template, setTemplate] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const [safety, setSafety] = useState("");
+  const [place, setPlace] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -49,7 +51,7 @@ export function NewPickupPage() {
       setBusy(true);
       const id = await repo.createPickup({
         acquisition_id: data.acq?.id ?? null, person_id: data.person?.id ?? null, title: title.trim(), scheduled_date: date || null,
-        window_from: from || null, window_to: to || null, resources, address: address.trim(), object_ids: selected, template_id: template || null, safety_note: safety.trim(),
+        window_from: from || null, window_to: to || null, resources, address: address.trim(), object_ids: selected, template_id: template || null, safety_note: safety.trim(), place_id: place,
       });
       await refresh();
       navigate(`/hamtning/${id}`, { replace: true });
@@ -65,6 +67,11 @@ export function NewPickupPage() {
         <label className="field-label" htmlFor="a">Adress</label>
         <input id="a" className="input" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Gata, ort" />
         <p className="mt-1 text-[12px] text-sot-3">Adressen syns bara för dig och medhjälpare, aldrig i berättelser.</p>
+      </div>
+      <div>
+        <p className="field-label">Plats</p>
+        <ExternalPlaceSelect value={place} onChange={setPlace} label="Plats utanför Vreta" />
+        <p className="mt-1 text-[12px] text-sot-3">Välj om hämtningen sker på en loppis, återvinningscentral eller annan plats ni brukar besöka.</p>
       </div>
       <div>
         <p className="field-label">Resurser</p>

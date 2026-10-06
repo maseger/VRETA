@@ -13,7 +13,8 @@ sleep 1
 PSQL="psql -h /tmp -p 55432 -U postgres -v ON_ERROR_STOP=1 -q"
 $PSQL -c "create database vreta_test"
 $PSQL -d vreta_test -f "$ROOT/supabase/tests/supabase_stubs.sql"
-for f in "$ROOT"/supabase/migrations/*.sql; do $PSQL -d vreta_test -f "$f"; done
+# pg_net finns inte i vanlig PostgreSQL; den migrationen var bara ett test i Supabase
+for f in "$ROOT"/supabase/migrations/*.sql; do case "$f" in *pg_net*) continue ;; esac; $PSQL -d vreta_test -f "$f"; done
 for t in "$ROOT"/supabase/tests/m*_rls_test.sql; do $PSQL -d vreta_test -f "$t"; done
 # Med RESTORE_TEST=1: säkerhetskopiera testdatabasen och läs tillbaka den (NFR-008)
 if [ "${RESTORE_TEST:-}" = "1" ]; then

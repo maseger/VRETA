@@ -29,7 +29,7 @@ export interface CaptureImage {
 
 export async function runCaptureAgent(
   client: Anthropic,
-  input: { text: string; kind: string; images: CaptureImage[]; today: string },
+  input: { text: string; kind: string; images: CaptureImage[]; today: string; known?: { projects: string[]; places: string[] } },
   onUsage?: UsageSink,
 ): Promise<CaptureProposalOut> {
   const content: Anthropic.Beta.BetaContentBlockParam[] = [
@@ -41,7 +41,10 @@ export async function runCaptureAgent(
     ),
     {
       type: "text",
-      text: `Dagens datum: ${input.today}\nTyp av fångst: ${input.kind}\nAnvändarens beskrivning: ${input.text || "(ingen text, tolka bilderna)"}`,
+      text: `Dagens datum: ${input.today}\nTyp av fångst: ${input.kind}\n`
+        + (input.known?.projects.length ? `Kända projekt: ${input.known.projects.join(", ")}\n` : "")
+        + (input.known?.places.length ? `Kända platser: ${input.known.places.join(", ")}\n` : "")
+        + `Användarens beskrivning: ${input.text || "(ingen text, tolka bilderna)"}`,
     },
   ];
 

@@ -13,6 +13,12 @@ export interface HeuristicResult {
   person_locality: string | null;
   deadline: string | null;
   task_title: string | null;
+  /** "på Återbruket", "på loppisen" – plats utanför Vreta (M6). */
+  place_name: string | null;
+  /** "till orangeriet" – kandidat; kopplas bara om ett projekt med namnet finns. */
+  project_name: string | null;
+  /** "Anders tipsade", "tips från Anders", "via Anders" (M8). */
+  introduced_by: string | null;
 }
 
 const NUMBER_WORDS: Record<string, number> = {
@@ -55,10 +61,25 @@ export function parseDeadline(text: string, today = new Date()): string | null {
   return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
+const NAME = "[A-ZÅÄÖ][a-zåäöé]+";
+const PLACE_WORDS = /\b(?:på|vid)\s+(loppis(?:en)?|återvinning(?:en|scentralen)?|återbruk(?:et)?|tippen|auktion(?:en)?|byggåterbruk(?:et)?)\b/i;
+
 export function parseCaptureText(text: string, today = new Date()): HeuristicResult {
-  const clean = text.replace(/\s+/g, " ").trim();
+  const original = text.replace(/\s+/g, " ").trim();
+  // Vem som tipsade tas bort innan säljaren letas upp, så att "tips från Anders" inte gör Anders till säljare
+  const tip = original.match(new RegExp(`(${NAME})\\s+tipsade`)) ?? original.match(new RegExp(`(?:tips(?:at)?\\s+(?:från|av)|via)\\s+(${NAME})`));
+  const introduced_by = tip?.[1] ?? null;
+  const clean = tip ? original.replace(tip[0], "").replace(/\s+/g, " ").trim() : original;
+
+  // Plats: "på Återbruket", "på Kyrkans loppis", "på loppisen"
+  const placeMatch = clean.match(new RegExp(`\\b(?:på|vid)\\s+((?:${NAME})(?:\\s+[a-zåäö]+)?)`)) ?? clean.match(PLACE_WORDS);
+  let place_name = placeMatch?.[1] ?? null;
+  // Ett andra ord hör bara till namnet om det är ett platsord: "Kyrkans loppis", men inte "Återbruket till"
+  if (place_name && /\s/.test(place_name) && !/^(loppis\w*|marknad\w*|gård\w*|butik\w*|handel\w*)$/i.test(place_name.split(" ")[1])) place_name = place_name.split(" ")[0];
+  // Projekt: "till orangeriet", "till jordkällaren"
+  const project_name = clean.match(/\btill\s+(?:den\s+|det\s+|vårt\s+|nya\s+)?([a-zåäöA-ZÅÄÖ]{4,})/)?.[1] ?? null;
   const clauses = clean.split(/[,.;\n]/).map((c) => c.trim()).filter(Boolean);
-  const first = clauses[0] ?? "";
+  const first = (clauses[0] ?? "").replace(/^(?:jag\s+|vi\s+)?(?:har\s+)?(?:köpte|köpt|fick|fått|hittade|hittat|hämtade|hämtat)\s+/i, "");
 
   // Antal och benämning: "sex gjutjärnsfönster", "400 tegel", "12 st rhododendron"
   let quantity = 1;
@@ -72,7 +93,7 @@ export function parseCaptureText(text: string, today = new Date()): HeuristicRes
     }
   }
   title = title
-    .replace(/\s+(från|av|hos)\s+.*$/i, "")
+    .replace(/\s+(från|av|hos|på|vid|till|via)\s+.*$/i, "")
     .replace(/\d[\d\s]*\s*(kr|kronor|:-).*$/i, "")
     .replace(/\b(gratis|billigt|säljes|skänkes)\b/gi, "")
     .replace(/\s+/g, " ")
@@ -118,5 +139,8 @@ export function parseCaptureText(text: string, today = new Date()): HeuristicRes
     person_locality,
     deadline,
     task_title,
+    place_name,
+    project_name,
+    introduced_by,
   };
 }

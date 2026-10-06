@@ -5,6 +5,7 @@ import { useApp, useData } from "../app/AppContext";
 import { cornersFromControlPoints, type ControlPoint, type LngLat } from "../geo/geo";
 import { VretaMap } from "../geo/VretaMap";
 import { rasterizeIfSvg } from "../services/images";
+import { parseMapPackage } from "../services/mapPackage";
 import { PageHeader } from "../ui/bits";
 
 /**
@@ -86,6 +87,22 @@ export function MapLayerPage() {
     }
   }, [method, cornersJson, size, imgPts, mapPts]);
 
+  async function importPackage(f: File | null) {
+    if (!f) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const layers = parseMapPackage(await f.text());
+      for (const layer of layers) await repo.addMapLayer(layer);
+      await refresh();
+      toast(layers.length === 1 ? "Kartlagret är tillagt" : `${layers.length} kartlager är tillagda`);
+      navigate("/vreta");
+    } catch (e) {
+      setError((e as Error).message);
+      setBusy(false);
+    }
+  }
+
   async function save() {
     if (!file || !corners) return;
     setBusy(true);
@@ -94,7 +111,7 @@ export function MapLayerPage() {
       await repo.addMapLayer({ kind, name: name.trim() || file.name, taken_on: date || null, image: await rasterizeIfSvg(file), corners, source_crs: method === "fil" ? srcCrs : "stödpunkter", opacity: kind === "base" ? 1 : 0.7 });
       await refresh();
       toast(kind === "base" ? "Grundbilden är tillagd" : "Överlägget är tillagt");
-      navigate("/vreta");
+      navigate("/platser");
     } catch (e) {
       setError((e as Error).message);
       setBusy(false);
@@ -110,8 +127,15 @@ export function MapLayerPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <Link to="/vreta" className="text-sm font-semibold text-falu">← Vretakartan</Link>
+      <Link to="/platser" className="text-sm font-semibold text-falu">← Vretakartan</Link>
       <PageHeader kicker="Vretakartan" title="Lägg till kartlager" />
+
+      <div className="card mb-5 p-4">
+        <label className="field-label" htmlFor="paket">Har du ett kartpaket? Välj filen så läggs alla kartor in på en gång</label>
+        <input id="paket" type="file" accept="application/json,.json" className="input" disabled={busy} onChange={(e) => void importPackage(e.target.files?.[0] ?? null)} />
+        {busy && <p className="mt-2 flex items-center gap-2 text-sm text-sot-3" role="status"><Loader2 size={16} className="animate-spin" aria-hidden="true" /> Lägger in kartorna …</p>}
+        <p className="mt-1 text-[12px] text-sot-3">Kartpaket skapas med <code>scripts/kartpaket.py</code>. Annars lägger du till en bild i taget nedan.</p>
+      </div>
 
       <div className="card mb-5 grid gap-4 p-4 sm:grid-cols-2">
         <div className="sm:col-span-2 flex flex-wrap gap-2">

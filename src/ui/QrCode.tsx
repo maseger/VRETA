@@ -9,4 +9,4 @@ export function QrCode({ value, className }: { value: string; className?: string
   return <div className={className} role="img" aria-label="QR-kod" dangerouslySetInnerHTML={{ __html: svg }} />;
 }
 
-export const locationUrl = (id: string) => `${window.location.origin}/lager/${id}`;
+export const locationUrl = (id: string) => `${window.location.origin}${import.meta.env.BASE_URL}lager/${id}`;

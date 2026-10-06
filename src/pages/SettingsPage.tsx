@@ -5,6 +5,8 @@ import type { Role } from "../domain/types";
 import { buildExport, type ExportProgress } from "../services/exportArchive";
 import { canSpeak, setSpeechRate, speak, speechRate } from "../services/speech";
 import { PageHeader, Section, formatDate } from "../ui/bits";
+import { GuestLinks } from "../ui/GuestLinks";
+import { leaveGuest } from "../services/guest";
 
 const ROLE_LABEL: Record<Role, string> = { owner: "Ägare", contributor: "Medhjälpare", viewer: "Läsare" };
 const EXPORT_KEY = "vreta.senaste.export";
@@ -23,6 +25,7 @@ const AUDIT_LABEL: Record<string, string> = {
   channel_removed: "Annons nedtagen", disposal: "Utflöde", create_from_proposal: "Förslag godkänt", visibility_change: "Synlighet ändrad",
   listing_created: "Annons skapad", listings_status: "Annonsstatus", leads_status: "Intressent", task_created: "Uppgift skapad",
   moved_in_storage: "Flyttad i lager", acquisition_status: "Anskaffning", pickup_status: "Hämtning",
+  project_status: "Projektstatus", person_relation: "Relation", guest_link_created: "Gästlänk skapad", guest_link_revoked: "Gästlänk stängd",
 };
 
 export function SettingsPage() {
@@ -33,6 +36,7 @@ export function SettingsPage() {
   const [progress, setProgress] = useState<ExportProgress | null>(null);
   const [rate, setRate] = useState(speechRate());
   const [filter, setFilter] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const last = lastExport();
   const stale = !last || Date.now() - Date.parse(last) > 30 * 864e5;
 
@@ -63,6 +67,14 @@ export function SettingsPage() {
     <div className="mx-auto max-w-2xl">
       <PageHeader kicker="Inställningar" title={profile?.name ?? ""} />
 
+      {profile?.guest ? (
+        <Section title="Du är gäst">
+          <div className="card space-y-3 p-4">
+            <p className="text-sm text-sot-2">Du tittar på Vreta via en gästlänk. Du kan se platserna, sakerna och projekten men inte ändra något. Privata uppgifter som priser och adresser visas inte, och människor syns bara om de sagt ja till det.</p>
+            <button className="btn-secondary" onClick={async () => { await leaveGuest(repo); await refresh(); }}><LogOut size={18} aria-hidden="true" /> Lämna gästläget</button>
+          </div>
+        </Section>
+      ) : (
       <Section title="Roll">
         <p className="mb-3">Du är inloggad som <strong>{profile ? ROLE_LABEL[profile.role] : ""}</strong>.</p>
         {repo.setDemoRole && (
@@ -76,6 +88,9 @@ export function SettingsPage() {
           </div>
         )}
       </Section>
+      )}
+
+      {isOwner && <GuestLinks />}
 
       {canSpeak() && (
         <Section title="Tal">
@@ -145,7 +160,33 @@ export function SettingsPage() {
         </Section>
       )}
 
-      {repo.kind === "supabase" && (
+      {repo.changePassword && !profile?.guest && (
+        <Section title="Lösenord">
+          <form
+            className="card space-y-3 p-4"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (newPassword.length < 8) return toast("Välj minst 8 tecken.");
+              try {
+                await repo.changePassword!(newPassword);
+                setNewPassword("");
+                toast("Lösenordet är bytt");
+              } catch (err) {
+                toast((err as Error).message);
+              }
+            }}
+          >
+            <p className="text-sm text-sot-2">Med ett lösenord kan du logga in utan att vänta på ett mejl.</p>
+            <div>
+              <label className="field-label" htmlFor="new-password">Nytt lösenord</label>
+              <input id="new-password" className="input" type="password" autoComplete="new-password" minLength={8} required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+            </div>
+            <button className="btn-secondary">Spara lösenord</button>
+          </form>
+        </Section>
+      )}
+
+      {repo.kind === "supabase" && !profile?.guest && (
         <button className="btn-ghost" onClick={async () => { await repo.signOut(); await refresh(); }}><LogOut size={18} aria-hidden="true" /> Logga ut</button>
       )}
     </div>

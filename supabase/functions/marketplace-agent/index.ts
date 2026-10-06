@@ -95,7 +95,10 @@ Deno.serve(async (req: Request) => {
     });
     source = "claude";
   } catch (err) {
-    if (!(err instanceof AgentRefusedError) && !(err instanceof Anthropic.APIError)) return json({ error: "internal" }, 500);
+    if (!(err instanceof AgentRefusedError) && !(err instanceof Anthropic.APIError)) {
+      console.error("marketplace-agent:", err instanceof Error ? `${err.name}: ${err.message}` : err);
+      return json({ error: "internal" }, 500);
+    }
     // Mallarna fungerar alltid; Claude är en förbättring, inte ett krav.
   }
   return json({ packages, price, media_ids: ctx.media_ids, removed: guard.removed, warnings: guard.warnings, source });

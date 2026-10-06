@@ -117,6 +117,8 @@ export interface Acquisition extends Base {
   payment_method?: string;
   source_url: string;
   deadline: string | null;
+  /** Plats utanför Vreta där saken köptes eller hämtades (M6). */
+  place_id?: string | null;
 }
 
 export type MediaKind = "image" | "audio";
@@ -179,6 +181,14 @@ export interface ProposalContent {
   task: { title: ProposedValue<string>; due: ProposedValue<string | null> } | null;
   why: ProposedValue<string>;
   agent: "claude" | "local";
+  /** Kopplingar till platser, projekt och människor (M6–M8). Saknas i äldre förslag. */
+  links?: ProposalLinks;
+}
+
+export interface ProposalLinks {
+  place: { name: ProposedValue<string>; existing_place_id: string | null } | null;
+  project: { name: ProposedValue<string>; existing_project_id: string | null; need_id: string | null } | null;
+  introduced_by: { name: ProposedValue<string>; existing_person_id: string | null } | null;
 }
 
 export interface Proposal extends Base {
@@ -258,6 +268,17 @@ export interface Profile {
   id: string;
   name: string;
   role: Role;
+  /** Gäst via gästlänk (M9): läsare utan konto som bara ser människor med namnsamtycke. */
+  guest?: boolean;
+}
+
+export interface GuestLink {
+  id: string;
+  label: string;
+  created_at: string;
+  last_used_at: string | null;
+  uses: number;
+  revoked_at: string | null;
 }
 
 export interface Organization extends Base {
@@ -303,6 +324,7 @@ export interface Pickup extends Base {
   completed_at: string | null;
   /** Privat för läsare. */
   address?: string;
+  place_id?: string | null;
 }
 
 export interface PickupItem {
@@ -364,6 +386,7 @@ export interface UsageEvent {
   structure_id: string | null;
   quantity: number | null;
   project: string;
+  project_id?: string | null;
   note: string;
   geom: PointGeom | null;
   event_id: string | null;
@@ -459,6 +482,7 @@ export interface Disposal {
   allocation_id: string | null;
   listing_id: string | null;
   person_id: string | null;
+  place_id?: string | null;
   type: DisposalType;
   quantity: number | null;
   occurred_at: string;
@@ -482,6 +506,7 @@ export interface Contribution {
   object_id: string | null;
   zone_id: string | null;
   project: string;
+  project_id?: string | null;
   occurred_at: string;
   thanked_at: string | null;
   visibility: Visibility;
@@ -510,6 +535,78 @@ export interface ContentConsent {
   image_ok: boolean;
   contribution_ok: boolean;
   how: string;
+  created_at: string;
+  created_by: string;
+}
+
+// ---------------------------------------------------------------- M6: projekt och platser utanför Vreta
+
+export type ProjectStatus = "idea" | "planned" | "active" | "paused" | "done";
+
+/** Projekt på Vreta: bygge, plantering m.m. Nytt liv och bidrag kopplas hit (6.4). */
+export interface Project extends Base {
+  name: string;
+  kind: string;
+  status: ProjectStatus;
+  description: string;
+  zone_id: string | null;
+  structure_id: string | null;
+  started_on: string | null;
+  finished_on: string | null;
+  /** Projektets yta på Vretakartan (M7). */
+  geom?: PolygonGeom | null;
+}
+
+/** Ett behov i ett projekt: "1 500 tegel". Uppfyllt räknas fram ur NeedFulfillment (6.4). */
+export interface Need extends Base {
+  project_id: string;
+  title: string;
+  /** Tomt = "några" – uppfyllt av första bidraget. */
+  quantity: number | null;
+  unit: string;
+  notes: string;
+  status: "open" | "dropped";
+  /** Efterlysning. */
+  listing_id: string | null;
+}
+
+export interface NeedFulfillment {
+  id: string;
+  site_id: string;
+  need_id: string;
+  quantity: number;
+  object_id: string | null;
+  contribution_id: string | null;
+  note: string;
+  occurred_at: string;
+  event_id: string | null;
+  created_at: string;
+  created_by: string;
+}
+
+/** Plats utanför Vreta där saker hämtas, köps och lämnas. */
+export interface ExternalPlace extends Base {
+  name: string;
+  kind: string;
+  /** Ort på kommunnivå – får synas. */
+  locality: string;
+  notes: string;
+  /** Privat för läsare (INV-13). */
+  address?: string;
+}
+
+// ---------------------------------------------------------------- M8: relationer mellan människor
+
+/** introduced är riktad (person_id tipsade oss om other_id); övriga gäller åt båda hållen. */
+export type RelationKind = "familj" | "partner" | "granne" | "van" | "kollega" | "samarbetar" | "introduced";
+
+export interface PersonRelation {
+  id: string;
+  site_id: string;
+  person_id: string;
+  other_id: string;
+  kind: RelationKind;
+  note: string;
   created_at: string;
   created_by: string;
 }

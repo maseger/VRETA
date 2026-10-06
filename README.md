@@ -46,7 +46,7 @@ scripts/test-db.sh # migrationer + RLS mot en tillfällig PostgreSQL (kräver po
 
 | Del | Var |
 | --- | --- |
-| Datamodell, tillståndsmaskin, audit, händelser, RLS | `supabase/migrations/20261005000000_m1_grund.sql` |
+| Datamodell, tillståndsmaskin, audit, händelser, RLS | `supabase/migrations/20261005123925_m1_grund.sql` |
 | Capture Agent och Story Agent (Claude, strukturerade svar, server-side fallback) | `supabase/functions/` |
 | Privacy Guard (deterministisk) och reservtolkning | `supabase/functions/_shared/` |
 | Datalager: Supabase + lokalt (IndexedDB) med samma regler | `src/data/` |
@@ -62,10 +62,10 @@ Formspråket hämtar färger från byggnadsvårdens material – kalkputs, linol
 
 | Del | Var |
 | --- | --- |
-| Organisationer, kontakthistorik (privat), anskaffningsflöde, hämtningar, checklistor, lagerplatser, RLS | `supabase/migrations/20261006000000_m2_infloede_lager.sql` |
+| Organisationer, kontakthistorik (privat), anskaffningsflöde, hämtningar, checklistor, lagerplatser, RLS | `supabase/migrations/20261005124018_m2_infloede_lager.sql` |
 | Avsluta hämtning i en transaktion: kvittering, status, händelse, lagerplats, anskaffning (AC-03) | `complete_pickup` i migrationen |
 | Offline-kö för fångst, bilder, checklistor och avslut + läscache för hämtningar (AC-02) | `src/data/outbox.ts`, `src/data/offlineSupabaseRepo.ts` |
-| Samla: Objekt · Människor · Inköp (pipeline) · Hämtningar | `src/pages/samla/` |
+| Saker: Objekt · Inköp (pipeline) · Hämtningar · Annonser | `src/pages/saker/` |
 | Personkort med roller, samtycke, privata uppgifter, kontakthistorik och diktering (AC-09) | `src/pages/PersonPage.tsx` |
 | Planera hämtning och hämtning på plats med navigering, checklista, foton och kvittering | `src/pages/NewPickupPage.tsx`, `src/pages/PickupPage.tsx` |
 | Lagerträd, lagerplats med QR-kod och utskrivbara etiketter | `src/pages/StoragePage.tsx`, `StorageLocationPage.tsx`, `LabelsPage.tsx` |
@@ -76,9 +76,9 @@ QR-koderna innehåller en länk till lagerplatsen, så telefonens vanliga kamera
 
 | Del | Var |
 | --- | --- |
-| Partier med fördelning (INV-11 kontrolleras vid commit), nytt liv, demontering, observationer, beslut, kartlager, PostGIS | `supabase/migrations/20261007000000_m3_nytt_liv_journal.sql` |
+| Partier med fördelning (INV-11 kontrolleras vid commit), nytt liv, demontering, observationer, beslut, kartlager, PostGIS | `supabase/migrations/20261005124129_m3_nytt_liv_journal.sql` |
 | `record_usage` och `store_allocation`: nytt liv för hela objekt eller delar av partier, en händelse i objekt-, zon- och platsjournal (AC-04, AC-05, AC-06) | migrationen |
-| Vretakartan: egna grundbilder och överlägg, zoner och byggnader, nålar för nytt liv och observationer, "Här" med GPS, rita och flytta hörn, area – helt offline | `src/geo/VretaMap.tsx`, `src/pages/VretaPage.tsx` |
+| Vretakartan (Platser → På Vreta): egna grundbilder och överlägg, zoner och byggnader, nålar för nytt liv och observationer, "Här" med GPS, rita och flytta hörn, area – helt offline | `src/geo/VretaMap.tsx`, `src/pages/platser/OnSitePlaces.tsx` |
 | Lägg till kartlager med hörnfil eller tre stödpunkter | `src/pages/MapLayerPage.tsx`, `src/geo/geo.ts` |
 | Nytt liv-formulär, partiets fördelning och demontering på objektsidan | `src/ui/UsageForm.tsx`, `src/pages/ObjectPage.tsx` |
 | Platsjournal med filter, zonsida, observationer och beslut | `src/pages/JournalPage.tsx`, `src/pages/ZonePage.tsx`, `src/ui/JournalForms.tsx` |
@@ -91,7 +91,7 @@ Kartfilerna visar fastighetens läge och ska aldrig ligga i repot.
 python3.12 scripts/prepare-basemap.py baskarta.pdf ut/    # GeoPDF eller GeoTIFF → ut/baskarta.png + ut/baskarta.json
 ```
 
-Ladda sedan upp båda filerna under **Vreta → Lager → Lägg till kartlager → Jag har en hörnfil**. Skriptet läser kartans inbäddade georeferens (t.ex. SWEREF 99 18 00), räknar om till Web Mercator och klipper vid kartramen. Ritningar utan georeferens placeras i appen med tre stödpunkter mot grundbilden.
+Ladda sedan upp båda filerna under **Platser → Lager → Lägg till kartlager → Jag har en hörnfil**. Skriptet läser kartans inbäddade georeferens (t.ex. SWEREF 99 18 00), räknar om till Web Mercator och klipper vid kartramen. Ritningar utan georeferens placeras i appen med tre stödpunkter mot grundbilden.
 
 Databastesterna kräver PostGIS: `apt-get install postgresql-16-postgis-3`.
 
@@ -99,7 +99,7 @@ Databastesterna kräver PostGIS: `apt-get install postgresql-16-postgis-3`.
 
 | Del | Var |
 | --- | --- |
-| Annonser, kanalposter, intressenter, utflöde (privat pris), bidrag, ömsesidighet, samtycke per inlägg, RLS | `supabase/migrations/20261008000000_m4_utflode_crm.sql` |
+| Annonser, kanalposter, intressenter, utflöde (privat pris), bidrag, ömsesidighet, samtycke per inlägg, RLS | `supabase/migrations/20261005124246_m4_utflode_crm.sql` |
 | `publish_channel` delar av partiet, `agree_lead` / `release_lead` reserverar och släpper, `complete_disposal` sätter status, köpare, pris, händelse och nedtagningspåminnelser i en transaktion (AC-08) | migrationen |
 | Kanaladaptrar (Blocket, Facebook Marketplace, Facebookgrupp, Tiptapp) – gränserna är konfiguration och ska verifieras (Q-03) | `supabase/functions/_shared/channels.ts` |
 | Annonspaket, integritetsfilter för annonser, prisförslag och svarsutkast | `supabase/functions/_shared/listingPackage.ts` |
@@ -113,6 +113,82 @@ Databastesterna kräver PostGIS: `apt-get install postgresql-16-postgis-3`.
 
 **Tack** skrivs från mallar i båda lägena, med samma integritetsfilter. Story Agent på servern får nu också bidrag och samtycke per inlägg, och dess text kontrolleras på samma sätt.
 
+## Saker · Människor · Platser
+
+Navigeringen följer vad saker är: **Saker** hanteras, **Människor** hanterar dem och har relationer, **Platser** är där det sker.
+
+| Del | Var |
+| --- | --- |
+| Nedre fältet: Idag · Saker · + · Människor · Platser (Fråga via den runda knappen); fliken är markerad även på detaljsidorna | `src/ui/AppShell.tsx` |
+| Saker: objekt, inköp, hämtningar, annonser | `src/pages/SakerPage.tsx`, `src/pages/saker/` |
+| Människor: personer med roller, samtycke, bidrag (nu med projekt) | `src/pages/ManniskorPage.tsx`, `src/pages/manniskor/` |
+| Platser på Vreta: karta, zoner och byggnader samt förvaring, projekt och observationer | `src/pages/PlatserPage.tsx`, `src/pages/platser/OnSitePlaces.tsx` |
+| Projekt: nytt liv och bidrag samlade per projektnamn | `src/pages/ProjectsPage.tsx`, `src/domain/places.ts` |
+| Platser utanför Vreta: orterna där saker hämtas, köps och lämnas | `src/pages/platser/ExternalPlaces.tsx` |
+
+Gamla adresser (`/samla`, `/vreta`) skickas vidare till de nya.
+
+### M6: projekt och platser utanför Vreta
+
+| Del | Var |
+| --- | --- |
+| Tabellerna `projects`, `external_places` (+ privat adress), `project_id` på nytt liv och bidrag, `place_id` på inköp, hämtningar och avslut, RLS | `supabase/migrations/20261006071304_m6_projekt_platser.sql` |
+| Projektnamn i fritext blir projekt (`resolve_project`); händelsen länkas till projektet; befintliga namn migreras | migrationen |
+| Projektlista och projektsida med status, saker, människor och projektjournal | `src/pages/ProjectsPage.tsx`, `src/pages/ProjectPage.tsx` |
+| Platser utanför Vreta: lista, ny plats, platssida med vad som kom in, lämnades och hämtades | `src/pages/platser/ExternalPlaces.tsx`, `src/pages/ExternalPlacePage.tsx` |
+| Fliken Platser på objektsidan; plats på ny hämtning; projektförslag i formulären | `src/pages/ObjectPage.tsx`, `src/ui/ExternalPlaceSelect.tsx`, `src/ui/ProjectInput.tsx` |
+| Databastester | `supabase/tests/m6_rls_test.sql` |
+
+### M7: behov, projektytor och Fråga Vreta om projekt och platser
+
+| Del | Var |
+| --- | --- |
+| `needs` och `need_fulfillments` med RLS; uppfyllelse blir händelse i projektjournalen; `need_fulfilled()`; projektyta (`projects.geom` + PostGIS) | `supabase/migrations/20261006071324_m7_behov_projektytor.sql` |
+| Behov på projektsidan: förlopp, fyll på (med förslag från lagret), efterlys, stryk | `src/ui/ProjectNeeds.tsx`, `src/domain/places.ts` |
+| Efterlysning från ett behov kopplas tillbaka till behovet | `src/pages/NewListingPage.tsx` (`?behov=`) |
+| Projektytor på Vretakartan: rita, flytta hörn, visa från projektsidan | `src/pages/platser/OnSitePlaces.tsx` (`?rita=` / `?visa=`) |
+| Fråga Vreta: `projects`, `project_overview`, `open_needs`, `place_overview`, och sökning i projekt och platser | `supabase/functions/_shared/knowledge.ts` |
+| Databastester | `supabase/tests/m7_rls_test.sql` |
+
+### M8: relationer mellan människor
+
+| Del | Var |
+| --- | --- |
+| `person_relations` (symmetriska relationer + riktad "tipsade oss om"), unik oavsett håll, RLS: bara ägare och medhjälpare | `supabase/migrations/20261006071338_m8_relationer.sql` |
+| Nätverk på personkortet: organisation, relationer, "kom till oss via" | `src/ui/PersonNetwork.tsx` |
+| Organisationer under Människor och en organisationssida med medlemmar och saker | `src/pages/manniskor/OrganizationsList.tsx`, `src/pages/OrganizationPage.tsx` |
+| Fråga Vreta: `person_network` | `supabase/functions/_shared/knowledge.ts` |
+| Databastester | `supabase/tests/m8_rls_test.sql` |
+
+### Lägga till platser
+
+*Ny plats* under Platser (`/platser/ny`, `src/pages/NewPlacePage.tsx`): område, byggnad eller anläggning, lagerplats eller plats utanför Vreta. Områden och byggnader kan ritas in på Vretakartan direkt (`/platser?rita=zone:<id>`) eller senare via *Rita in*.
+
+Platstyperna för områden och byggnader är en katalog för en regenerativ återbruksfastighet (hushåll, skogsträdgård, plantering, kompost, damm, svackdike, parkering, materialgård, hönshus, regnvattentank …) med förklaring och permakulturzon 0–5; egna typer går också att skriva: `src/domain/placeTypes.ts`, `src/ui/PlaceTypeSelect.tsx`.
+
+### M9: gäster utan konto
+
+| Del | Var |
+| --- | --- |
+| Gästlänkar (bara hash sparas), `redeem_guest_link` med anonym inloggning, `revoke_guest_link`, `is_guest()`; gäster ser bara människor, bidrag och händelser med samtycke och inga hämtningar, uppgifter eller citat | `supabase/migrations/20261006071952_m9_gaster.sql` |
+| Gästlänkar under Inställningar: skapa, skicka, se användning, stäng | `src/ui/GuestLinks.tsx` |
+| `/gast/<nyckel>` och gästens startsida; Fråga, Fånga och inköp/hämtningar döljs | `src/pages/GuestEntryPage.tsx`, `src/pages/GuestHomePage.tsx`, `src/ui/AppShell.tsx` |
+| Fråga Vreta nekar gäster på servern | `supabase/functions/ask-vreta/` |
+| Databastester | `supabase/tests/m9_rls_test.sql` |
+
+**Med Supabase:** slå på anonym inloggning (Authentication → Sign In / Providers → Allow anonymous sign-ins), kör `supabase db push` och driftsätt `ask-vreta`.
+
+### Fånga känner igen plats, projekt och tipsare
+
+| Del | Var |
+| --- | --- |
+| Lokal tolkning: "på Återbruket", "till orangeriet", "Anders tipsade" / "tips från" / "via" | `supabase/functions/_shared/captureHeuristics.ts` |
+| Capture Agent: fälten `place`, `project`, `introduced_by`; får namnen på kända projekt och platser | `supabase/functions/_shared/agentSchemas.ts`, `agents.ts`, `capture-agent/` |
+| Matchning mot platser, projekt, behov och personer, och kopplingarna vid godkännande | `src/services/proposalLinks.ts` |
+| Kopplingar under Att granska | `src/ui/ProposalLinksCard.tsx`, `src/pages/ProposalPage.tsx` |
+
+Med Supabase: kör `supabase db push` för att lägga in migrationerna och driftsätt `ask-vreta` och `capture-agent` igen (`supabase functions deploy ask-vreta capture-agent`).
+
 ## Vad M5 innehåller (kunskap och härdning)
 
 | Del | Var |
@@ -125,7 +201,7 @@ Databastesterna kräver PostGIS: `apt-get install postgresql-16-postgis-3`.
 | Idag prioriterar: granska, hämtningar, försenat, intressenter, uppföljning, att tacka, legat i lager över ett år | `src/pages/TodayPage.tsx` |
 | Export som ZIP: alla tabeller som JSON och CSV, originalbilder och kartor (AC-16) | `src/services/exportArchive.ts` |
 | Egen backup och återställningstest (NFR-008) | `scripts/backup.sh`, `scripts/restore-test.sh`, `RESTORE_TEST=1 scripts/test-db.sh` |
-| Fulltextsök på svenska, index, privata trådar, AI-förbrukning per funktion med månadstak (NFR-014) | `supabase/migrations/20261009000000_m5_kunskap_hardning.sql` |
+| Fulltextsök på svenska, index, privata trådar, AI-förbrukning per funktion med månadstak (NFR-014) | `supabase/migrations/20261005124317_m5_kunskap_hardning.sql` |
 | Tillgänglighet: hoppa-till-innehåll-länk, aria-live, etiketter; axe (WCAG 2.2 AA) utan anmärkningar på kärnflödena | `src/ui/AppShell.tsx` m.fl. |
 | Prestanda: alla sidor utom Idag laddas vid behov; startpaketet gick från 725 kB till 168 kB | `src/App.tsx`, `vite.config.ts` |
 | Fälttestprotokoll för en vecka | `docs/falttest.md` |

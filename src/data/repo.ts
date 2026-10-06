@@ -1,4 +1,5 @@
 import type {
+  ExternalPlace, GuestLink, Need, NeedFulfillment, PersonRelation, Project,
   Acquisition, AcquisitionType, AuditEntry, Capture, CaptureInput, ContentItem, EventRec, Media, ObjectStatus,
   Person, Profile, Proposal, ProposalContent, Role, Site, StoryNote, Structure, Task, VObject, Zone, FieldMeta,
   AcquisitionStatus, ChecklistItem, ChecklistTemplate, Interaction, Organization, Pickup, PickupItem, PickupStatus,
@@ -55,6 +56,9 @@ export interface Repo {
 
   session(): Promise<Profile | null>;
   signInWithEmail(email: string): Promise<void>;
+  /** Inloggning utan mejl, för konton som har ett lösenord. */
+  signInWithPassword?(email: string, password: string): Promise<void>;
+  changePassword?(password: string): Promise<void>;
   signOut(): Promise<void>;
   bootstrapSite(siteName: string, memberName: string): Promise<void>;
   setDemoRole?(role: Role): Promise<void>;
@@ -188,6 +192,41 @@ export interface Repo {
   /** Antal ändringar som väntar på att synkas (bara Supabase). */
   pendingSync?(): Promise<number>;
   flushOutbox?(): Promise<number>;
+  // ---- M6: projekt och platser utanför Vreta
+  projects(): Promise<Project[]>;
+  createProject(input: NewProject): Promise<Project>;
+  updateProject(id: string, patch: Partial<NewProject>): Promise<void>;
+  externalPlaces(): Promise<ExternalPlace[]>;
+  createExternalPlace(input: NewExternalPlace): Promise<ExternalPlace>;
+  updateExternalPlace(id: string, patch: Partial<NewExternalPlace>): Promise<void>;
+  setAcquisitionPlace(acquisitionId: string, placeId: string | null): Promise<void>;
+  setPickupPlace(pickupId: string, placeId: string | null): Promise<void>;
+  setDisposalPlace(disposalId: string, placeId: string | null): Promise<void>;
+
+  // ---- M7: behov och projektytor
+  needs(projectId?: string): Promise<Need[]>;
+  createNeed(input: NewNeed): Promise<Need>;
+  updateNeed(id: string, patch: Partial<Pick<Need, "title" | "quantity" | "unit" | "notes" | "status" | "listing_id">>): Promise<void>;
+  needFulfillments(needIds?: string[]): Promise<NeedFulfillment[]>;
+  fulfillNeed(input: NewFulfillment): Promise<NeedFulfillment>;
+  removeFulfillment(id: string): Promise<void>;
+  setProjectGeom(id: string, geom: PolygonGeom | null): Promise<void>;
+
+  // ---- M8: relationer och organisationer
+  /** Tom för läsare – relationer är personuppgifter. */
+  relations(personId?: string): Promise<PersonRelation[]>;
+  addRelation(input: Pick<PersonRelation, "person_id" | "other_id" | "kind" | "note">): Promise<PersonRelation>;
+  removeRelation(id: string): Promise<void>;
+  updateOrganization(id: string, patch: Partial<Pick<Organization, "name" | "kind" | "locality">>): Promise<void>;
+
+  // ---- M9: gäster
+  /** Öppnar en gästlänk utan konto. Kastar om länken inte gäller. */
+  enterAsGuest(token: string): Promise<void>;
+  guestLinks(): Promise<GuestLink[]>;
+  /** Nyckeln returneras bara här – sedan finns bara dess hash kvar. */
+  createGuestLink(label: string): Promise<{ id: string; token: string }>;
+  revokeGuestLink(id: string): Promise<void>;
+
   storyRows(objectId: string, contentId?: string): Promise<StoryRows>;
   audit(): Promise<AuditEntry[]>;
   exportAll(): Promise<Record<string, unknown[]>>;
@@ -215,7 +254,14 @@ export interface NewPickup {
   object_ids: string[];
   template_id: string | null;
   safety_note: string;
+  /** Plats utanför Vreta (M6). */
+  place_id?: string | null;
 }
+
+export type NewNeed = Pick<Need, "project_id" | "title" | "quantity" | "unit" | "notes">;
+export type NewFulfillment = Pick<NeedFulfillment, "need_id" | "quantity" | "object_id" | "contribution_id" | "note">;
+export type NewProject = Pick<Project, "name" | "kind" | "status" | "description" | "zone_id" | "structure_id" | "started_on" | "finished_on">;
+export type NewExternalPlace = Pick<ExternalPlace, "name" | "kind" | "locality" | "notes"> & { address: string };
 
 export interface Receipt {
   object_id: string;

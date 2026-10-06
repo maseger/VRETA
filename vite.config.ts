@@ -2,7 +2,11 @@ import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
+// Sökväg där appen ligger, t.ex. "/VRETA/" på GitHub Pages. Standard är roten.
+const base = process.env.VITE_BASE ?? "/";
+
 export default defineConfig({
+  base,
   plugins: [
     react(),
     VitePWA({
@@ -16,7 +20,8 @@ export default defineConfig({
         theme_color: "#8C2F1D",
         background_color: "#F4EFE4",
         display: "standalone",
-        start_url: "/",
+        start_url: base,
+        scope: base,
         icons: [{ src: "icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any maskable" }],
       },
       workbox: { globPatterns: ["**/*.{js,css,html,svg,woff2}"] },

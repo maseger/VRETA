@@ -19,8 +19,18 @@ function lastLocality(): string {
 export function NewListingPage() {
   const [params] = useSearchParams();
   const objectId = params.get("objekt");
+  // Efterlysning av ett projektbehov (6.4): rubrik och antal från behovet, annonsen kopplas tillbaka
+  const needId = params.get("behov");
   const { repo, refresh } = useApp();
   const navigate = useNavigate();
+  const { data: need } = useData(async (r) => {
+    if (!needId) return null;
+    const n = (await r.needs()).find((x) => x.id === needId) ?? null;
+    if (!n) return null;
+    const [fulfilled, project] = await Promise.all([r.needFulfillments([n.id]), r.projects().then((ps) => ps.find((p) => p.id === n.project_id) ?? null)]);
+    const left = n.quantity != null ? Math.max(0, n.quantity - fulfilled.reduce((s, f) => s + f.quantity, 0)) : null;
+    return { n, left, project };
+  }, [needId]);
   const { data } = useData(async (r) => {
     if (!objectId) return { object: null, usable: null };
     const object = await r.object(objectId);
@@ -35,6 +45,12 @@ export function NewListingPage() {
   const [locality, setLocality] = useState(lastLocality());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!need) return;
+    setType("wanted");
+    setTitle(need.left ? `${need.n.title} – ${need.left.toLocaleString("sv-SE")} ${need.n.unit}` : need.n.title);
+  }, [need]);
 
   useEffect(() => {
     if (!data?.object) return;
@@ -58,8 +74,9 @@ export function NewListingPage() {
       }
       const l = await repo.saveListing({
         object_id: objectId, type, title: title.trim(), description: data?.object?.description ?? "", price: type === "give" ? 0 : null,
-        quantity: data?.object?.is_batch ? qty : null, locality: locality.trim(), image_ids: [],
+        quantity: data?.object?.is_batch ? qty : need?.left ?? null, locality: locality.trim(), image_ids: [],
       });
+      if (need) await repo.updateNeed(need.n.id, { listing_id: l.id });
       await refresh();
       navigate(`/annons/${l.id}`, { replace: true });
     } catch (e) {
@@ -72,6 +89,7 @@ export function NewListingPage() {
   return (
     <div className="mx-auto max-w-xl">
       {data?.object && <Link to={`/objekt/${data.object.id}`} className="text-sm font-semibold text-falu">← {data.object.title}</Link>}
+      {need?.project && <Link to={`/projekt/${need.project.id}`} className="text-sm font-semibold text-falu">← {need.project.name}</Link>}
       <PageHeader kicker="Lägg ut" title={data?.object ? "Ge det ett nytt hem" : "Ny annons eller efterlysning"} />
 
       <p className="field-label">Vad vill du göra?</p>

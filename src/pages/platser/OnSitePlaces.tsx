@@ -1,23 +1,24 @@
-import { Archive, BookOpen, ChevronRight, Crosshair, Layers, Pencil, Plus, Undo2, X } from "lucide-react";
+import { Archive, ChevronRight, Crosshair, Eye, Hammer, Layers, Pencil, Plus, Undo2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useApp, useData } from "../app/AppContext";
-import type { MapLayer } from "../domain/types";
-import { areaM2, centroid, closeRing, formatArea, zoneAt, type LngLat, type PolygonGeom } from "../geo/geo";
-import { VretaMap, type MapPin, type MapPolygon } from "../geo/VretaMap";
-import { PageHeader, Section } from "../ui/bits";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useApp, useData } from "../../app/AppContext";
+import type { MapLayer } from "../../domain/types";
+import { areaM2, centroid, closeRing, formatArea, zoneAt, type LngLat, type PolygonGeom } from "../../geo/geo";
+import { VretaMap, type MapPin, type MapPolygon } from "../../geo/VretaMap";
+import { Section } from "../../ui/bits";
 
 type Mode = { kind: "view" } | { kind: "draw" } | { kind: "edit"; target: MapPolygon; vertices: LngLat[] };
 
-export function VretaPage() {
-  const { repo, site, profile, refresh, toast } = useApp();
+/** Platser på Vreta: kartan, zoner och byggnader – och det som sker där: förvaring, projekt och observationer. */
+export function OnSitePlaces() {
+  const { repo, profile, refresh, toast } = useApp();
   const navigate = useNavigate();
   const canWrite = profile?.role !== "viewer";
   const { data } = useData(async (r) => {
-    const [zones, structures, layers, usage, observations, objects] = await Promise.all([
-      r.zones(), r.structures(), r.mapLayers(), r.allUsageEvents(), r.observations(), r.objects(),
+    const [zones, structures, layers, usage, observations, objects, projects] = await Promise.all([
+      r.zones(), r.structures(), r.mapLayers(), r.allUsageEvents(), r.observations(), r.objects(), r.projects(),
     ]);
-    return { zones, structures, layers, usage, observations, objects };
+    return { zones, structures, layers, usage, observations, objects, projects };
   });
 
   // Bildlager som blob-URL:er (fungerar offline när bilden är cachad)
@@ -47,7 +48,7 @@ export function VretaPage() {
   const overlays = data?.layers.filter((l) => l.kind === "overlay") ?? [];
   const [baseId, setBaseId] = useState<string | null>(null);
   const [shownOverlays, setShownOverlays] = useState<Record<string, number>>({});
-  const [show, setShow] = useState({ zoner: true, byggnader: true, liv: true, obs: true });
+  const [show, setShow] = useState({ zoner: true, byggnader: true, projekt: true, liv: true, obs: true });
   const [panel, setPanel] = useState(false);
   const [mode, setMode] = useState<Mode>({ kind: "view" });
   const [draft, setDraft] = useState<LngLat[]>([]);
@@ -58,11 +59,13 @@ export function VretaPage() {
   const [newName, setNewName] = useState("");
 
   const base: MapLayer | undefined = bases.find((b) => b.id === baseId) ?? bases[bases.length - 1];
+  // Överlägg visas från början med sin sparade genomskinlighet; 0 betyder avslaget
+  const overlayOpacity = (o: MapLayer) => shownOverlays[o.id] ?? o.opacity;
 
   const images = useMemo(() => {
     const list = [];
     if (base && urls[base.id]) list.push({ id: base.id, url: urls[base.id], corners: base.corners as LngLat[], opacity: 1 });
-    for (const o of overlays) if (shownOverlays[o.id] && urls[o.id]) list.push({ id: o.id, url: urls[o.id], corners: o.corners as LngLat[], opacity: shownOverlays[o.id] });
+    for (const o of overlays) if (overlayOpacity(o) && urls[o.id]) list.push({ id: o.id, url: urls[o.id], corners: o.corners as LngLat[], opacity: overlayOpacity(o) });
     return list;
   }, [base, overlays, shownOverlays, urls]);
 
@@ -71,6 +74,7 @@ export function VretaPage() {
     const out: MapPolygon[] = [];
     if (show.zoner) for (const z of data.zones) if (z.geom) out.push({ id: z.id, kind: "zone", name: z.name, geom: z.geom, highlight: selected?.id === z.id });
     if (show.byggnader) for (const s of data.structures) if (s.geom) out.push({ id: s.id, kind: "structure", name: s.name, geom: s.geom, highlight: selected?.id === s.id });
+    if (show.projekt) for (const p of data.projects) if (p.geom && p.status !== "done") out.push({ id: p.id, kind: "project", name: p.name, geom: p.geom, highlight: selected?.id === p.id });
     if (mode.kind === "edit") return out.map((p) => (p.id === mode.target.id ? { ...p, geom: closeRing(mode.vertices), highlight: true } : p));
     return out;
   }, [data, show, selected, mode]);
@@ -117,6 +121,7 @@ export function VretaPage() {
     const [kind, id] = target.split(":");
     if (kind === "zone") await repo.setZoneGeom(id, geom);
     else if (kind === "structure") await repo.setStructureGeom(id, geom);
+    else if (kind === "project") await repo.setProjectGeom(id, geom);
     else if (kind === "new-zone") await repo.setZoneGeom((await repo.createZone({ name: newName.trim(), kind: "", notes: "" })).id, geom);
     else if (kind === "new-structure") await repo.setStructureGeom((await repo.createStructure({ name: newName.trim(), kind: "", notes: "", zone_id: null })).id, geom);
     setDraft([]);
@@ -131,6 +136,7 @@ export function VretaPage() {
     if (mode.kind !== "edit") return;
     const geom = closeRing(mode.vertices);
     if (mode.target.kind === "zone") await repo.setZoneGeom(mode.target.id, geom);
+    else if (mode.target.kind === "project") await repo.setProjectGeom(mode.target.id, geom);
     else await repo.setStructureGeom(mode.target.id, geom);
     setMode({ kind: "view" });
     setSelected(null);
@@ -139,20 +145,55 @@ export function VretaPage() {
   }
 
   const count = (key: "zone_id" | "structure_id", id: string) => data?.objects.filter((o) => o[key] === id && o.status === "in_use").length ?? 0;
-  const unmapped = [...(data?.zones.filter((z) => !z.geom).map((z) => ({ v: `zone:${z.id}`, l: `Zon: ${z.name}` })) ?? []), ...(data?.structures.filter((s) => !s.geom).map((s) => ({ v: `structure:${s.id}`, l: `Byggnad: ${s.name}` })) ?? [])];
+  const inProject = (id: string) => new Set(data?.usage.filter((u) => u.project_id === id).map((u) => u.object_id)).size;
+  const unmapped = [...(data?.zones.filter((z) => !z.geom).map((z) => ({ v: `zone:${z.id}`, l: `Zon: ${z.name}` })) ?? []), ...(data?.structures.filter((s) => !s.geom).map((s) => ({ v: `structure:${s.id}`, l: `Byggnad: ${s.name}` })) ?? []), ...(data?.projects.filter((p) => !p.geom && p.status !== "done").map((p) => ({ v: `project:${p.id}`, l: `Projekt: ${p.name}` })) ?? [])];
+
+  // Från projektsidan: ?rita=project:<id> börjar rita ytan, ?visa=project:<id> markerar den
+  const [params, setParams] = useSearchParams();
+  useEffect(() => {
+    if (!data) return;
+    const rita = params.get("rita");
+    const visa = params.get("visa");
+    if (!rita && !visa) return;
+    if (rita && canWrite) {
+      setMode({ kind: "draw" });
+      setDraft([]);
+      setTarget(rita);
+    }
+    if (visa) {
+      const [, id] = visa.split(":");
+      const p = data.projects.find((x) => x.id === id);
+      if (p?.geom) setSelected({ id: p.id, kind: "project", name: p.name, geom: p.geom });
+    }
+    setParams({}, { replace: true });
+  }, [data, params, setParams, canWrite]);
 
   return (
     <div>
-      <PageHeader kicker="Platsen" title={site?.name ?? "Vreta"}>
-        <Link to="/journal" className="btn-secondary"><BookOpen size={18} aria-hidden="true" /> Journal</Link>
-      </PageHeader>
+      {/* Det som sker på platserna: saker förvaras, projekt genomförs, observationer görs */}
+      <ul className="mb-4 grid grid-cols-3 gap-2 sm:gap-3">
+        {[
+          { to: "/lager", icon: Archive, title: "Förvaring", text: "Lagerplatser, QR-etiketter och vad som ligger var", n: `${data?.objects.filter((o) => o.status === "stored").length ?? 0} saker i lager` },
+          { to: "/platser/projekt", icon: Hammer, title: "Projekt", text: "Byggen, planteringar och annat som tar saker i bruk", n: `${data?.projects.filter((p) => p.status === "active").length ?? 0} pågår` },
+          { to: "/journal?filter=obs", icon: Eye, title: "Obser\u00ADvationer", text: "Djur, växter, väder och annat som syns på platsen", n: `${data?.observations.length ?? 0} observationer` },
+        ].map(({ to, icon: Icon, title, text, n }) => (
+          <li key={to}>
+            <Link to={to} className="card flex h-full flex-col gap-1 p-3 hover:bg-kalk-2/60 sm:gap-2 sm:p-4">
+              <Icon size={24} strokeWidth={1.5} className="text-falu" aria-hidden="true" />
+              <span className="font-serif text-[15px] font-semibold leading-tight sm:text-lg">{title}</span>
+              <span className="hidden flex-1 text-sm text-sot-3 sm:block">{text}</span>
+              <span className="mt-auto text-[12px] font-semibold text-sot-2">{n}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
 
       <div className="card relative mb-3 overflow-hidden">
         {bases.length === 0 && data && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-kalk-2/90 p-6 text-center">
             <p className="font-serif text-lg font-semibold">Vretakartan saknar grundbild</p>
             <p className="max-w-sm text-sm text-sot-3">Lägg in fastighetskartan eller en baskarta som grundbild. Den sparas i appen och fungerar utan nät.</p>
-            {canWrite && <Link to="/vreta/kartlager/ny" className="btn-primary"><Plus size={18} aria-hidden="true" /> Lägg till grundbild</Link>}
+            {canWrite && <Link to="/platser/kartlager/ny" className="btn-primary"><Plus size={18} aria-hidden="true" /> Lägg till grundbild</Link>}
           </div>
         )}
         <VretaMap
@@ -189,17 +230,17 @@ export function VretaPage() {
             {overlays.map((o) => (
               <div key={o.id} className="py-1 text-sm">
                 <label className="flex items-center gap-2">
-                  <input type="checkbox" className="accent-[#8C2F1D]" checked={!!shownOverlays[o.id]} onChange={(e) => setShownOverlays((s) => ({ ...s, [o.id]: e.target.checked ? 0.7 : 0 }))} />
+                  <input type="checkbox" className="accent-[#8C2F1D]" checked={!!overlayOpacity(o)} onChange={(e) => setShownOverlays((s) => ({ ...s, [o.id]: e.target.checked ? o.opacity || 0.7 : 0 }))} />
                   {o.name}
                 </label>
-                {!!shownOverlays[o.id] && <input type="range" min={0.1} max={1} step={0.05} value={shownOverlays[o.id]} onChange={(e) => setShownOverlays((s) => ({ ...s, [o.id]: Number(e.target.value) }))} className="ml-6 w-40 accent-[#8C2F1D]" aria-label={`Genomskinlighet för ${o.name}`} />}
+                {!!overlayOpacity(o) && <input type="range" min={0.1} max={1} step={0.05} value={overlayOpacity(o)} onChange={(e) => setShownOverlays((s) => ({ ...s, [o.id]: Number(e.target.value) }))} className="ml-6 w-40 accent-[#8C2F1D]" aria-label={`Genomskinlighet för ${o.name}`} />}
               </div>
             ))}
-            {canWrite && <Link to="/vreta/kartlager/ny" className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-falu"><Plus size={16} aria-hidden="true" /> Lägg till kartlager</Link>}
+            {canWrite && <Link to="/platser/kartlager/ny" className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-falu"><Plus size={16} aria-hidden="true" /> Lägg till kartlager</Link>}
           </div>
           <div>
             <p className="kicker mb-2">Visa</p>
-            {([["zoner", "Zoner"], ["byggnader", "Byggnader och anläggningar"], ["liv", "Nytt liv"], ["obs", "Observationer"]] as [keyof typeof show, string][]).map(([k, l]) => (
+            {([["zoner", "Zoner"], ["byggnader", "Byggnader och anläggningar"], ["projekt", "Projekt"], ["liv", "Nytt liv"], ["obs", "Observationer"]] as [keyof typeof show, string][]).map(([k, l]) => (
               <label key={k} className="flex items-center gap-2 py-1 text-sm">
                 <input type="checkbox" className="accent-[#4F5E3A]" checked={show[k]} onChange={(e) => setShow((s) => ({ ...s, [k]: e.target.checked }))} /> {l}
               </label>
@@ -240,12 +281,12 @@ export function VretaPage() {
       {selected && mode.kind === "view" && (
         <div className="card mb-4 flex flex-wrap items-center gap-3 p-4">
           <div className="flex-1">
-            <p className="kicker">{selected.kind === "zone" ? "Zon" : "Byggnad"} · {formatArea(areaM2(selected.geom))}</p>
+            <p className="kicker">{{ zone: "Zon", structure: "Byggnad", project: "Projekt" }[selected.kind]} · {formatArea(areaM2(selected.geom))}</p>
             <p className="font-serif text-lg font-semibold">{selected.name}</p>
-            <p className="text-sm text-sot-3">{count(selected.kind === "zone" ? "zone_id" : "structure_id", selected.id)} objekt i bruk</p>
+            <p className="text-sm text-sot-3">{selected.kind === "project" ? inProject(selected.id) : count(selected.kind === "zone" ? "zone_id" : "structure_id", selected.id)} objekt i bruk</p>
           </div>
           {canWrite && <button className="btn-secondary" onClick={() => setMode({ kind: "edit", target: selected, vertices: selected.geom.coordinates[0].slice(0, -1) as LngLat[] })}>Flytta hörn</button>}
-          {selected.kind === "zone" && <button className="btn-primary" onClick={() => navigate(`/zon/${selected.id}`)}>Öppna <ChevronRight size={18} aria-hidden="true" /></button>}
+          {selected.kind !== "structure" && <button className="btn-primary" onClick={() => navigate(selected.kind === "zone" ? `/zon/${selected.id}` : `/projekt/${selected.id}`)}>Öppna <ChevronRight size={18} aria-hidden="true" /></button>}
           <button className="btn-ghost" onClick={() => setSelected(null)} aria-label="Stäng"><X size={18} /></button>
         </div>
       )}
@@ -258,33 +299,33 @@ export function VretaPage() {
         </div>
       )}
 
-      <Link to="/lager" className="card mb-8 mt-6 flex items-center gap-4 p-5 hover:bg-kalk-2/60">
-        <Archive size={28} strokeWidth={1.5} className="shrink-0 text-falu" aria-hidden="true" />
-        <span className="flex-1"><span className="block font-serif text-lg font-semibold">Lager</span><span className="text-sm text-sot-3">Lagerplatser, QR-etiketter och vad som ligger var</span></span>
-        <ChevronRight size={18} className="text-sot-3" aria-hidden="true" />
-      </Link>
-
-      <Section title="Zoner">
+      <div className="h-4" />
+      <Section title="Områden" action={canWrite ? <Link to="/platser/ny?typ=zon" className="inline-flex items-center gap-1 text-sm font-semibold text-falu"><Plus size={16} aria-hidden="true" /> Nytt område</Link> : undefined}>
         <ul className="card divide-y divide-dashed divide-lera-light">
           {data?.zones.map((z) => (
             <li key={z.id}>
               <Link to={`/zon/${z.id}`} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-kalk-2/60">
-                <span><span className="font-medium">{z.name}</span><span className="block text-sm text-sot-3">{[z.geom ? formatArea(areaM2(z.geom)) : "Inte inritad", z.notes].filter(Boolean).join(" · ")}</span></span>
+                <span><span className="font-medium">{z.name}</span><span className="block text-sm text-sot-3">{[z.kind, z.geom ? formatArea(areaM2(z.geom)) : "Inte inritad"].filter(Boolean).join(" · ")}</span></span>
                 <span className="text-sm text-sot-3">{count("zone_id", z.id)} i bruk</span>
               </Link>
             </li>
           ))}
+          {data && !data.zones.length && <li className="px-4 py-4 text-sm text-sot-3">Inga områden ännu. Lägg till trädgården, odlingen eller ängen – kartan kan ritas in senare.</li>}
         </ul>
       </Section>
 
-      <Section title="Byggnader och anläggningar">
+      <Section title="Byggnader och anläggningar" action={canWrite ? <Link to="/platser/ny?typ=byggnad" className="inline-flex items-center gap-1 text-sm font-semibold text-falu"><Plus size={16} aria-hidden="true" /> Ny byggnad</Link> : undefined}>
         <ul className="card divide-y divide-dashed divide-lera-light">
           {data?.structures.map((s) => (
             <li key={s.id} className="flex items-center justify-between px-4 py-3">
               <span><span className="font-medium">{s.name}</span><span className="block text-sm text-sot-3">{[s.kind, s.geom ? formatArea(areaM2(s.geom)) : "Inte inritad"].filter(Boolean).join(" · ")}</span></span>
-              <span className="text-sm text-sot-3">{count("structure_id", s.id)} i bruk</span>
+              <span className="flex items-center gap-3 text-sm text-sot-3">
+                {canWrite && !s.geom && bases.length > 0 && <Link to={`/platser?rita=structure:${s.id}`} className="font-semibold text-falu">Rita in</Link>}
+                {count("structure_id", s.id)} i bruk
+              </span>
             </li>
           ))}
+          {data && !data.structures.length && <li className="px-4 py-4 text-sm text-sot-3">Inga byggnader ännu. Lägg till huset, ladugården eller växthuset.</li>}
         </ul>
       </Section>
     </div>

@@ -2,6 +2,7 @@
 // audit, händelser vid statusbyten) upprätthålls i databasen; klienten anropar bara.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type {
+  ExternalPlace, GuestLink, Need, NeedFulfillment, PersonRelation, Project,
   BatchAllocation, Decision, EventLink, MapLayer, Observation, UsageEvent,
   AskThread, ChannelPost, ContentConsent, Contribution, Disposal, Lead, LeadStatus, Listing, ListingStatus, PublishMode, ReciprocityEntry,
   AcquisitionStatus, ChecklistItem, ChecklistTemplate, Interaction, Organization, Pickup, PickupItem, PickupStatus,
@@ -11,11 +12,17 @@ import type {
 } from "../domain/types";
 import type { StoryRows } from "../../supabase/functions/_shared/storyContext";
 import type { PolygonGeom } from "../geo/geo";
-import type { DisposalInput, ListingInput, ApproveInput, MediaInput, NewMapLayer, NewPerson, NewPickup, PlaceRef, Receipt, Repo, UsageInput } from "./repo";
+import type { DisposalInput, ListingInput, ApproveInput, MediaInput, NewExternalPlace, NewFulfillment, NewMapLayer, NewNeed, NewPerson, NewProject, NewPickup, PlaceRef, Receipt, Repo, UsageInput } from "./repo";
 
 function check<T>(res: { data: T | null; error: { message: string } | null }): T {
   if (res.error) throw new Error(res.error.message);
   return res.data as T;
+}
+
+/** Projektnamn är unika per plats (projects_site_name). */
+function projectCheck<T>(res: { data: T | null; error: { message: string } | null }): T {
+  if (res.error?.message.includes("projects_site_name")) throw new Error("Det finns redan ett projekt med det namnet");
+  return check(res);
 }
 
 export class SupabaseRepo implements Repo {
@@ -39,13 +46,28 @@ export class SupabaseRepo implements Repo {
   async session(): Promise<Profile | null> {
     const { data } = await this.client.auth.getUser();
     if (!data.user) return null;
-    const rows = check(await this.client.from("site_members").select("site_id, role, name").eq("user_id", data.user.id).limit(1));
-    if (!rows.length) return { id: data.user.id, name: data.user.email ?? "", role: "viewer" };
+    const rows = check(await this.client.from("site_members").select("site_id, role, name, is_guest").eq("user_id", data.user.id).limit(1));
+    // En anonym gäst vars länk har stängts har inget medlemskap kvar – då är hen utloggad
+    if (!rows.length) return data.user.is_anonymous ? null : { id: data.user.id, name: data.user.email ?? "", role: "viewer" };
     this.siteIdCache = rows[0].site_id;
-    return { id: data.user.id, name: rows[0].name || data.user.email || "", role: rows[0].role };
+    return { id: data.user.id, name: rows[0].name || data.user.email || "", role: rows[0].role, guest: !!rows[0].is_guest };
   }
   async signInWithEmail(email: string): Promise<void> {
-    const { error } = await this.client.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } });
+    const { error } = await this.client.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin + import.meta.env.BASE_URL } });
+    if (error?.code === "over_email_send_rate_limit") {
+      throw new Error("För många inloggningsmejl på kort tid. Vänta en timme och försök igen, eller använd länken i det senaste mejlet.");
+    }
+    if (error) throw new Error(error.message);
+  }
+  async signInWithPassword(email: string, password: string): Promise<void> {
+    const { error } = await this.client.auth.signInWithPassword({ email, password });
+    if (error?.code === "invalid_credentials") throw new Error("Fel e-post eller lösenord.");
+    if (error) throw new Error(error.message);
+  }
+  async changePassword(password: string): Promise<void> {
+    const { error } = await this.client.auth.updateUser({ password });
+    if (error?.code === "weak_password") throw new Error("Lösenordet är för svagt. Välj minst 8 tecken.");
+    if (error?.code === "same_password") throw new Error("Det nya lösenordet måste skilja sig från det gamla.");
     if (error) throw new Error(error.message);
   }
   async signOut(): Promise<void> {
@@ -244,6 +266,8 @@ export class SupabaseRepo implements Repo {
       "map_layers", "batch_allocations", "usage_events", "observations", "decisions",
       "listings", "channel_posts", "leads", "disposals", "disposal_private", "contributions", "reciprocity_entries", "content_consents",
       "ask_threads",
+      "projects", "external_places", "external_place_private",
+      "needs", "need_fulfillments", "person_relations",
     ];
     const out: Record<string, unknown[]> = {};
     for (const t of tables) out[t] = check(await this.client.from(t).select("*")) as unknown[];
@@ -335,7 +359,10 @@ export class SupabaseRepo implements Repo {
     return check(await this.client.from("checklist_items").select("*").eq("pickup_id", pickupId).order("position")) as ChecklistItem[];
   }
   async createPickup(input: NewPickup): Promise<string> {
-    return check(await this.client.rpc("create_pickup", { p_site: await this.siteId(), p_input: input })) as string;
+    const { place_id, ...rest } = input;
+    const id = check(await this.client.rpc("create_pickup", { p_site: await this.siteId(), p_input: rest })) as string;
+    if (place_id) await this.setPickupPlace(id, place_id);
+    return id;
   }
   async setPickupStatus(id: string, to: PickupStatus): Promise<void> {
     check(await this.client.from("pickups").update({ status: to }).eq("id", id));
@@ -488,6 +515,116 @@ export class SupabaseRepo implements Repo {
   async addContribution(input: Pick<Contribution, "person_id" | "kind" | "description" | "hours" | "object_id" | "zone_id" | "project" | "visibility"> & { occurred_at?: string }): Promise<Contribution> {
     return check(await this.client.from("contributions").insert({ ...input, site_id: await this.siteId() }).select().single()) as Contribution;
   }
+  // ------------------------------------------------------------ M6: projekt och platser utanför Vreta
+  async projects(): Promise<Project[]> {
+    return check(await this.client.from("projects").select("*").is("archived_at", null).order("name")) as Project[];
+  }
+  async createProject(input: NewProject): Promise<Project> {
+    return projectCheck(await this.client.from("projects").insert({ ...input, name: input.name.trim().replace(/\s+/g, " "), site_id: await this.siteId() }).select().single()) as Project;
+  }
+  async updateProject(id: string, patch: Partial<NewProject>): Promise<void> {
+    projectCheck(await this.client.from("projects").update(patch.name !== undefined ? { ...patch, name: patch.name.trim().replace(/\s+/g, " ") } : patch).eq("id", id));
+  }
+  async externalPlaces(): Promise<ExternalPlace[]> {
+    const places = check(await this.client.from("external_places").select("*").is("archived_at", null).order("name")) as ExternalPlace[];
+    const priv = check(await this.client.from("external_place_private").select("place_id, address")) as { place_id: string; address: string }[];
+    return places.map((p) => {
+      const pp = priv.find((x) => x.place_id === p.id);
+      return pp ? { ...p, address: pp.address } : p;
+    });
+  }
+  async createExternalPlace(input: NewExternalPlace): Promise<ExternalPlace> {
+    const site_id = await this.siteId();
+    const { address, ...rest } = input;
+    const p = check(await this.client.from("external_places").insert({ ...rest, site_id }).select().single()) as ExternalPlace;
+    check(await this.client.from("external_place_private").insert({ place_id: p.id, site_id, address }));
+    return p;
+  }
+  async updateExternalPlace(id: string, patch: Partial<NewExternalPlace>): Promise<void> {
+    const { address, ...rest } = patch;
+    if (Object.keys(rest).length) check(await this.client.from("external_places").update({ ...rest, updated_at: new Date().toISOString() }).eq("id", id));
+    if (address !== undefined) check(await this.client.from("external_place_private").upsert({ place_id: id, site_id: await this.siteId(), address }));
+  }
+  async setAcquisitionPlace(id: string, placeId: string | null): Promise<void> {
+    check(await this.client.from("acquisitions").update({ place_id: placeId }).eq("id", id));
+  }
+  async setPickupPlace(id: string, placeId: string | null): Promise<void> {
+    check(await this.client.from("pickups").update({ place_id: placeId }).eq("id", id));
+  }
+  async setDisposalPlace(id: string, placeId: string | null): Promise<void> {
+    check(await this.client.rpc("set_disposal_place", { p_disposal: id, p_place: placeId }));
+  }
+
+  // ------------------------------------------------------------ M7: behov och projektytor
+  async needs(projectId?: string): Promise<Need[]> {
+    let q = this.client.from("needs").select("*").is("archived_at", null).order("created_at");
+    if (projectId) q = q.eq("project_id", projectId);
+    return check(await q) as Need[];
+  }
+  async createNeed(input: NewNeed): Promise<Need> {
+    return check(await this.client.from("needs").insert({ ...input, title: input.title.trim(), unit: input.unit.trim() || "st", site_id: await this.siteId() }).select().single()) as Need;
+  }
+  async updateNeed(id: string, patch: Partial<Pick<Need, "title" | "quantity" | "unit" | "notes" | "status" | "listing_id">>): Promise<void> {
+    check(await this.client.from("needs").update(patch).eq("id", id));
+  }
+  async needFulfillments(needIds?: string[]): Promise<NeedFulfillment[]> {
+    let q = this.client.from("need_fulfillments").select("*").order("occurred_at");
+    if (needIds) {
+      if (!needIds.length) return [];
+      q = q.in("need_id", needIds);
+    }
+    return check(await q) as NeedFulfillment[];
+  }
+  async fulfillNeed(input: NewFulfillment): Promise<NeedFulfillment> {
+    return check(await this.client.from("need_fulfillments").insert({ ...input, site_id: await this.siteId() }).select().single()) as NeedFulfillment;
+  }
+  async removeFulfillment(id: string): Promise<void> {
+    check(await this.client.from("need_fulfillments").delete().eq("id", id));
+  }
+  async setProjectGeom(id: string, geom: PolygonGeom | null): Promise<void> {
+    check(await this.client.from("projects").update({ geom }).eq("id", id));
+  }
+
+  // ------------------------------------------------------------ M8: relationer och organisationer
+  async relations(personId?: string): Promise<PersonRelation[]> {
+    let q = this.client.from("person_relations").select("*").order("created_at");
+    if (personId) q = q.or(`person_id.eq.${personId},other_id.eq.${personId}`);
+    return check(await q) as PersonRelation[];
+  }
+  async addRelation(input: Pick<PersonRelation, "person_id" | "other_id" | "kind" | "note">): Promise<PersonRelation> {
+    const res = await this.client.from("person_relations").insert({ ...input, site_id: await this.siteId() }).select().single();
+    if (res.error?.message.includes("person_relations_unique")) throw new Error("Relationen finns redan");
+    return check(res) as PersonRelation;
+  }
+  async removeRelation(id: string): Promise<void> {
+    check(await this.client.from("person_relations").delete().eq("id", id));
+  }
+  async updateOrganization(id: string, patch: Partial<Pick<Organization, "name" | "kind" | "locality">>): Promise<void> {
+    check(await this.client.from("organizations").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id));
+  }
+
+  // ------------------------------------------------------------ M9: gäster
+  async enterAsGuest(token: string): Promise<void> {
+    const { data } = await this.client.auth.getUser();
+    // Anonym inloggning måste vara påslagen i Supabase (Authentication → Sign In / Providers)
+    if (!data.user) {
+      const { error } = await this.client.auth.signInAnonymously();
+      if (error) throw new Error(error.message);
+    }
+    const res = await this.client.rpc("redeem_guest_link", { p_token: token });
+    if (res.error) throw new Error(res.error.message.includes("gäller inte") ? "Gästlänken gäller inte längre" : res.error.message);
+    this.siteIdCache = null;
+  }
+  async guestLinks(): Promise<GuestLink[]> {
+    return check(await this.client.from("guest_links").select("id, label, created_at, last_used_at, uses, revoked_at").order("created_at", { ascending: false })) as GuestLink[];
+  }
+  async createGuestLink(label: string): Promise<{ id: string; token: string }> {
+    return check(await this.client.rpc("create_guest_link", { p_label: label })) as { id: string; token: string };
+  }
+  async revokeGuestLink(id: string): Promise<void> {
+    check(await this.client.rpc("revoke_guest_link", { p_link: id }));
+  }
+
   async markThanked(ids: string[]): Promise<void> {
     if (ids.length) check(await this.client.from("contributions").update({ thanked_at: new Date().toISOString() }).in("id", ids).is("thanked_at", null));
   }

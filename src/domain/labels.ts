@@ -1,4 +1,4 @@
-import type { UsageType, AcquisitionStatus, AcquisitionType, InteractionChannel, PickupStatus, ReceiptStatus, Channel, ContentGoal, ObjectStatus, Visibility, ListingType, ListingStatus, LeadStatus, DisposalType, ContributionKind } from "./types";
+import type { UsageType, AcquisitionStatus, AcquisitionType, InteractionChannel, PickupStatus, ReceiptStatus, Channel, ContentGoal, ObjectStatus, Visibility, ListingType, ListingStatus, LeadStatus, DisposalType, ContributionKind, PersonRelation, ProjectStatus, RelationKind } from "./types";
 
 export const STATUS_LABEL: Record<ObjectStatus, string> = {
   discovered: "Upptäckt",
@@ -87,6 +87,8 @@ export const EVENT_LABEL: Record<string, string> = {
   "disposal.exchanged": "Bytt",
   "disposal.lent": "Utlånad",
   "disposal.discarded": "Kasserad",
+  "need.fulfilled": "Behov",
+  "need.covered": "Behov uppfyllt",
 };
 
 export const CATEGORIES = [
@@ -188,6 +190,7 @@ export const JOURNAL_FILTERS: { key: string; label: string; match: (t: string) =
   { key: "in", label: "Fynd och hämtningar", match: (t) => t === "object.discovered" || t === "pickup.completed" },
   { key: "ut", label: "Sålt och skänkt", match: (t) => t.startsWith("disposal.") },
   { key: "bidrag", label: "Bidrag", match: (t) => t.startsWith("contribution.") },
+  { key: "behov", label: "Projektbehov", match: (t) => t.startsWith("need.") },
   { key: "berattat", label: "Berättat", match: (t) => t === "content.shared" || t === "story.moment" },
 ];
 
@@ -242,3 +245,49 @@ export const CONTRIBUTION_LABEL: Record<ContributionKind, string> = {
 };
 
 export const PAYMENT_METHODS = ["Swish", "Kontant", "Byte", "Annat"];
+
+// ---------------------------------------------------------------- M6: projekt och platser utanför Vreta
+export const PROJECT_STATUS_LABEL: Record<ProjectStatus, string> = {
+  idea: "Idé",
+  planned: "Planerat",
+  active: "Pågår",
+  paused: "Vilar",
+  done: "Klart",
+};
+export const PROJECT_KINDS = ["Bygge", "Plantering", "Renovering", "Anläggning", "Odling", "Annat"];
+
+export const PLACE_KINDS: { key: string; label: string }[] = [
+  { key: "hamtstalle", label: "Hämtställe" },
+  { key: "loppis", label: "Loppis" },
+  { key: "atervinning", label: "Återvinningscentral" },
+  { key: "butik", label: "Butik eller handlare" },
+  { key: "gard", label: "Gård eller trädgård" },
+  { key: "leverantor", label: "Leverantör" },
+  { key: "byggaterbruk", label: "Byggåterbruk" },
+  { key: "rivning", label: "Rivnings- eller renoveringsobjekt" },
+  { key: "auktion", label: "Auktion" },
+  { key: "plantskola", label: "Plantskola" },
+  { key: "vaxtbyte", label: "Frö- och växtbyte" },
+  { key: "skog", label: "Skog eller natur" },
+  { key: "annat", label: "Annat" },
+];
+export const placeKindLabel = (k: string) => PLACE_KINDS.find((x) => x.key === k)?.label ?? k;
+
+// ---------------------------------------------------------------- M8: relationer och organisationer
+export const RELATION_KINDS: { key: RelationKind; label: string }[] = [
+  { key: "familj", label: "Familj" },
+  { key: "partner", label: "Partner" },
+  { key: "granne", label: "Granne" },
+  { key: "van", label: "Vän" },
+  { key: "kollega", label: "Kollega" },
+  { key: "samarbetar", label: "Arbetar ihop" },
+  { key: "introduced", label: "Tipsade oss om" },
+];
+
+/** Relationen sedd från en av personerna: "Granne", "Tipsade oss om" eller "Kom till oss via". */
+export function relationLabel(r: PersonRelation, from: string): string {
+  if (r.kind === "introduced") return r.person_id === from ? "Tipsade oss om" : "Kom till oss via";
+  return RELATION_KINDS.find((k) => k.key === r.kind)?.label ?? r.kind;
+}
+
+export const ORG_KINDS = ["Förening", "Företag", "Kommun", "Församling", "Gård", "Annat"];

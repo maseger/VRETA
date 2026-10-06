@@ -29,6 +29,10 @@ export const CaptureProposalSchema = z.object({
     .nullable(),
   task: z.object({ title: z.string(), due: z.string().nullable(), confidence: z.number() }).nullable(),
   why: z.string(),
+  // M6–M8: platsen utanför Vreta, projektet på Vreta och vem som tipsade
+  place: z.object({ name: z.string(), confidence: z.number() }).nullable(),
+  project: z.object({ name: z.string(), confidence: z.number() }).nullable(),
+  introduced_by: z.object({ name: z.string(), confidence: z.number() }).nullable(),
 });
 export type CaptureProposalOut = z.infer<typeof CaptureProposalSchema>;
 
@@ -45,6 +49,10 @@ Regler:
 - deadline och task.due anges som ÅÅÅÅ-MM-DD om ett datum eller en månad nämns; dagens datum står i meddelandet.
 - person är den som säljer eller ger bort saken. Ange ort bara om den nämns.
 - why är en kort mening om varför fyndet är intressant, bara om användaren säger det, annars tom sträng.
+- place är platsen utanför Vreta där saken köps eller hämtas (loppis, återvinningscentral, butik, gård), inte säljarens hemort. Använd namnet från listan över kända platser om det passar.
+- project är projektet på Vreta som saken ska användas till ("till orangeriet"). Använd namnet från listan över kända projekt om det passar.
+- introduced_by är personen som tipsade om fyndet ("Anders tipsade", "via Anders") – aldrig säljaren.
+- Sätt place, project och introduced_by till null när texten inte nämner dem.
 - Bilder kan visa personer, registreringsskyltar eller adresser; nämn dem aldrig i fälten.`;
 
 export const StoryDraftSchema = z.object({

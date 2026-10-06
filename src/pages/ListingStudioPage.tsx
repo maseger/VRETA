@@ -111,7 +111,7 @@ function Studio({ listing, object, posts, media, persons, guard, reply, canWrite
 
   return (
     <div className="mx-auto max-w-3xl">
-      {object ? <Link to={`/objekt/${object.id}`} className="text-sm font-semibold text-falu">← {object.title}</Link> : <Link to="/samla?vy=annonser" className="text-sm font-semibold text-falu">← Annonser</Link>}
+      {object ? <Link to={`/objekt/${object.id}`} className="text-sm font-semibold text-falu">← {object.title}</Link> : <Link to="/saker?vy=annonser" className="text-sm font-semibold text-falu">← Annonser</Link>}
       <PageHeader kicker={`Annonsstudion · ${LISTING_TYPE_LABEL[listing.type]}`} title={listing.title}>
         <span className="stamp self-center border-falu text-falu">{LISTING_STATUS_LABEL[listing.status]}</span>
       </PageHeader>

@@ -24,6 +24,8 @@ const SCREEN_TYPES: [RegExp, string][] = [
   [/^\/annons\/([^/]+)/, "listing"],
   [/^\/hamtning\/([^/]+)/, "pickup"],
   [/^\/lager\/([^/]+)/, "storage"],
+  [/^\/projekt\/([^/]+)/, "project"],
+  [/^\/plats\/([^/]+)/, "place"],
 ];
 
 /** S11 Fråga Vreta: chatboten med källkort, åtgärder med bekräftelse och röstläge (11.6, 7.5). */
@@ -44,6 +46,8 @@ export function AskPage() {
         : type === "zone" ? (await r.zones()).find((z) => z.id === id)?.name
         : type === "listing" ? (await r.listing(id))?.title
         : type === "pickup" ? (await r.pickup(id))?.title
+        : type === "project" ? (await r.projects()).find((p) => p.id === id)?.name
+        : type === "place" ? (await r.externalPlaces()).find((p) => p.id === id)?.name
         : (await r.storageLocations()).find((l) => l.id === id)?.name;
       return { type, id, title };
     }
@@ -224,7 +228,10 @@ export function AskPage() {
               <p>Jag känner till allt i appen som du har behörighet att se, och svarar med källor. Jag kan också flytta saker, skapa uppgifter och öppna annons- och Berätta-studion – efter att du bekräftat.</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              {(screen?.type === "object" ? ["Vad har hänt med den här?", ...SUGGESTIONS.slice(0, 3)] : SUGGESTIONS).map((s) => (
+              {(screen?.type === "object" ? ["Vad har hänt med den här?", ...SUGGESTIONS.slice(0, 3)]
+                : screen?.type === "project" ? ["Hur går det med projektet?", "Vad behöver projektet?", ...SUGGESTIONS.slice(0, 2)]
+                : screen?.type === "place" ? ["Vad har vi fått därifrån?", ...SUGGESTIONS.slice(0, 3)]
+                : SUGGESTIONS).map((s) => (
                 <button key={s} className="chip text-left" onClick={() => void send(s)}>{s}</button>
               ))}
             </div>
@@ -287,7 +294,7 @@ function Card({ card }: { card: SourceCard }) {
   return (
     <li>
       <Link to={card.href} className="card flex h-full flex-col px-3 py-2 hover:bg-kalk-2/60">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-sot-3">{{ object: "Objekt", person: "Person", listing: "Annons", pickup: "Hämtning", zone: "Zon", storage: "Lagerplats", task: "Uppgift", journal: "Journal" }[card.type]}</span>
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-sot-3">{{ object: "Objekt", person: "Person", listing: "Annons", pickup: "Hämtning", zone: "Zon", storage: "Lagerplats", task: "Uppgift", journal: "Journal", project: "Projekt", place: "Plats" }[card.type]}</span>
         <span className="font-medium">{card.title}</span>
         {card.subtitle && <span className="text-sm text-sot-3">{card.subtitle}</span>}
       </Link>

@@ -302,4 +302,150 @@ describe("M4: utflöde, intressenter och bidrag", () => {
     await repo.setDemoRole("contributor");
     await expect(repo.setContentConsent({ content_id: item.id, person_id: erik.id, name_ok: true, image_ok: false, contribution_ok: true, how: "" })).rejects.toThrow(/ägaren/);
   });
+
+  it("gör projektnamn till projekt, återanvänder dem och länkar händelserna (M6)", async () => {
+    const orangeriet = (await repo.projects()).find((p) => p.name === "Orangeriet")!;
+    expect(orangeriet).toBeTruthy(); // från nytt liv och bidrag i demodata
+    const usage = (await repo.allUsageEvents()).filter((u) => u.project_id === orangeriet.id);
+    const contribs = (await repo.contributions()).filter((c) => c.project_id === orangeriet.id);
+    expect(usage.length).toBeGreaterThan(0);
+    expect(contribs.length).toBe(2);
+    expect((await repo.projects()).filter((p) => p.name.toLowerCase() === "orangeriet")).toHaveLength(1);
+    expect((await repo.eventsFor("project", orangeriet.id)).filter((e) => /^(usage|contribution)\./.test(e.event_type)).length).toBe(usage.length + contribs.length);
+    await expect(repo.createProject({ name: " orangeriet ", kind: "", status: "idea", description: "", zone_id: null, structure_id: null, started_on: null, finished_on: null })).rejects.toThrow(/redan/);
+    await repo.updateProject(orangeriet.id, { name: "Orangeriet i söder", status: "done" });
+    const done = (await repo.projects()).find((p) => p.id === orangeriet.id)!;
+    expect(done.finished_on).toBeTruthy();
+    expect((await repo.contributions()).filter((c) => c.project_id === orangeriet.id).every((c) => c.project === "Orangeriet i söder")).toBe(true);
+  });
+
+  it("har platser utanför Vreta med privat adress och kopplar inköp, hämtning och avslut (M6)", async () => {
+    const place = await repo.createExternalPlace({ name: "Kyrkans loppis", kind: "loppis", locality: "Sandviken", notes: "", address: "Kyrkogatan 2" });
+    const [acq] = await repo.allAcquisitions();
+    await repo.setAcquisitionPlace(acq.id, place.id);
+    expect((await repo.allAcquisitions()).find((a) => a.id === acq.id)!.place_id).toBe(place.id);
+    const [pickup] = await repo.pickups();
+    await repo.setPickupPlace(pickup.id, place.id);
+    const [disposal] = await repo.disposals();
+    await repo.setDisposalPlace(disposal.id, place.id);
+    expect((await repo.disposals()).find((d) => d.id === disposal.id)!.place_id).toBe(place.id);
+    expect((await repo.externalPlaces()).find((p) => p.id === place.id)!.address).toBe("Kyrkogatan 2");
+    await repo.setDemoRole("viewer");
+    expect((await repo.externalPlaces()).find((p) => p.id === place.id)!.address).toBeUndefined();
+    await expect(repo.setDisposalPlace(disposal.id, null)).rejects.toThrow();
+  });
+
+  it("räknar fram hur långt ett behov kommit och skriver det i projektjournalen (M7)", async () => {
+    const orangeriet = (await repo.projects()).find((p) => p.name === "Orangeriet")!;
+    expect(orangeriet.geom?.type).toBe("Polygon");
+    const needs = await repo.needs(orangeriet.id);
+    const tegel = needs.find((n) => n.title === "Tegel till södra muren")!;
+    const sum = async () => (await repo.needFulfillments([tegel.id])).reduce((s, f) => s + f.quantity, 0);
+    expect(await sum()).toBe(250);
+    const f = await repo.fulfillNeed({ need_id: tegel.id, quantity: 150, object_id: null, contribution_id: null, note: "Från rivningen" });
+    expect(await sum()).toBe(400);
+    const covered = (await repo.eventsFor("project", orangeriet.id)).find((e) => e.event_type === "need.covered");
+    expect(covered?.summary).toBe("Tegel till södra muren: 400 av 400 st");
+    await repo.removeFulfillment(f.id);
+    expect(await sum()).toBe(250);
+    await expect(repo.fulfillNeed({ need_id: tegel.id, quantity: 0, object_id: null, contribution_id: null, note: "" })).rejects.toThrow(/större än noll/);
+    expect(needs.find((n) => n.title === "Fönster till långsidan")!.listing_id).toBeTruthy();
+    await repo.setDemoRole("viewer");
+    await expect(repo.createNeed({ project_id: orangeriet.id, title: "Smygbehov", quantity: 1, unit: "st", notes: "" })).rejects.toThrow();
+  });
+
+  it("håller relationer mellan människor och döljer dem för läsare (M8)", async () => {
+    const people = await repo.persons();
+    const id = (n: string) => people.find((p) => p.name === n)!.id;
+    const goran = await repo.relations(id("Göran"));
+    expect(goran).toHaveLength(1);
+    expect(goran[0]).toMatchObject({ kind: "introduced", person_id: id("Anders"), other_id: id("Göran") });
+    await expect(repo.addRelation({ person_id: id("Lena"), other_id: id("Erik"), kind: "granne", note: "" })).rejects.toThrow(/finns redan/);
+    await expect(repo.addRelation({ person_id: id("Lena"), other_id: id("Lena"), kind: "van", note: "" })).rejects.toThrow(/sig själv/);
+    const r = await repo.addRelation({ person_id: id("Göran"), other_id: id("Anders"), kind: "introduced", note: "" }); // åt andra hållet är en ny relation
+    await repo.removeRelation(r.id);
+    expect((await repo.person(id("Erik")))!.organization_id).toBeTruthy();
+    await repo.setDemoRole("viewer");
+    expect(await repo.relations()).toEqual([]);
+  });
+});
+
+
+describe("Fånga med kopplingar (M6–M8)", () => {
+  it("kopplar plats, behov och tipsare när förslaget godkänns", async () => {
+    const { proposeForCapture } = await import("../services/captureAgent");
+    const { applyLinks } = await import("../services/proposalLinks");
+    const { initialChoice } = await import("../ui/ProposalLinksCard");
+    const cap = await repo.saveCapture(crypto.randomUUID(), { text: "Köpte 150 tegel från Göran på Återbruket till orangeriet, 300 kr. Anders tipsade", kind: "find", media_ids: [] });
+    const content = await proposeForCapture(repo, cap);
+    const places = await repo.externalPlaces();
+    const orangeriet = (await repo.projects()).find((p) => p.name === "Orangeriet")!;
+    const tegelBehov = (await repo.needs(orangeriet.id)).find((n) => n.title === "Tegel till södra muren")!;
+    expect(content.links?.place?.existing_place_id).toBe(places.find((p) => p.name === "Återbruket")!.id);
+    expect(content.links?.project).toMatchObject({ existing_project_id: orangeriet.id, need_id: tegelBehov.id });
+    expect(content.links?.introduced_by?.existing_person_id).toBeTruthy();
+    const prop = await repo.attachProposal(cap.id, content);
+    const goran = (await repo.persons()).find((p) => p.name === "Göran")!;
+    const objectId = await repo.approveProposal({
+      proposal_id: prop.id, partial: false,
+      object: { title: "Tegel", category: "Tegel och sten", description: "", material: "", dimensions: "", quantity: 150, unit: "st", condition: null, field_meta: {} },
+      person: { name: "Göran", locality: "", existing_person_id: goran.id },
+      acquisition: { type: "purchase", price: 300, deadline: null }, task: null, why: "", media_ids: [],
+    });
+    const done = await applyLinks(repo, objectId, initialChoice(content.links));
+    expect(done).toHaveLength(3);
+    expect((await repo.acquisitionsFor(objectId))[0].place_id).toBe(content.links!.place!.existing_place_id);
+    // 250 fanns, 150 behövdes till 400
+    expect((await repo.needFulfillments([tegelBehov.id])).reduce((s, f) => s + f.quantity, 0)).toBe(400);
+    expect((await repo.relations(goran.id)).filter((r) => r.kind === "introduced" && r.other_id === goran.id)).toHaveLength(1); // Anders → Göran fanns redan
+  });
+
+  it("gissar inte projekt som inte finns i den lokala tolkningen", async () => {
+    const { proposeForCapture } = await import("../services/captureAgent");
+    const cap = await repo.saveCapture(crypto.randomUUID(), { text: "Tre ekdörrar till salu från Lena", kind: "find", media_ids: [] });
+    expect((await proposeForCapture(repo, cap)).links?.project ?? null).toBeNull();
+  });
+});
+
+describe("Gäster (M9)", () => {
+  it("släpper in med gästlänk, visar bara människor med namnsamtycke och stänger ute när länken stängs", async () => {
+    const everyone = (await repo.persons()).length;
+    const lena = (await repo.persons()).find((p) => p.name === "Lena")!;
+    await repo.updateConsent(lena.id, { consent_name: "yes" });
+    const { id, token } = await repo.createGuestLink("Familjen");
+    expect((await repo.guestLinks())[0]).toMatchObject({ label: "Familjen", uses: 0 });
+    await repo.setDemoRole("viewer");
+    await repo.signOut();
+    await expect(repo.enterAsGuest("fel")).rejects.toThrow(/gäller inte/);
+    // Läsaren byts mot gästen (bara medlemmar med högre roll behåller sin roll)
+    await (repo as unknown as { put: (s: string, v: unknown, k: string) => Promise<void> }).put("meta", null, "profile");
+    await repo.enterAsGuest(token);
+    const me = (await repo.session())!;
+    expect(me).toMatchObject({ role: "viewer", guest: true, name: "Familjen" });
+    const seen = await repo.persons();
+    expect(seen.map((p) => p.name)).toContain("Lena");
+    expect(seen.every((p) => p.consent_name === "yes")).toBe(true);
+    expect(seen.length).toBeLessThan(everyone);
+    expect((await repo.objects()).length).toBeGreaterThan(0);
+    expect(await repo.pickups()).toEqual([]);
+    expect(await repo.tasks()).toEqual([]);
+    expect((await repo.contributions()).every((c) => seen.some((p) => p.id === c.person_id && p.consent_contribution === "yes"))).toBe(true);
+    await expect(repo.createProject({ name: "Gästprojekt", kind: "", status: "idea", description: "", zone_id: null, structure_id: null, started_on: null, finished_on: null })).rejects.toThrow();
+    await expect(repo.guestLinks()).rejects.toThrow();
+    // Ägaren stänger länken – gästen är utloggad
+    await repo.setDemoRole("owner");
+    await repo.revokeGuestLink(id);
+    await (repo as unknown as { put: (s: string, v: unknown, k: string) => Promise<void> }).put("meta", me, "profile");
+    expect(await repo.session()).toBeNull();
+    await expect(repo.enterAsGuest(token)).rejects.toThrow(/gäller inte/);
+  });
+
+  it("visar gästvyn i demoläget och tar ägaren tillbaka vid Lämna", async () => {
+    const { leaveGuest } = await import("../services/guest");
+    const { token } = await repo.createGuestLink("Grannarna");
+    await repo.enterAsGuest(token);
+    expect((await repo.session())!.guest).toBe(true);
+    await leaveGuest(repo);
+    expect((await repo.session())!.role).toBe("owner");
+  });
 });

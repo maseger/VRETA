@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useApp, useData } from "../app/AppContext";
 import { JOURNAL_FILTERS } from "../domain/labels";
 import { PageHeader } from "../ui/bits";
@@ -15,7 +15,8 @@ const PERIODS = [
 /** Platsjournal (S10, 4.9): allt som hänt på Vreta, filtrerat på typ, zon och period. */
 export function JournalPage() {
   const { site } = useApp();
-  const [filter, setFilter] = useState("allt");
+  const [params] = useSearchParams();
+  const [filter, setFilter] = useState(() => (JOURNAL_FILTERS.some((f) => f.key === params.get("filter")) ? params.get("filter")! : "allt"));
   const [period, setPeriod] = useState("allt");
   const [zone, setZone] = useState("");
   const { data } = useData(async (r) => {
@@ -39,7 +40,7 @@ export function JournalPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <Link to="/vreta" className="text-sm font-semibold text-falu">← Vreta</Link>
+      <Link to="/platser" className="text-sm font-semibold text-falu">← Platser</Link>
       <PageHeader kicker="Platsjournal" title={`Det här har hänt på ${site?.name ?? "Vreta"}`} />
       <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
         {JOURNAL_FILTERS.map((f) => <button key={f.key} className={`chip shrink-0 ${filter === f.key ? "chip-on" : ""}`} onClick={() => setFilter(f.key)}>{f.label}</button>)}

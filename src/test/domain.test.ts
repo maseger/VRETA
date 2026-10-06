@@ -73,3 +73,14 @@ describe("Privacy Guard (AC-10, AC-11)", () => {
     expect(text).toContain("tack");
   });
 });
+
+describe("Fånga känner igen plats, projekt och tipsare (M6–M8)", () => {
+  it("tolkar plats, projekt och vem som tipsade utan att göra tipsaren till säljare", () => {
+    const h = parseCaptureText("Köpte 40 tegel på Återbruket till orangeriet, 200 kr. Anders tipsade");
+    expect(h).toMatchObject({ title: "Tegel", quantity: 40, place_name: "Återbruket", project_name: "orangeriet", introduced_by: "Anders", person_name: null, price_total: 200 });
+    const g = parseCaptureText("Två dörrar från Lena i Storvik, tips från Maja");
+    expect(g).toMatchObject({ person_name: "Lena", person_locality: "Storvik", introduced_by: "Maja", place_name: null });
+    expect(parseCaptureText("Fyra stolar på Kyrkans loppis").place_name).toBe("Kyrkans loppis");
+    expect(parseCaptureText("Sex fönster på loppisen").place_name).toBe("loppisen");
+  });
+});

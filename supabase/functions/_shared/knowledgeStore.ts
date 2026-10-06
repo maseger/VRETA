@@ -35,11 +35,11 @@ export function supabaseStore(sb: SupabaseClient, role: Role, today: string): KS
     persons: () => once("persons", () => withPrivate("persons", "person_private", "person_id", "contact, notes")),
     acquisitions: () => once("acqs", () => withPrivate("acquisitions", "acquisition_private", "acquisition_id", "price")),
     disposals: () => once("disposals", () => withPrivate("disposals", "disposal_private", "disposal_id", "price")),
-    contributions: () => once("contribs", () => rows(sb.from("contributions").select("id,person_id,kind,description,occurred_at,thanked_at,object_id"))),
+    contributions: () => once("contribs", () => rows(sb.from("contributions").select("id,person_id,kind,description,occurred_at,thanked_at,object_id,project_id,hours"))),
     listings: () => once("listings", () => rows(sb.from("listings").select("id,object_id,title,type,status").is("archived_at", null))),
     leads: () => once("leads", () => rows(sb.from("leads").select("id,listing_id,person_id,status,message,queue_position,created_at"))),
     tasks: () => once("tasks", () => rows(sb.from("tasks").select("id,title,due,status,entity_type,entity_id").in("status", ["open", "in_progress"]))),
-    pickups: () => once("pickups", () => rows(sb.from("pickups").select("id,title,scheduled_date,status"))),
+    pickups: () => once("pickups", () => rows(sb.from("pickups").select("id,title,scheduled_date,status,place_id"))),
     interactions: () => once("interactions", () => rows(sb.from("interactions").select("id,person_id,summary,follow_up,occurred_at"))),
     events: () => once("events", () => rows(sb.from("events").select("id,event_type,summary,occurred_at,story_worthy").order("occurred_at", { ascending: false }).limit(2000))),
     eventsFor: async (type, id) => {
@@ -51,6 +51,14 @@ export function supabaseStore(sb: SupabaseClient, role: Role, today: string): KS
     content: () => once("content", () => rows(sb.from("content_items").select("source_type,source_id,status,goal"))),
     observations: () => once("obs", () => rows(sb.from("observations").select("id,kind,text,zone_id,occurred_at").is("archived_at", null))),
     decisions: () => once("decs", () => rows(sb.from("decisions").select("id,question,choice,rationale,zone_id,decided_on").is("archived_at", null))),
+    projects: () => once("projects", () => rows(sb.from("projects").select("id,name,kind,status,description,zone_id,structure_id,started_on,finished_on").is("archived_at", null))),
+    needs: () => once("needs", () => rows(sb.from("needs").select("id,project_id,title,quantity,unit,status,listing_id").is("archived_at", null))),
+    needFulfillments: () => once("fulfillments", () => rows(sb.from("need_fulfillments").select("id,need_id,quantity,object_id"))),
+    // Adressen hämtas aldrig hit – den behövs inte för att svara
+    externalPlaces: () => once("places", () => rows(sb.from("external_places").select("id,name,kind,locality").is("archived_at", null))),
+    usage: () => once("usage", () => rows(sb.from("usage_events").select("id,object_id,type,occurred_at,zone_id,structure_id,quantity,project_id"))),
+    // RLS: läsare får inga rader
+    relations: () => once("relations", () => rows(sb.from("person_relations").select("id,person_id,other_id,kind,note"))),
     proposalsWaiting: async () => (await rows(sb.from("proposals").select("id").eq("status", "pending"))).length,
   };
 }

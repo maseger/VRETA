@@ -371,17 +371,36 @@ Gränssnittet är byggt för tumme och fält på mobilen och för överblick på
 
 ### 7.1 Navigation
 
-**Mobil (nedre fält):** Idag · Samla · **+** · Vreta · Fråga
+**Mobil (nedre fält):** Idag · Saker · **+** · Människor · Platser. Fråga nås från den runda knappen som finns på alla skärmar.
+
+Saker, människor och platser är tre olika delar som är beroende av varandra: **saker** är det som hanteras, **människor** hanterar dem och har relationer med varandra och med Vreta, och **platser** är där det sker fysiskt. Detaljsidorna hör till sin del (objekt och hämtningar till Saker, personkort till Människor, lager, zoner och journal till Platser).
 
 | Flik | Innehåll |
 | --- | --- |
 | Idag | Nästa steg: att granska, hämtningar, förfallna uppgifter, intressenter som väntar svar, berättelseförslag |
-| Samla | Objekt och partier (lista/rutnät), filter på status, kategori, plats; växla till Personer och Annonser |
+| Saker | Objekt och partier (lista/rutnät) med filter på status och plats; sakernas väg in och ut: inköp, hämtningar och annonser |
 | + | Global fångst, alltid tillgänglig |
-| Vreta | Karta, zoner, byggnader, lager, journal, (P1) projekt |
+| Människor | Personer med roller, samtycke, kontakthistorik, bidrag och ömsesidighet; nätverk (relationer mellan människor); organisationer med medlemmar |
+| Platser | **På Vreta:** karta, zoner och byggnader, och det som sker där – förvaring (lager), projekt (byggen, planteringar) och observationer (djur, växter m.m.) med journal. **Utanför:** platser som loppisar, hämtställen och återvinningscentraler, och orterna där saker hämtas, köps och lämnas |
 | Fråga | Chatboten Fråga Vreta: sök, frågor och uppdrag i text eller tal (se 11.6) |
 
-**Dator:** vänsterkolumn med samma fem plus Människor, Marknadsplats, Berätta, Journal och Inställningar. Listor och detaljer visas sida vid sida.
+**Lägga till platser:** knappen *Ny plats* under Platser lägger till ett område på Vreta, en byggnad eller anläggning, en lagerplats eller en plats utanför Vreta – utan att kartan behövs. Områden och byggnader kan ritas in på Vretakartan direkt efteråt eller senare ("Rita in").
+
+**Gäster:** ägaren skapar gästlänkar under Inställningar och skickar dem till familj och vänner. Den som öppnar länken loggas in anonymt och blir läsare med gästflagga – utan konto. Gäster ser en egen startsida (projekt, nytt liv, senaste fynden), kartan, saker, projekt och platser. De ser aldrig priser, kontaktuppgifter, adresser, relationer, inköp, hämtningar, uppgifter, citat eller vad Vreta gett tillbaka; människor, bidrag och journalhändelser som nämner en person syns bara med personens samtycke. Gäster kan inte ändra något och inte använda Fråga Vreta. En länk kan stängas, och då förlorar alla som använt den åtkomsten. Bara nyckelns hash sparas. Fritext som ägaren själv skrivit (t.ex. en objektbeskrivning med ett namn) filtreras inte.
+
+**Dator:** vänsterkolumn med Idag, Saker, Människor, Platser och Fråga samt Fånga och Inställningar. Listor och detaljer visas sida vid sida.
+
+**Projekt** (Project) är egna poster med namn, slag, status (idé, planerat, pågår, vilar, klart), zon eller byggnad och beskrivning. Nytt liv och bidrag kopplas med project_id; ett nytt projektnamn i formulären blir ett projekt. Projektsidan visar behov, saker, människor och projektjournal, och projektets yta kan ritas på Vretakartan (eget lager "Projekt").
+
+**Behov** (Need) hör till ett projekt: rubrik, antal och enhet (antal kan lämnas tomt). NeedFulfillment kopplar en kvantitet till en sak (eller inget, t.ex. sten från egna marken). Hur långt behovet kommit räknas fram ur summan ("1 020 av 1 500 tegel") och lagras aldrig. Varje uppfyllelse blir en händelse i projektjournalen; när behovet är fyllt markeras händelsen som värd att berätta. Appen föreslår saker i lager som passar behovet, och ett behov kan efterlysas – annonsen kopplas tillbaka till behovet.
+
+**Relationer mellan människor** (PersonRelation): familj, partner, granne, vän, kollega, arbetar ihop – och den riktade "tipsade oss om", som visar via vem någon kom till Vreta. Relationerna är personuppgifter och syns bara för ägare och medhjälpare. Personer kan kopplas till en organisation (förening, företag, kommun …), och organisationen har en egen sida med medlemmar och saker som kommit därifrån.
+
+**Fånga känner igen kopplingar.** Capture Agent (och den lokala tolkningen) föreslår plats utanför Vreta ("på Återbruket"), projekt ("till orangeriet") och vem som tipsade ("Anders tipsade") – aldrig tipsaren som säljare. Namnen matchas mot befintliga platser, projekt, behov och personer; agenten får namnen på kända projekt och platser. Den lokala tolkningen kopplar bara projekt som redan finns. Under Att granska visas kopplingarna som förslag; vid godkännande kopplas platsen till inköpet, saken räknas mot projektets behov (eller ett nytt behov) och tipset blir relationen "tipsade oss om" till säljaren eller givaren.
+
+**Fråga Vreta** har verktygen `person_network` ("Vem känner Erik?", "Vem tipsade om Göran?"), `projects`, `project_overview`, `open_needs` och `place_overview` ("Hur går det med orangeriet?", "Vad behöver vi till orangeriet?", "Vad har vi köpt på Återbruket?"). Adresser till platser utanför Vreta läses aldrig av chatboten.
+
+**Platser utanför Vreta** (ExternalPlace) har namn, slag, ort och en privat adress. Inköp, hämtningar och avslut kan kopplas till en plats (place_id), så att man ser vad som kom därifrån och vad som lämnades där. Orten är på kommunnivå och får synas; adressen syns bara för ägare och medhjälpare (INV-12, INV-13). Objektsidan har en flik Platser med var saken är på Vreta och var den kom ifrån och tog vägen.
 
 ### 7.2 Designprinciper
 

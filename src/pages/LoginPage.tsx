@@ -6,6 +6,8 @@ export function LoginPage() {
   const { repo, profile, refresh } = useApp();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const [password, setPassword] = useState("");
+  const [usePassword, setUsePassword] = useState(false);
   const [siteName, setSiteName] = useState("Vreta");
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -24,9 +26,15 @@ export function LoginPage() {
               className="space-y-4"
               onSubmit={async (e) => {
                 e.preventDefault();
+                setError(null);
                 try {
-                  await repo.signInWithEmail(email);
-                  setSent(true);
+                  if (usePassword && repo.signInWithPassword) {
+                    await repo.signInWithPassword(email, password);
+                    await refresh();
+                  } else {
+                    await repo.signInWithEmail(email);
+                    setSent(true);
+                  }
                 } catch (err) {
                   setError((err as Error).message);
                 }
@@ -35,9 +43,20 @@ export function LoginPage() {
               <h1 className="text-2xl">Logga in</h1>
               <div>
                 <label className="field-label" htmlFor="email">E-post</label>
-                <input id="email" className="input" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+                <input id="email" className="input" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
               </div>
-              <button className="btn-primary w-full">Skicka inloggningslänk</button>
+              {usePassword && (
+                <div>
+                  <label className="field-label" htmlFor="password">Lösenord</label>
+                  <input id="password" className="input" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+                </div>
+              )}
+              <button className="btn-primary w-full">{usePassword ? "Logga in" : "Skicka inloggningslänk"}</button>
+              {repo.signInWithPassword && (
+                <button type="button" className="btn-ghost w-full text-sm" onClick={() => { setUsePassword(!usePassword); setError(null); }}>
+                  {usePassword ? "Få en inloggningslänk via e-post i stället" : "Logga in med lösenord i stället"}
+                </button>
+              )}
             </form>
           )
         ) : (

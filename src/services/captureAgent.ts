@@ -8,7 +8,8 @@ import { fromAgent, fromHeuristics } from "./proposalMapping";
 import { toAgentImage } from "./images";
 
 export async function proposeForCapture(repo: Repo, capture: Capture): Promise<ProposalContent> {
-  const people = await repo.persons();
+  const [people, projects, places, needs] = await Promise.all([repo.persons(), repo.projects(), repo.externalPlaces(), repo.needs()]);
+  const ctx = { projects, places, needs };
   if (repo instanceof SupabaseRepo && navigator.onLine) {
     try {
       const media = await repo.mediaFor("capture", capture.id);
@@ -20,12 +21,12 @@ export async function proposeForCapture(repo: Repo, capture: Capture): Promise<P
       const { data, error } = await repo.client.functions.invoke<{ proposal: CaptureProposalOut }>("capture-agent", {
         body: { text: capture.input.text, kind: capture.input.kind, images },
       });
-      if (!error && data?.proposal) return fromAgent(data.proposal, people);
+      if (!error && data?.proposal) return fromAgent(data.proposal, people, ctx);
     } catch {
       // faller tillbaka till lokal tolkning nedan
     }
   }
-  return fromHeuristics(parseCaptureText(capture.input.text), people);
+  return fromHeuristics(parseCaptureText(capture.input.text), people, ctx);
 }
 
 /** Tolkar fångster som sparats offline och saknar förslag. */

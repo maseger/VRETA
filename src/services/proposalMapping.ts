@@ -2,6 +2,7 @@
 import type { ProposalContent, Person } from "../domain/types";
 import type { CaptureProposalOut } from "../../supabase/functions/_shared/agentSchemas";
 import type { HeuristicResult } from "../../supabase/functions/_shared/captureHeuristics";
+import { resolveLinks, type LinkContext } from "./proposalLinks";
 
 const LOCAL_CONFIDENCE = 0.45;
 
@@ -14,7 +15,7 @@ export function matchPerson(name: string | null | undefined, locality: string | 
   return null;
 }
 
-export function fromAgent(out: CaptureProposalOut, people: Person[]): ProposalContent {
+export function fromAgent(out: CaptureProposalOut, people: Person[], ctx?: Omit<LinkContext, "people">): ProposalContent {
   const o = out.object;
   const match = out.person ? matchPerson(out.person.name, out.person.locality, people) : null;
   return {
@@ -43,10 +44,11 @@ export function fromAgent(out: CaptureProposalOut, people: Person[]): ProposalCo
     task: out.task ? { title: { value: out.task.title, confidence: out.task.confidence }, due: { value: out.task.due, confidence: out.task.confidence } } : null,
     why: { value: out.why, confidence: out.why ? 0.8 : 0 },
     agent: "claude",
+    links: ctx ? resolveLinks({ place: out.place ?? null, project: out.project ?? null, introduced_by: out.introduced_by ?? null }, o?.title ?? "", { ...ctx, people }, false) : undefined,
   };
 }
 
-export function fromHeuristics(h: HeuristicResult, people: Person[]): ProposalContent {
+export function fromHeuristics(h: HeuristicResult, people: Person[], ctx?: Omit<LinkContext, "people">): ProposalContent {
   const c = LOCAL_CONFIDENCE;
   const match = matchPerson(h.person_name, h.person_locality, people);
   return {
@@ -69,5 +71,10 @@ export function fromHeuristics(h: HeuristicResult, people: Person[]): ProposalCo
     task: h.task_title ? { title: { value: h.task_title, confidence: c }, due: { value: h.deadline, confidence: c } } : null,
     why: { value: "", confidence: 0 },
     agent: "local",
+    links: ctx ? resolveLinks({
+      place: h.place_name ? { name: h.place_name, confidence: c } : null,
+      project: h.project_name ? { name: h.project_name, confidence: c } : null,
+      introduced_by: h.introduced_by ? { name: h.introduced_by, confidence: c } : null,
+    }, h.title, { ...ctx, people }, true) : undefined,
   };
 }

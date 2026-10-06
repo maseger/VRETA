@@ -5,6 +5,7 @@ import { USAGE_LABEL } from "../domain/labels";
 import type { Structure, UsageType, VObject, Zone } from "../domain/types";
 import { zoneAt, type LngLat } from "../geo/geo";
 import { prepareImage, type PreparedImage } from "../services/images";
+import { ProjectInput } from "./ProjectInput";
 
 const TYPES: UsageType[] = ["installed", "planted", "built_in", "renovated", "reused", "moved", "replanted"];
 
@@ -88,7 +89,7 @@ export function UsageForm({ object, zones, structures, maxQty, fromAllocation, o
         )}
         <div><label className="field-label" htmlFor="u-date">Datum</label><input id="u-date" type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} /></div>
       </div>
-      <input className="input" value={project} onChange={(e) => setProject(e.target.value)} placeholder="Projekt (valfritt), t.ex. Orangeriet" aria-label="Projekt" />
+      <ProjectInput value={project} onChange={setProject} />
       <textarea className="input" rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Anteckning (valfritt)" aria-label="Anteckning" />
       <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden onChange={async (e) => e.target.files?.[0] && setPhoto(await prepareImage(e.target.files[0]))} />
       <div className="flex items-center gap-3">

@@ -15,7 +15,7 @@ const MODEL = "claude-opus-5-5";
 const SYSTEM = `Du är Fråga Vreta, chatboten i appen VRETA för återbruk och byggnadsvård på platsen Vreta. Svara på svenska, kort och konkret.
 
 Regler:
-- Allt du påstår om Vreta (objekt, lager, personer, affärer, journal) måste komma från ett verktygsresultat i det här samtalet. Använd alltid verktygen för sådana frågor. Hittar verktygen inget: säg "Jag hittar inget om det."
+- Allt du påstår om Vreta (objekt, lager, personer och deras relationer, affärer, projekt och behov, platser, journal) måste komma från ett verktygsresultat i det här samtalet. Använd alltid verktygen för sådana frågor. Hittar verktygen inget: säg "Jag hittar inget om det."
 - Allmänna frågor (t.ex. hur man renoverar ett gjutjärnsfönster) får du besvara med egen kunskap, men börja då svaret med "Allmänt råd:" så att det inte förväxlas med fakta om Vreta.
 - Du kan aldrig publicera något, ändra samtycke, radera data eller sätta pris. Be användaren göra det i respektive studio.
 - Åtgärdsverktygen (propose_*, start_*) utför ingenting. Säg att användaren bekräftar nedan; påstå aldrig att något redan är gjort.
@@ -29,6 +29,8 @@ Deno.serve(async (req: Request) => {
   });
   const member = await siteOf(sb);
   if (!member) return json({ error: "unauthorized" }, 401);
+  // Gäster (M9) använder inte AI
+  if (member.is_guest) return json({ error: "forbidden" }, 403);
   if (await overCap(sb, member.site_id)) return json({ error: "cap_reached" }, 429);
 
   const { question, screen, history } = (await req.json()) as { question: string; screen: Screen; history: { role: "user" | "assistant"; text: string }[] };
@@ -84,6 +86,7 @@ Deno.serve(async (req: Request) => {
   } catch (err) {
     if (err instanceof Anthropic.RateLimitError) return json({ error: "rate_limited" }, 429);
     if (err instanceof Anthropic.APIError) return json({ error: "upstream", status: err.status }, 502);
+    console.error("ask-vreta:", err instanceof Error ? `${err.name}: ${err.message}` : err);
     return json({ error: "internal" }, 500);
   }
 });

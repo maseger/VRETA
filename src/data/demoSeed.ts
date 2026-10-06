@@ -190,4 +190,34 @@ export async function seedDemo(repo: LocalRepo, withImages = true): Promise<void
   await repo.addContribution({ person_id: erik.id, kind: "tid", description: "Hjälpte till att mura orangeriets södra mur", hours: 6, object_id: tegel?.id ?? null, zone_id: orangeriZon.id, project: "Orangeriet", visibility: "shareable" });
   await repo.addContribution({ person_id: erik.id, kind: "kunskap", description: "Lärde oss blanda kalkbruk", hours: null, object_id: null, zone_id: null, project: "Orangeriet", visibility: "shareable" });
   if (anders) await repo.addReciprocity(anders.id, "Fick rhododendronsticklingar från trädgården");
+
+  // M6: projekt och platser utanför Vreta
+  await repo.createProject({ name: "Jordkällaren", kind: "Bygge", status: "planned", description: "Mura upp den gamla jordkällaren vid ladan igen, med kalkbruk och sten från fastigheten.", zone_id: null, structure_id: null, started_on: null, finished_on: null });
+  const atervinning = await repo.createExternalPlace({ name: "Återbruket", kind: "atervinning", locality: "Gävle", notes: "Återbruksdelen vid återvinningscentralen. Bra för tegel och fönster.", address: "" });
+  const radAcq = (await repo.acquisitionsFor(radId))[0];
+  if (radAcq) await repo.setAcquisitionPlace(radAcq.id, atervinning.id);
+  await repo.createExternalPlace({ name: "Kyrkans loppis", kind: "loppis", locality: "Sandviken", notes: "Öppet lördagar 10–14.", address: "" });
+
+  // M7: orangeriets behov och yta på kartan
+  const orangeriet = (await repo.projects()).find((p) => p.name === "Orangeriet");
+  if (orangeriet) {
+    await repo.setProjectGeom(orangeriet.id, DEMO_GEOM.orangerietBygge);
+    const tegelBehov = await repo.createNeed({ project_id: orangeriet.id, title: "Tegel till södra muren", quantity: 400, unit: "st", notes: "" });
+    if (tegel) await repo.fulfillNeed({ need_id: tegelBehov.id, quantity: 250, object_id: tegel.id, contribution_id: null, note: "Första skiftet" });
+    const fonster = await repo.createNeed({ project_id: orangeriet.id, title: "Fönster till långsidan", quantity: 12, unit: "st", notes: "Gärna spröjsade, minst 60 cm breda" });
+    await repo.updateNeed(fonster.id, { listing_id: sokes.id });
+    await repo.createNeed({ project_id: orangeriet.id, title: "Kalkbruk", quantity: null, unit: "säckar", notes: "" });
+  }
+
+  // M8: relationer och organisationer
+  const everyone = await repo.persons();
+  const who = (name: string) => everyone.find((p) => p.name === name);
+  const hembygd = await repo.createOrganization({ name: "Storviks hembygdsförening", kind: "Förening", locality: "Storvik" });
+  await repo.updatePerson(erik.id, { organization_id: hembygd.id });
+  const lena = who("Lena");
+  const goran = who("Göran");
+  const johanP = who("Johan");
+  if (lena) await repo.addRelation({ person_id: erik.id, other_id: lena.id, kind: "granne", note: "" });
+  if (anders && goran) await repo.addRelation({ person_id: anders.id, other_id: goran.id, kind: "introduced", note: "Visste att Göran hade radiatorer kvar efter sin renovering" });
+  if (birgitta && johanP) await repo.addRelation({ person_id: birgitta.id, other_id: johanP.id, kind: "familj", note: "Johan är Birgittas brorson" });
 }

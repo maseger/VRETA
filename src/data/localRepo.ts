@@ -3,6 +3,7 @@
 import { openDB, type IDBPDatabase } from "idb";
 import { ACQUISITION_TRANSITIONS, LEAD_TRANSITIONS, LISTING_TRANSITIONS, PICKUP_TRANSITIONS, assertTransition } from "../domain/stateMachine";
 import type {
+  ExternalPlace, GuestLink, Need, NeedFulfillment, PersonRelation, Project,
   BatchAllocation, Decision, MapLayer, Observation, UsageEvent,
   ChannelPost, ContentConsent, Contribution, Disposal, DisposalType, Lead, LeadStatus, Listing, ListingStatus, PublishMode, ReciprocityEntry, AskThread,
   AcquisitionStatus, ChecklistItem, ChecklistTemplate, Interaction, Organization, Pickup, PickupItem, PickupStatus,
@@ -12,7 +13,7 @@ import type {
 } from "../domain/types";
 import type { StoryRows } from "../../supabase/functions/_shared/storyContext";
 import type { PolygonGeom } from "../geo/geo";
-import { PermissionError, type DisposalInput, type ListingInput, type NewMapLayer, type UsageInput, type ApproveInput, type MediaInput, type NewPerson, type NewPickup, type PlaceRef, type Receipt, type Repo } from "./repo";
+import { PermissionError, type DisposalInput, type ListingInput, type NewMapLayer, type UsageInput, type ApproveInput, type MediaInput, type NewExternalPlace, type NewFulfillment, type NewNeed, type NewPerson, type NewProject, type NewPickup, type PlaceRef, type Receipt, type Repo } from "./repo";
 
 const STORES = [
   "sites", "zones", "structures", "objects", "persons", "person_private", "acquisitions", "acquisition_private",
@@ -27,6 +28,14 @@ const STORES = [
   "listings", "channel_posts", "leads", "disposals", "disposal_private", "contributions", "reciprocity_entries", "content_consents",
   // M5
   "ask_threads",
+  // M6
+  "projects", "external_places", "external_place_private",
+  // M7
+  "needs", "need_fulfillments",
+  // M8
+  "person_relations",
+  // M9
+  "guest_links",
 ] as const;
 
 const KEY_PATHS: Partial<Record<string, string | null>> = {
@@ -35,6 +44,7 @@ const KEY_PATHS: Partial<Record<string, string | null>> = {
   organization_private: "organization_id",
   pickup_private: "pickup_id",
   disposal_private: "disposal_id",
+  external_place_private: "place_id",
   blobs: null,
   meta: null,
 };
@@ -51,6 +61,8 @@ interface PersonPrivate { person_id: string; site_id: string; contact: string; n
 interface OrgPrivate { organization_id: string; site_id: string; contact: string; notes: string; created_by: string }
 interface PickupPrivate { pickup_id: string; site_id: string; address: string; created_by: string }
 interface DisposalPrivate { disposal_id: string; site_id: string; price: number | null; payment_method: string; created_by: string }
+interface PlacePrivate { place_id: string; site_id: string; address: string; created_by: string }
+interface StoredGuestLink extends GuestLink { site_id: string; token_hash: string; created_by: string }
 interface AcqPrivate { acquisition_id: string; site_id: string; price: number | null; payment_method: string; created_by: string }
 
 const now = () => new Date().toISOString();
@@ -61,7 +73,7 @@ export class LocalRepo implements Repo {
   private dbp: Promise<IDBPDatabase>;
 
   constructor(dbName = "vreta-demo") {
-    this.dbp = openDB(dbName, 5, {
+    this.dbp = openDB(dbName, 9, {
       upgrade(db) {
         for (const s of STORES) {
           if (db.objectStoreNames.contains(s)) continue;
@@ -103,6 +115,10 @@ export class LocalRepo implements Repo {
     if (me.role !== "owner") throw new PermissionError("Bara ägaren kan göra detta");
     return me;
   }
+  /** Som is_guest() i databasen: gäster ser inte det operativa och personliga (M9). */
+  private async isGuest(): Promise<boolean> {
+    return !!(await this.session())?.guest;
+  }
   private seesPrivate(me: Profile, createdBy: string) {
     return me.role === "owner" || me.id === createdBy;
   }
@@ -129,7 +145,16 @@ export class LocalRepo implements Repo {
 
   // ------------------------------------------------------------ session
   async session(): Promise<Profile | null> {
-    return (await this.get<Profile>("meta", "profile")) ?? null;
+    const p = (await this.get<Profile>("meta", "profile")) ?? null;
+    // En gäst vars länk har stängts är utloggad
+    if (p?.guest) {
+      const link = await this.get<StoredGuestLink>("guest_links", p.id.replace(/^guest-/, ""));
+      if (!link || link.revoked_at) {
+        await (await this.dbp).delete("meta", "profile");
+        return null;
+      }
+    }
+    return p;
   }
   async signInWithEmail(): Promise<void> {}
   async signOut(): Promise<void> {}
@@ -355,7 +380,7 @@ export class LocalRepo implements Repo {
     const me = await this.me();
     const priv = await this.all<PersonPrivate>("person_private");
     return (await this.all<Person>("persons"))
-      .filter((p) => !p.archived_at)
+      .filter((p) => !p.archived_at && (!me.guest || p.consent_name === "yes"))
       .map((p) => {
         const pp = priv.find((x) => x.person_id === p.id);
         return pp && this.seesPrivate(me, pp.created_by) ? { ...p, contact: pp.contact, notes: pp.notes } : p;
@@ -387,7 +412,13 @@ export class LocalRepo implements Repo {
   // ------------------------------------------------------------ historik och berättande
   async eventsFor(entity_type: string, entity_id: string): Promise<EventRec[]> {
     const links = (await this.all<EventLink>("event_links")).filter((l) => l.entity_type === entity_type && l.entity_id === entity_id);
-    const ids = new Set(links.map((l) => l.event_id));
+    let ids = new Set(links.map((l) => l.event_id));
+    if (await this.isGuest()) {
+      // Händelser som nämner en person utan namnsamtycke döljs för gäster
+      const ok = new Set((await this.persons()).map((p) => p.id));
+      const hidden = new Set((await this.all<EventLink>("event_links")).filter((l) => l.entity_type === "person" && !ok.has(l.entity_id)).map((l) => l.event_id));
+      ids = new Set([...ids].filter((id) => !hidden.has(id)));
+    }
     return (await this.all<EventRec>("events")).filter((e) => ids.has(e.id)).sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
   }
   async addStoryNote(input: Pick<StoryNote, "entity_type" | "entity_id" | "kind" | "text" | "quote_consent">): Promise<void> {
@@ -395,6 +426,7 @@ export class LocalRepo implements Repo {
     await this.put("story_notes", { ...(await this.base(me)), ...input } satisfies StoryNote);
   }
   async storyNotesFor(entity_type: string, entity_id: string): Promise<StoryNote[]> {
+    if (await this.isGuest()) return [];
     return (await this.all<StoryNote>("story_notes")).filter((n) => n.entity_type === entity_type && n.entity_id === entity_id && !n.archived_at);
   }
   async markMoment(objectId: string, text: string): Promise<void> {
@@ -438,6 +470,7 @@ export class LocalRepo implements Repo {
 
   // ------------------------------------------------------------ övrigt
   async tasks(): Promise<Task[]> {
+    if (await this.isGuest()) return [];
     return (await this.all<Task>("tasks"))
       .filter((t) => t.status === "open" || t.status === "in_progress")
       .sort((a, b) => (a.due ?? "9999").localeCompare(b.due ?? "9999"));
@@ -591,17 +624,21 @@ export class LocalRepo implements Repo {
     return { ...p, address: pp?.address ?? "" };
   }
   async pickups(): Promise<Pickup[]> {
+    if (await this.isGuest()) return [];
     const list = (await this.all<Pickup>("pickups")).filter((p) => !p.archived_at);
     return Promise.all(list.sort((a, b) => (a.scheduled_date ?? "9999").localeCompare(b.scheduled_date ?? "9999")).map((p) => this.withAddress(p)));
   }
   async pickup(id: string): Promise<Pickup | null> {
+    if (await this.isGuest()) return null;
     const p = await this.get<Pickup>("pickups", id);
     return p ? this.withAddress(p) : null;
   }
   async pickupItems(pickupId: string): Promise<PickupItem[]> {
+    if (await this.isGuest()) return [];
     return (await this.all<PickupItem>("pickup_items")).filter((i) => i.pickup_id === pickupId);
   }
   async checklist(pickupId: string): Promise<ChecklistItem[]> {
+    if (await this.isGuest()) return [];
     return (await this.all<ChecklistItem>("checklist_items")).filter((i) => i.pickup_id === pickupId).sort((a, b) => a.position - b.position);
   }
   async createPickup(input: NewPickup): Promise<string> {
@@ -610,7 +647,7 @@ export class LocalRepo implements Repo {
     const p: Pickup = {
       ...b, acquisition_id: input.acquisition_id, person_id: input.person_id, title: input.title, scheduled_date: input.scheduled_date,
       window_from: input.window_from, window_to: input.window_to, resources: input.resources, status: "planned",
-      safety_note: input.safety_note, completed_at: null,
+      safety_note: input.safety_note, completed_at: null, place_id: input.place_id ?? null,
     };
     await this.put("pickups", p);
     await this.put("pickup_private", { pickup_id: p.id, site_id: p.site_id, address: input.address, created_by: me.id } satisfies PickupPrivate);
@@ -736,11 +773,13 @@ export class LocalRepo implements Repo {
     const links: { type: string; id: string; role?: string }[] = [{ type: "object", id: objectId }];
     if (input.zone_id) links.push({ type: "zone", id: input.zone_id, role: "place" });
     if (input.structure_id) links.push({ type: "structure", id: input.structure_id, role: "place" });
+    const project = await this.resolveProject(me, input.project, input.zone_id, input.occurred_at ?? now());
+    if (project) links.push({ type: "project", id: project.id, role: "project" });
     const ev = await this.event(me, `usage.${input.type}`, `${verb[input.type]}: ${qty}${o.title.toLowerCase()}${place ? ` – ${place}` : ""}`, links, true,
       { occurred_at: input.occurred_at ?? now(), notes: input.note });
     const u: UsageEvent = {
       id: uuid(), site_id: o.site_id, object_id: objectId, allocation_id: allocationId, type: input.type, occurred_at: input.occurred_at ?? now(),
-      zone_id: input.zone_id, structure_id: input.structure_id, quantity: input.quantity, project: input.project, note: input.note, geom: input.geom,
+      zone_id: input.zone_id, structure_id: input.structure_id, quantity: input.quantity, project: project?.name ?? "", project_id: project?.id ?? null, note: input.note, geom: input.geom,
       event_id: ev.id, created_at: now(), created_by: me.id,
     };
     await this.put("usage_events", u);
@@ -763,6 +802,7 @@ export class LocalRepo implements Repo {
     return (await this.allUsageEvents()).filter((u) => u.object_id === objectId);
   }
   async allUsageEvents(): Promise<UsageEvent[]> {
+    await this.backfillProjects();
     return (await this.all<UsageEvent>("usage_events")).sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
   }
 
@@ -1041,9 +1081,12 @@ export class LocalRepo implements Repo {
 
   // ------------------------------------------------------------ M4: bidrag, ömsesidighet och samtycke
   async contributions(personId?: string): Promise<Contribution[]> {
+    await this.backfillProjects();
     const me = await this.me();
+    // Gäster ser bara bidrag från personer som sagt ja till namn och till att bidraget beskrivs
+    const allowed = me.guest ? new Set((await this.persons()).filter((p) => p.consent_contribution === "yes").map((p) => p.id)) : null;
     return (await this.all<Contribution>("contributions"))
-      .filter((c) => (!personId || c.person_id === personId) && (c.visibility !== "private" || this.seesPrivate(me, c.created_by)))
+      .filter((c) => (!personId || c.person_id === personId) && (c.visibility !== "private" || this.seesPrivate(me, c.created_by)) && (!allowed || allowed.has(c.person_id)))
       .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
   }
   async addContribution(input: Pick<Contribution, "person_id" | "kind" | "description" | "hours" | "object_id" | "zone_id" | "project" | "visibility"> & { occurred_at?: string }): Promise<Contribution> {
@@ -1056,11 +1099,232 @@ export class LocalRepo implements Repo {
     if (input.object_id) links.push({ type: "object", id: input.object_id });
     if (input.zone_id) links.push({ type: "zone", id: input.zone_id, role: "place" });
     const occurred = input.occurred_at ?? now();
+    const project = await this.resolveProject(me, input.project, input.zone_id, occurred);
+    if (project) links.push({ type: "project", id: project.id, role: "project" });
     const ev = await this.event(me, `contribution.${input.kind}`, `Bidrag från ${p.name}: ${input.description}`, links, true, { occurred_at: occurred, visibility: input.visibility });
-    const c: Contribution = { id: uuid(), site_id: p.site_id, ...input, occurred_at: occurred, thanked_at: null, event_id: ev.id, created_at: now(), created_by: me.id };
+    const c: Contribution = { id: uuid(), site_id: p.site_id, ...input, project: project?.name ?? "", project_id: project?.id ?? null, occurred_at: occurred, thanked_at: null, event_id: ev.id, created_at: now(), created_by: me.id };
     await this.put("contributions", c);
     return c;
   }
+  // ------------------------------------------------------------ M6: projekt och platser utanför Vreta
+  async projects(): Promise<Project[]> {
+    await this.backfillProjects();
+    return (await this.all<Project>("projects")).filter((p) => !p.archived_at).sort((a, b) => a.name.localeCompare(b.name, "sv"));
+  }
+  /** Demodata från före M6 har projekt bara som namn – som migrationen gör de dem till projekt. */
+  private backfill?: Promise<void>;
+  private backfillProjects(): Promise<void> {
+    return (this.backfill ??= this.runBackfill());
+  }
+  private async runBackfill() {
+    const me = await this.session();
+    if (!me) return;
+    for (const u of (await this.all<UsageEvent>("usage_events")).filter((x) => x.project?.trim() && !x.project_id)) {
+      const p = await this.resolveProject(me, u.project, u.zone_id, u.occurred_at);
+      if (p) await this.put("usage_events", { ...u, project: p.name, project_id: p.id });
+    }
+    for (const c of (await this.all<Contribution>("contributions")).filter((x) => x.project?.trim() && !x.project_id)) {
+      const p = await this.resolveProject(me, c.project, c.zone_id, c.occurred_at);
+      if (p) await this.put("contributions", { ...c, project: p.name, project_id: p.id });
+    }
+  }
+  /** Som triggern resolve_project: ett namn slås upp utan hänsyn till skiftläge, annars skapas projektet. */
+  private async resolveProject(me: Profile, name: string, zoneId: string | null, at: string): Promise<Project | null> {
+    const clean = name.trim().replace(/\s+/g, " ");
+    if (!clean) return null;
+    const found = (await this.all<Project>("projects")).find((p) => p.name.toLocaleLowerCase("sv") === clean.toLocaleLowerCase("sv"));
+    if (found) return found;
+    const p: Project = { ...(await this.base(me)), name: clean, kind: "", status: "active", description: "", zone_id: zoneId, structure_id: null, started_on: at.slice(0, 10), finished_on: null };
+    await this.put("projects", p);
+    return p;
+  }
+  private async assertUniqueProject(name: string, exceptId?: string) {
+    const key = name.trim().replace(/\s+/g, " ").toLocaleLowerCase("sv");
+    if (!key) throw new Error("Projektet behöver ett namn");
+    if ((await this.all<Project>("projects")).some((p) => p.id !== exceptId && p.name.toLocaleLowerCase("sv") === key)) throw new Error("Det finns redan ett projekt med det namnet");
+  }
+  async createProject(input: NewProject): Promise<Project> {
+    const me = await this.requireWriter();
+    await this.assertUniqueProject(input.name);
+    const p: Project = { ...(await this.base(me)), ...input, name: input.name.trim().replace(/\s+/g, " ") };
+    await this.put("projects", p);
+    return p;
+  }
+  async updateProject(id: string, patch: Partial<NewProject>): Promise<void> {
+    const me = await this.requireWriter();
+    const p = await this.get<Project>("projects", id);
+    if (!p) throw new Error("Projektet finns inte");
+    if (patch.name !== undefined) await this.assertUniqueProject(patch.name, id);
+    const next: Project = { ...p, ...patch, updated_at: now() };
+    if (patch.status && patch.status !== p.status) {
+      if (patch.status === "done" && !next.finished_on) next.finished_on = now().slice(0, 10);
+      if (patch.status === "active" && !next.started_on) next.started_on = now().slice(0, 10);
+      await this.audit_(me, "project_status", "project", id, { status: p.status }, { status: patch.status });
+    }
+    await this.put("projects", next);
+    if (patch.name !== undefined && next.name !== p.name) {
+      for (const u of (await this.all<UsageEvent>("usage_events")).filter((x) => x.project_id === id)) await this.put("usage_events", { ...u, project: next.name });
+      for (const c of (await this.all<Contribution>("contributions")).filter((x) => x.project_id === id)) await this.put("contributions", { ...c, project: next.name });
+    }
+  }
+  async externalPlaces(): Promise<ExternalPlace[]> {
+    const me = await this.me();
+    const priv = await this.all<PlacePrivate>("external_place_private");
+    return (await this.all<ExternalPlace>("external_places")).filter((p) => !p.archived_at)
+      .map((p) => (me.role === "viewer" ? p : { ...p, address: priv.find((x) => x.place_id === p.id)?.address ?? "" }))
+      .sort((a, b) => a.name.localeCompare(b.name, "sv"));
+  }
+  async createExternalPlace(input: NewExternalPlace): Promise<ExternalPlace> {
+    const me = await this.requireWriter();
+    const { address, ...rest } = input;
+    if (!rest.name.trim()) throw new Error("Platsen behöver ett namn");
+    const p: ExternalPlace = { ...(await this.base(me)), ...rest, name: rest.name.trim() };
+    await this.put("external_places", p);
+    await this.put("external_place_private", { place_id: p.id, site_id: p.site_id, address, created_by: me.id } satisfies PlacePrivate);
+    return p;
+  }
+  async updateExternalPlace(id: string, patch: Partial<NewExternalPlace>): Promise<void> {
+    const me = await this.requireWriter();
+    const p = await this.get<ExternalPlace>("external_places", id);
+    if (!p) throw new Error("Platsen finns inte");
+    const { address, ...rest } = patch;
+    await this.put("external_places", { ...p, ...rest, updated_at: now() });
+    if (address !== undefined) await this.put("external_place_private", { place_id: id, site_id: p.site_id, address, created_by: me.id } satisfies PlacePrivate);
+  }
+  private async setPlace(store: "acquisitions" | "pickups" | "disposals", id: string, placeId: string | null) {
+    await this.requireWriter();
+    const row = await this.get<{ place_id?: string | null }>(store, id);
+    if (!row) throw new Error("Posten finns inte");
+    if (placeId && !(await this.get<ExternalPlace>("external_places", placeId))) throw new Error("Platsen finns inte");
+    await this.put(store, { ...row, place_id: placeId });
+  }
+  async setAcquisitionPlace(id: string, placeId: string | null): Promise<void> {
+    await this.setPlace("acquisitions", id, placeId);
+  }
+  async setPickupPlace(id: string, placeId: string | null): Promise<void> {
+    await this.setPlace("pickups", id, placeId);
+  }
+  async setDisposalPlace(id: string, placeId: string | null): Promise<void> {
+    await this.setPlace("disposals", id, placeId);
+  }
+
+  // ------------------------------------------------------------ M7: behov och projektytor
+  async needs(projectId?: string): Promise<Need[]> {
+    return (await this.all<Need>("needs")).filter((n) => !n.archived_at && (!projectId || n.project_id === projectId)).sort((a, b) => a.created_at.localeCompare(b.created_at));
+  }
+  async createNeed(input: NewNeed): Promise<Need> {
+    const me = await this.requireWriter();
+    if (!input.title.trim()) throw new Error("Behovet behöver en rubrik");
+    if (input.quantity != null && !(input.quantity > 0)) throw new Error("Antalet måste vara större än noll");
+    if (!(await this.get<Project>("projects", input.project_id))) throw new Error("Projektet finns inte");
+    const n: Need = { ...(await this.base(me)), ...input, title: input.title.trim(), unit: input.unit.trim() || "st", status: "open", listing_id: null };
+    await this.put("needs", n);
+    return n;
+  }
+  async updateNeed(id: string, patch: Partial<Pick<Need, "title" | "quantity" | "unit" | "notes" | "status" | "listing_id">>): Promise<void> {
+    await this.requireWriter();
+    const n = await this.get<Need>("needs", id);
+    if (!n) throw new Error("Behovet finns inte");
+    await this.put("needs", { ...n, ...patch, updated_at: now() });
+  }
+  async needFulfillments(needIds?: string[]): Promise<NeedFulfillment[]> {
+    return (await this.all<NeedFulfillment>("need_fulfillments")).filter((f) => !needIds || needIds.includes(f.need_id)).sort((a, b) => a.occurred_at.localeCompare(b.occurred_at));
+  }
+  /** Som triggern need_fulfillments_journal: en händelse i projektjournalen med hur långt behovet kommit. */
+  async fulfillNeed(input: NewFulfillment): Promise<NeedFulfillment> {
+    const me = await this.requireWriter();
+    if (!(input.quantity > 0)) throw new Error("Antalet måste vara större än noll");
+    const n = await this.get<Need>("needs", input.need_id);
+    if (!n) throw new Error("Behovet finns inte");
+    const total = (await this.needFulfillments([n.id])).reduce((s, f) => s + f.quantity, 0) + input.quantity;
+    const obj = input.object_id ? await this.get<VObject>("objects", input.object_id) : undefined;
+    const contrib = input.contribution_id ? await this.get<Contribution>("contributions", input.contribution_id) : undefined;
+    const from = obj?.title ?? (contrib ? (await this.get<Person>("persons", contrib.person_id))?.name : "") ?? "";
+    const covered = n.quantity != null && total >= n.quantity;
+    const links: { type: string; id: string; role?: string }[] = [{ type: "project", id: n.project_id, role: "project" }, { type: "site", id: n.site_id, role: "place" }];
+    if (obj) links.push({ type: "object", id: obj.id });
+    const amount = n.quantity == null ? `${total} ${n.unit}` : `${total} av ${n.quantity} ${n.unit}`;
+    const ev = await this.event(me, covered ? "need.covered" : "need.fulfilled", `${n.title}: ${amount}${from ? ` – ${from}` : ""}`, links, covered, { notes: input.note });
+    const f: NeedFulfillment = { id: uuid(), site_id: n.site_id, ...input, occurred_at: now(), event_id: ev.id, created_at: now(), created_by: me.id };
+    await this.put("need_fulfillments", f);
+    return f;
+  }
+  async removeFulfillment(id: string): Promise<void> {
+    await this.requireWriter();
+    await (await this.dbp).delete("need_fulfillments", id);
+  }
+  async setProjectGeom(id: string, geom: PolygonGeom | null): Promise<void> {
+    await this.requireWriter();
+    const p = await this.get<Project>("projects", id);
+    if (p) await this.put("projects", { ...p, geom, updated_at: now() });
+  }
+
+  // ------------------------------------------------------------ M8: relationer och organisationer
+  async relations(personId?: string): Promise<PersonRelation[]> {
+    const me = await this.me();
+    if (me.role === "viewer") return [];
+    return (await this.all<PersonRelation>("person_relations")).filter((r) => !personId || r.person_id === personId || r.other_id === personId);
+  }
+  async addRelation(input: Pick<PersonRelation, "person_id" | "other_id" | "kind" | "note">): Promise<PersonRelation> {
+    const me = await this.requireWriter();
+    if (input.person_id === input.other_id) throw new Error("En person kan inte ha en relation med sig själv");
+    if (!(await this.get<Person>("persons", input.person_id)) || !(await this.get<Person>("persons", input.other_id))) throw new Error("Personen finns inte");
+    const same = (r: PersonRelation) => r.kind === input.kind && (input.kind === "introduced"
+      ? r.person_id === input.person_id && r.other_id === input.other_id
+      : [r.person_id, r.other_id].sort().join() === [input.person_id, input.other_id].sort().join());
+    if ((await this.all<PersonRelation>("person_relations")).some(same)) throw new Error("Relationen finns redan");
+    const r: PersonRelation = { id: uuid(), site_id: await this.siteId(), ...input, created_at: now(), created_by: me.id };
+    await this.put("person_relations", r);
+    await this.audit_(me, "person_relation", "person", input.person_id, null, { kind: input.kind, other_id: input.other_id });
+    return r;
+  }
+  async removeRelation(id: string): Promise<void> {
+    await this.requireWriter();
+    await (await this.dbp).delete("person_relations", id);
+  }
+  async updateOrganization(id: string, patch: Partial<Pick<Organization, "name" | "kind" | "locality">>): Promise<void> {
+    await this.requireWriter();
+    const o = await this.get<Organization>("organizations", id);
+    if (!o) throw new Error("Organisationen finns inte");
+    await this.put("organizations", { ...o, ...patch, updated_at: now() });
+  }
+
+  // ------------------------------------------------------------ M9: gäster
+  private async hash(token: string): Promise<string> {
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
+    return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+  async enterAsGuest(token: string): Promise<void> {
+    const h = await this.hash(token);
+    const link = (await this.all<StoredGuestLink>("guest_links")).find((l) => l.token_hash === h && !l.revoked_at);
+    if (!link) throw new PermissionError("Gästlänken gäller inte längre");
+    // I demoläget är ägare och gäst samma webbläsare: länken visar gästvyn och "Lämna" går tillbaka.
+    // Med Supabase nedgraderas en medlem aldrig (redeem_guest_link, m9_rls_test.sql).
+    await this.put("guest_links", { ...link, last_used_at: now(), uses: link.uses + 1 });
+    await this.put("meta", { id: `guest-${link.id}`, name: link.label || "Gäst", role: "viewer", guest: true } satisfies Profile, "profile");
+  }
+  async guestLinks(): Promise<GuestLink[]> {
+    await this.requireOwner();
+    return (await this.all<StoredGuestLink>("guest_links"))
+      .map(({ id, label, created_at, last_used_at, uses, revoked_at }) => ({ id, label, created_at, last_used_at, uses, revoked_at }))
+      .sort((a, b) => b.created_at.localeCompare(a.created_at));
+  }
+  async createGuestLink(label: string): Promise<{ id: string; token: string }> {
+    const me = await this.requireOwner();
+    const token = [...crypto.getRandomValues(new Uint8Array(24))].map((b) => b.toString(16).padStart(2, "0")).join("");
+    const link: StoredGuestLink = { id: uuid(), site_id: await this.siteId(), token_hash: await this.hash(token), label: label.trim(), created_at: now(), created_by: me.id, last_used_at: null, uses: 0, revoked_at: null };
+    await this.put("guest_links", link);
+    await this.audit_(me, "guest_link_created", "guest_link", link.id, null, { label: link.label });
+    return { id: link.id, token };
+  }
+  async revokeGuestLink(id: string): Promise<void> {
+    const me = await this.requireOwner();
+    const link = await this.get<StoredGuestLink>("guest_links", id);
+    if (!link) return;
+    await this.put("guest_links", { ...link, revoked_at: now() });
+    await this.audit_(me, "guest_link_revoked", "guest_link", id, null, null);
+  }
+
   async markThanked(ids: string[]): Promise<void> {
     await this.requireWriter();
     for (const id of ids) {
@@ -1069,6 +1333,7 @@ export class LocalRepo implements Repo {
     }
   }
   async reciprocity(personId: string): Promise<ReciprocityEntry[]> {
+    if (await this.isGuest()) return [];
     return (await this.all<ReciprocityEntry>("reciprocity_entries")).filter((r) => r.person_id === personId).sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
   }
   async addReciprocity(personId: string, description: string): Promise<void> {
@@ -1076,6 +1341,7 @@ export class LocalRepo implements Repo {
     await this.put("reciprocity_entries", { id: uuid(), site_id: await this.siteId(), person_id: personId, description, occurred_at: now(), created_at: now(), created_by: me.id } satisfies ReciprocityEntry);
   }
   async contentConsents(contentId: string): Promise<ContentConsent[]> {
+    if (await this.isGuest()) return [];
     return (await this.all<ContentConsent>("content_consents")).filter((c) => c.content_id === contentId);
   }
   async setContentConsent(input: Pick<ContentConsent, "content_id" | "person_id" | "name_ok" | "image_ok" | "contribution_ok" | "how">): Promise<void> {
@@ -1122,6 +1388,7 @@ export class LocalRepo implements Repo {
     return this.all<BatchAllocation>("batch_allocations");
   }
   async allStoryNotes(): Promise<StoryNote[]> {
+    if (await this.isGuest()) return [];
     return (await this.all<StoryNote>("story_notes")).filter((n) => !n.archived_at);
   }
   async allContent(): Promise<ContentItem[]> {
