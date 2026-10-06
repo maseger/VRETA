@@ -3,7 +3,7 @@
 import { openDB, type IDBPDatabase } from "idb";
 import { ACQUISITION_TRANSITIONS, LEAD_TRANSITIONS, LISTING_TRANSITIONS, PICKUP_TRANSITIONS, assertTransition } from "../domain/stateMachine";
 import type {
-  ExternalPlace, Need, NeedFulfillment, PersonRelation, Project,
+  ExternalPlace, GuestLink, Need, NeedFulfillment, PersonRelation, Project,
   BatchAllocation, Decision, MapLayer, Observation, UsageEvent,
   ChannelPost, ContentConsent, Contribution, Disposal, DisposalType, Lead, LeadStatus, Listing, ListingStatus, PublishMode, ReciprocityEntry, AskThread,
   AcquisitionStatus, ChecklistItem, ChecklistTemplate, Interaction, Organization, Pickup, PickupItem, PickupStatus,
@@ -34,6 +34,8 @@ const STORES = [
   "needs", "need_fulfillments",
   // M8
   "person_relations",
+  // M9
+  "guest_links",
 ] as const;
 
 const KEY_PATHS: Partial<Record<string, string | null>> = {
@@ -60,6 +62,7 @@ interface OrgPrivate { organization_id: string; site_id: string; contact: string
 interface PickupPrivate { pickup_id: string; site_id: string; address: string; created_by: string }
 interface DisposalPrivate { disposal_id: string; site_id: string; price: number | null; payment_method: string; created_by: string }
 interface PlacePrivate { place_id: string; site_id: string; address: string; created_by: string }
+interface StoredGuestLink extends GuestLink { site_id: string; token_hash: string; created_by: string }
 interface AcqPrivate { acquisition_id: string; site_id: string; price: number | null; payment_method: string; created_by: string }
 
 const now = () => new Date().toISOString();
@@ -70,7 +73,7 @@ export class LocalRepo implements Repo {
   private dbp: Promise<IDBPDatabase>;
 
   constructor(dbName = "vreta-demo") {
-    this.dbp = openDB(dbName, 8, {
+    this.dbp = openDB(dbName, 9, {
       upgrade(db) {
         for (const s of STORES) {
           if (db.objectStoreNames.contains(s)) continue;
@@ -112,6 +115,10 @@ export class LocalRepo implements Repo {
     if (me.role !== "owner") throw new PermissionError("Bara ägaren kan göra detta");
     return me;
   }
+  /** Som is_guest() i databasen: gäster ser inte det operativa och personliga (M9). */
+  private async isGuest(): Promise<boolean> {
+    return !!(await this.session())?.guest;
+  }
   private seesPrivate(me: Profile, createdBy: string) {
     return me.role === "owner" || me.id === createdBy;
   }
@@ -138,7 +145,16 @@ export class LocalRepo implements Repo {
 
   // ------------------------------------------------------------ session
   async session(): Promise<Profile | null> {
-    return (await this.get<Profile>("meta", "profile")) ?? null;
+    const p = (await this.get<Profile>("meta", "profile")) ?? null;
+    // En gäst vars länk har stängts är utloggad
+    if (p?.guest) {
+      const link = await this.get<StoredGuestLink>("guest_links", p.id.replace(/^guest-/, ""));
+      if (!link || link.revoked_at) {
+        await (await this.dbp).delete("meta", "profile");
+        return null;
+      }
+    }
+    return p;
   }
   async signInWithEmail(): Promise<void> {}
   async signOut(): Promise<void> {}
@@ -364,7 +380,7 @@ export class LocalRepo implements Repo {
     const me = await this.me();
     const priv = await this.all<PersonPrivate>("person_private");
     return (await this.all<Person>("persons"))
-      .filter((p) => !p.archived_at)
+      .filter((p) => !p.archived_at && (!me.guest || p.consent_name === "yes"))
       .map((p) => {
         const pp = priv.find((x) => x.person_id === p.id);
         return pp && this.seesPrivate(me, pp.created_by) ? { ...p, contact: pp.contact, notes: pp.notes } : p;
@@ -396,7 +412,13 @@ export class LocalRepo implements Repo {
   // ------------------------------------------------------------ historik och berättande
   async eventsFor(entity_type: string, entity_id: string): Promise<EventRec[]> {
     const links = (await this.all<EventLink>("event_links")).filter((l) => l.entity_type === entity_type && l.entity_id === entity_id);
-    const ids = new Set(links.map((l) => l.event_id));
+    let ids = new Set(links.map((l) => l.event_id));
+    if (await this.isGuest()) {
+      // Händelser som nämner en person utan namnsamtycke döljs för gäster
+      const ok = new Set((await this.persons()).map((p) => p.id));
+      const hidden = new Set((await this.all<EventLink>("event_links")).filter((l) => l.entity_type === "person" && !ok.has(l.entity_id)).map((l) => l.event_id));
+      ids = new Set([...ids].filter((id) => !hidden.has(id)));
+    }
     return (await this.all<EventRec>("events")).filter((e) => ids.has(e.id)).sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
   }
   async addStoryNote(input: Pick<StoryNote, "entity_type" | "entity_id" | "kind" | "text" | "quote_consent">): Promise<void> {
@@ -404,6 +426,7 @@ export class LocalRepo implements Repo {
     await this.put("story_notes", { ...(await this.base(me)), ...input } satisfies StoryNote);
   }
   async storyNotesFor(entity_type: string, entity_id: string): Promise<StoryNote[]> {
+    if (await this.isGuest()) return [];
     return (await this.all<StoryNote>("story_notes")).filter((n) => n.entity_type === entity_type && n.entity_id === entity_id && !n.archived_at);
   }
   async markMoment(objectId: string, text: string): Promise<void> {
@@ -447,6 +470,7 @@ export class LocalRepo implements Repo {
 
   // ------------------------------------------------------------ övrigt
   async tasks(): Promise<Task[]> {
+    if (await this.isGuest()) return [];
     return (await this.all<Task>("tasks"))
       .filter((t) => t.status === "open" || t.status === "in_progress")
       .sort((a, b) => (a.due ?? "9999").localeCompare(b.due ?? "9999"));
@@ -600,17 +624,21 @@ export class LocalRepo implements Repo {
     return { ...p, address: pp?.address ?? "" };
   }
   async pickups(): Promise<Pickup[]> {
+    if (await this.isGuest()) return [];
     const list = (await this.all<Pickup>("pickups")).filter((p) => !p.archived_at);
     return Promise.all(list.sort((a, b) => (a.scheduled_date ?? "9999").localeCompare(b.scheduled_date ?? "9999")).map((p) => this.withAddress(p)));
   }
   async pickup(id: string): Promise<Pickup | null> {
+    if (await this.isGuest()) return null;
     const p = await this.get<Pickup>("pickups", id);
     return p ? this.withAddress(p) : null;
   }
   async pickupItems(pickupId: string): Promise<PickupItem[]> {
+    if (await this.isGuest()) return [];
     return (await this.all<PickupItem>("pickup_items")).filter((i) => i.pickup_id === pickupId);
   }
   async checklist(pickupId: string): Promise<ChecklistItem[]> {
+    if (await this.isGuest()) return [];
     return (await this.all<ChecklistItem>("checklist_items")).filter((i) => i.pickup_id === pickupId).sort((a, b) => a.position - b.position);
   }
   async createPickup(input: NewPickup): Promise<string> {
@@ -1055,8 +1083,10 @@ export class LocalRepo implements Repo {
   async contributions(personId?: string): Promise<Contribution[]> {
     await this.backfillProjects();
     const me = await this.me();
+    // Gäster ser bara bidrag från personer som sagt ja till namn och till att bidraget beskrivs
+    const allowed = me.guest ? new Set((await this.persons()).filter((p) => p.consent_contribution === "yes").map((p) => p.id)) : null;
     return (await this.all<Contribution>("contributions"))
-      .filter((c) => (!personId || c.person_id === personId) && (c.visibility !== "private" || this.seesPrivate(me, c.created_by)))
+      .filter((c) => (!personId || c.person_id === personId) && (c.visibility !== "private" || this.seesPrivate(me, c.created_by)) && (!allowed || allowed.has(c.person_id)))
       .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
   }
   async addContribution(input: Pick<Contribution, "person_id" | "kind" | "description" | "hours" | "object_id" | "zone_id" | "project" | "visibility"> & { occurred_at?: string }): Promise<Contribution> {
@@ -1259,6 +1289,42 @@ export class LocalRepo implements Repo {
     await this.put("organizations", { ...o, ...patch, updated_at: now() });
   }
 
+  // ------------------------------------------------------------ M9: gäster
+  private async hash(token: string): Promise<string> {
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
+    return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+  async enterAsGuest(token: string): Promise<void> {
+    const h = await this.hash(token);
+    const link = (await this.all<StoredGuestLink>("guest_links")).find((l) => l.token_hash === h && !l.revoked_at);
+    if (!link) throw new PermissionError("Gästlänken gäller inte längre");
+    // I demoläget är ägare och gäst samma webbläsare: länken visar gästvyn och "Lämna" går tillbaka.
+    // Med Supabase nedgraderas en medlem aldrig (redeem_guest_link, m9_rls_test.sql).
+    await this.put("guest_links", { ...link, last_used_at: now(), uses: link.uses + 1 });
+    await this.put("meta", { id: `guest-${link.id}`, name: link.label || "Gäst", role: "viewer", guest: true } satisfies Profile, "profile");
+  }
+  async guestLinks(): Promise<GuestLink[]> {
+    await this.requireOwner();
+    return (await this.all<StoredGuestLink>("guest_links"))
+      .map(({ id, label, created_at, last_used_at, uses, revoked_at }) => ({ id, label, created_at, last_used_at, uses, revoked_at }))
+      .sort((a, b) => b.created_at.localeCompare(a.created_at));
+  }
+  async createGuestLink(label: string): Promise<{ id: string; token: string }> {
+    const me = await this.requireOwner();
+    const token = [...crypto.getRandomValues(new Uint8Array(24))].map((b) => b.toString(16).padStart(2, "0")).join("");
+    const link: StoredGuestLink = { id: uuid(), site_id: await this.siteId(), token_hash: await this.hash(token), label: label.trim(), created_at: now(), created_by: me.id, last_used_at: null, uses: 0, revoked_at: null };
+    await this.put("guest_links", link);
+    await this.audit_(me, "guest_link_created", "guest_link", link.id, null, { label: link.label });
+    return { id: link.id, token };
+  }
+  async revokeGuestLink(id: string): Promise<void> {
+    const me = await this.requireOwner();
+    const link = await this.get<StoredGuestLink>("guest_links", id);
+    if (!link) return;
+    await this.put("guest_links", { ...link, revoked_at: now() });
+    await this.audit_(me, "guest_link_revoked", "guest_link", id, null, null);
+  }
+
   async markThanked(ids: string[]): Promise<void> {
     await this.requireWriter();
     for (const id of ids) {
@@ -1267,6 +1333,7 @@ export class LocalRepo implements Repo {
     }
   }
   async reciprocity(personId: string): Promise<ReciprocityEntry[]> {
+    if (await this.isGuest()) return [];
     return (await this.all<ReciprocityEntry>("reciprocity_entries")).filter((r) => r.person_id === personId).sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
   }
   async addReciprocity(personId: string, description: string): Promise<void> {
@@ -1274,6 +1341,7 @@ export class LocalRepo implements Repo {
     await this.put("reciprocity_entries", { id: uuid(), site_id: await this.siteId(), person_id: personId, description, occurred_at: now(), created_at: now(), created_by: me.id } satisfies ReciprocityEntry);
   }
   async contentConsents(contentId: string): Promise<ContentConsent[]> {
+    if (await this.isGuest()) return [];
     return (await this.all<ContentConsent>("content_consents")).filter((c) => c.content_id === contentId);
   }
   async setContentConsent(input: Pick<ContentConsent, "content_id" | "person_id" | "name_ok" | "image_ok" | "contribution_ok" | "how">): Promise<void> {
@@ -1320,6 +1388,7 @@ export class LocalRepo implements Repo {
     return this.all<BatchAllocation>("batch_allocations");
   }
   async allStoryNotes(): Promise<StoryNote[]> {
+    if (await this.isGuest()) return [];
     return (await this.all<StoryNote>("story_notes")).filter((n) => !n.archived_at);
   }
   async allContent(): Promise<ContentItem[]> {

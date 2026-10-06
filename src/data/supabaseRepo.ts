@@ -2,7 +2,7 @@
 // audit, händelser vid statusbyten) upprätthålls i databasen; klienten anropar bara.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type {
-  ExternalPlace, Need, NeedFulfillment, PersonRelation, Project,
+  ExternalPlace, GuestLink, Need, NeedFulfillment, PersonRelation, Project,
   BatchAllocation, Decision, EventLink, MapLayer, Observation, UsageEvent,
   AskThread, ChannelPost, ContentConsent, Contribution, Disposal, Lead, LeadStatus, Listing, ListingStatus, PublishMode, ReciprocityEntry,
   AcquisitionStatus, ChecklistItem, ChecklistTemplate, Interaction, Organization, Pickup, PickupItem, PickupStatus,
@@ -46,10 +46,11 @@ export class SupabaseRepo implements Repo {
   async session(): Promise<Profile | null> {
     const { data } = await this.client.auth.getUser();
     if (!data.user) return null;
-    const rows = check(await this.client.from("site_members").select("site_id, role, name").eq("user_id", data.user.id).limit(1));
-    if (!rows.length) return { id: data.user.id, name: data.user.email ?? "", role: "viewer" };
+    const rows = check(await this.client.from("site_members").select("site_id, role, name, is_guest").eq("user_id", data.user.id).limit(1));
+    // En anonym gäst vars länk har stängts har inget medlemskap kvar – då är hen utloggad
+    if (!rows.length) return data.user.is_anonymous ? null : { id: data.user.id, name: data.user.email ?? "", role: "viewer" };
     this.siteIdCache = rows[0].site_id;
-    return { id: data.user.id, name: rows[0].name || data.user.email || "", role: rows[0].role };
+    return { id: data.user.id, name: rows[0].name || data.user.email || "", role: rows[0].role, guest: !!rows[0].is_guest };
   }
   async signInWithEmail(email: string): Promise<void> {
     const { error } = await this.client.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } });
@@ -586,6 +587,28 @@ export class SupabaseRepo implements Repo {
   }
   async updateOrganization(id: string, patch: Partial<Pick<Organization, "name" | "kind" | "locality">>): Promise<void> {
     check(await this.client.from("organizations").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id));
+  }
+
+  // ------------------------------------------------------------ M9: gäster
+  async enterAsGuest(token: string): Promise<void> {
+    const { data } = await this.client.auth.getUser();
+    // Anonym inloggning måste vara påslagen i Supabase (Authentication → Sign In / Providers)
+    if (!data.user) {
+      const { error } = await this.client.auth.signInAnonymously();
+      if (error) throw new Error(error.message);
+    }
+    const res = await this.client.rpc("redeem_guest_link", { p_token: token });
+    if (res.error) throw new Error(res.error.message.includes("gäller inte") ? "Gästlänken gäller inte längre" : res.error.message);
+    this.siteIdCache = null;
+  }
+  async guestLinks(): Promise<GuestLink[]> {
+    return check(await this.client.from("guest_links").select("id, label, created_at, last_used_at, uses, revoked_at").order("created_at", { ascending: false })) as GuestLink[];
+  }
+  async createGuestLink(label: string): Promise<{ id: string; token: string }> {
+    return check(await this.client.rpc("create_guest_link", { p_label: label })) as { id: string; token: string };
+  }
+  async revokeGuestLink(id: string): Promise<void> {
+    check(await this.client.rpc("revoke_guest_link", { p_link: id }));
   }
 
   async markThanked(ids: string[]): Promise<void> {

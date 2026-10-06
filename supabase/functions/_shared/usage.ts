@@ -1,11 +1,11 @@
 // AI-kostnad per funktion (NFR-014): loggas efter varje anrop och kan begränsas med ett månadstak.
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export async function siteOf(sb: SupabaseClient): Promise<{ site_id: string; role: "owner" | "contributor" | "viewer" } | null> {
+export async function siteOf(sb: SupabaseClient): Promise<{ site_id: string; role: "owner" | "contributor" | "viewer"; is_guest: boolean } | null> {
   const { data: auth } = await sb.auth.getUser();
   if (!auth.user) return null;
-  const { data } = await sb.from("site_members").select("site_id, role").eq("user_id", auth.user.id).limit(1);
-  return (data?.[0] as { site_id: string; role: "owner" | "contributor" | "viewer" }) ?? null;
+  const { data } = await sb.from("site_members").select("site_id, role, is_guest").eq("user_id", auth.user.id).limit(1);
+  return (data?.[0] as { site_id: string; role: "owner" | "contributor" | "viewer"; is_guest: boolean }) ?? null;
 }
 
 /** true om platsens månadstak för AI är nått. */

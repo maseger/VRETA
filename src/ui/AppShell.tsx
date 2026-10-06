@@ -2,6 +2,7 @@ import { Boxes, CloudOff, MapPinned, MessageCircle, Plus, Settings, Sun, Users }
 import type { ReactNode } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useApp } from "../app/AppContext";
+import { leaveGuest } from "../services/guest";
 import { Logo } from "./Logo";
 
 // Tre delar som hänger ihop men är olika: saker som hanteras, människor som hanterar dem och
@@ -20,7 +21,10 @@ function isIn(pathname: string, item: (typeof NAV)[number]): boolean {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { profile, online, toastMessage, repo, pending } = useApp();
+  const { profile, online, toastMessage, repo, pending, refresh } = useApp();
+  const guest = !!profile?.guest;
+  // Gäster använder inte Fråga Vreta (AI-anrop)
+  const nav = guest ? NAV.filter((n) => n.to !== "/fraga") : NAV;
   const { pathname } = useLocation();
   const canWrite = profile?.role !== "viewer";
 
@@ -38,7 +42,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </NavLink>
         )}
         <nav className="flex flex-col gap-1">
-          {NAV.map((item) => {
+          {nav.map((item) => {
             const { to, label, icon: Icon } = item;
             const on = isIn(pathname, item);
             return (
@@ -79,7 +83,15 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main id="innehall" tabIndex={-1} className="mx-auto w-full max-w-4xl flex-1 px-4 pb-32 pt-6 md:px-10 md:pb-16 md:pt-10">{children}</main>
+      <main id="innehall" tabIndex={-1} className="mx-auto w-full max-w-4xl flex-1 px-4 pb-32 pt-6 md:px-10 md:pb-16 md:pt-10">
+        {guest && (
+          <p className="mb-5 flex flex-wrap items-center justify-between gap-2 rounded-md border border-dashed border-linolja bg-linolja-pale/50 px-4 py-2.5 text-sm text-sot-2" role="note">
+            <span><strong>Välkommen, {profile?.name}!</strong> Du tittar som gäst och kan inte ändra något.</span>
+            <button className="font-semibold text-falu" onClick={async () => { await leaveGuest(repo); await refresh(); }}>Lämna</button>
+          </p>
+        )}
+        {children}
+      </main>
 
       {/* Mobil: nedre fält med + i mitten */}
       <nav className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-lera-light bg-kalk/95 backdrop-blur md:hidden" aria-label="Huvudmeny">
@@ -100,7 +112,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </nav>
 
       {/* Fråga Vreta finns på alla skärmar och vet var du står (FR-069) */}
-      {pathname !== "/fraga" && (
+      {pathname !== "/fraga" && !guest && (
         <NavLink to={`/fraga?fran=${encodeURIComponent(pathname)}`} aria-label="Fråga Vreta om det här"
           className="fixed bottom-24 right-4 z-30 flex h-12 w-12 items-center justify-center rounded-full border border-lera-light bg-[#FBF8F1] text-linolja shadow-papper hover:bg-kalk-2 md:bottom-8 md:right-8 md:h-14 md:w-14">
           <MessageCircle size={22} strokeWidth={1.75} aria-hidden="true" />

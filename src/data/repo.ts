@@ -1,5 +1,5 @@
 import type {
-  ExternalPlace, Need, NeedFulfillment, PersonRelation, Project,
+  ExternalPlace, GuestLink, Need, NeedFulfillment, PersonRelation, Project,
   Acquisition, AcquisitionType, AuditEntry, Capture, CaptureInput, ContentItem, EventRec, Media, ObjectStatus,
   Person, Profile, Proposal, ProposalContent, Role, Site, StoryNote, Structure, Task, VObject, Zone, FieldMeta,
   AcquisitionStatus, ChecklistItem, ChecklistTemplate, Interaction, Organization, Pickup, PickupItem, PickupStatus,
@@ -215,6 +215,14 @@ export interface Repo {
   addRelation(input: Pick<PersonRelation, "person_id" | "other_id" | "kind" | "note">): Promise<PersonRelation>;
   removeRelation(id: string): Promise<void>;
   updateOrganization(id: string, patch: Partial<Pick<Organization, "name" | "kind" | "locality">>): Promise<void>;
+
+  // ---- M9: gäster
+  /** Öppnar en gästlänk utan konto. Kastar om länken inte gäller. */
+  enterAsGuest(token: string): Promise<void>;
+  guestLinks(): Promise<GuestLink[]>;
+  /** Nyckeln returneras bara här – sedan finns bara dess hash kvar. */
+  createGuestLink(label: string): Promise<{ id: string; token: string }>;
+  revokeGuestLink(id: string): Promise<void>;
 
   storyRows(objectId: string, contentId?: string): Promise<StoryRows>;
   audit(): Promise<AuditEntry[]>;

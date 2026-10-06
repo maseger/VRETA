@@ -5,6 +5,7 @@ import { AppShell } from "./ui/AppShell";
 import { LogoMark } from "./ui/Logo";
 import { LoginPage } from "./pages/LoginPage";
 import { TodayPage } from "./pages/TodayPage";
+import { GuestEntryPage } from "./pages/GuestEntryPage";
 // Sidorna laddas först när de öppnas, så att Idag startar snabbt (NFR-004). Kartsidorna drar in MapLibre.
 const AskPage = lazy(() => import("./pages/AskPage").then((m) => ({ default: m.AskPage })));
 const CapturePage = lazy(() => import("./pages/CapturePage").then((m) => ({ default: m.CapturePage })));
@@ -23,6 +24,7 @@ const SakerPage = lazy(() => import("./pages/SakerPage").then((m) => ({ default:
 const ManniskorPage = lazy(() => import("./pages/ManniskorPage").then((m) => ({ default: m.ManniskorPage })));
 const PlatserPage = lazy(() => import("./pages/PlatserPage").then((m) => ({ default: m.PlatserPage })));
 const OrganizationPage = lazy(() => import("./pages/OrganizationPage").then((m) => ({ default: m.OrganizationPage })));
+const GuestHomePage = lazy(() => import("./pages/GuestHomePage").then((m) => ({ default: m.GuestHomePage })));
 const NewPlacePage = lazy(() => import("./pages/NewPlacePage").then((m) => ({ default: m.NewPlacePage })));
 const ProjectPage = lazy(() => import("./pages/ProjectPage").then((m) => ({ default: m.ProjectPage })));
 const ExternalPlacePage = lazy(() => import("./pages/ExternalPlacePage").then((m) => ({ default: m.ExternalPlacePage })));
@@ -36,6 +38,7 @@ const MapLayerPage = lazy(() => import("./pages/MapLayerPage").then((m) => ({ de
 
 export default function App() {
   const { ready, profile, site } = useApp();
+  const { pathname } = useLocation();
   if (!ready) {
     return (
       <div className="flex min-h-dvh items-center justify-center">
@@ -43,12 +46,14 @@ export default function App() {
       </div>
     );
   }
+  // Gästlänken fungerar utan inloggning (M9)
+  if (pathname.startsWith("/gast/")) return <Routes><Route path="/gast/:token" element={<GuestEntryPage />} /></Routes>;
   if (!profile || !site) return <LoginPage />;
   return (
     <AppShell>
       <Suspense fallback={<LogoMark className="mx-auto mt-20 h-10 w-10 animate-pulse" />}>
       <Routes>
-        <Route path="/" element={<TodayPage />} />
+        <Route path="/" element={profile.guest ? <GuestHomePage /> : <TodayPage />} />
         <Route path="/saker" element={<SakerPage />} />
         <Route path="/manniskor" element={<ManniskorPage />} />
         <Route path="/platser" element={<PlatserPage />} />
@@ -78,7 +83,7 @@ export default function App() {
         <Route path="/lager" element={<StoragePage />} />
         <Route path="/lager/etiketter" element={<LabelsPage />} />
         <Route path="/lager/:id" element={<StorageLocationPage />} />
-        <Route path="/fraga" element={<AskPage />} />
+        <Route path="/fraga" element={profile.guest ? <Navigate to="/" replace /> : <AskPage />} />
         <Route path="/installningar" element={<SettingsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

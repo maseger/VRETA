@@ -29,6 +29,8 @@ Deno.serve(async (req: Request) => {
   });
   const member = await siteOf(sb);
   if (!member) return json({ error: "unauthorized" }, 401);
+  // Gäster (M9) använder inte AI
+  if (member.is_guest) return json({ error: "forbidden" }, 403);
   if (await overCap(sb, member.site_id)) return json({ error: "cap_reached" }, 429);
 
   const { question, screen, history } = (await req.json()) as { question: string; screen: Screen; history: { role: "user" | "assistant"; text: string }[] };

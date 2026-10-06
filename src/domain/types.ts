@@ -268,6 +268,17 @@ export interface Profile {
   id: string;
   name: string;
   role: Role;
+  /** Gäst via gästlänk (M9): läsare utan konto som bara ser människor med namnsamtycke. */
+  guest?: boolean;
+}
+
+export interface GuestLink {
+  id: string;
+  label: string;
+  created_at: string;
+  last_used_at: string | null;
+  uses: number;
+  revoked_at: string | null;
 }
 
 export interface Organization extends Base {

@@ -386,6 +386,8 @@ Saker, människor och platser är tre olika delar som är beroende av varandra: 
 
 **Lägga till platser:** knappen *Ny plats* under Platser lägger till ett område på Vreta, en byggnad eller anläggning, en lagerplats eller en plats utanför Vreta – utan att kartan behövs. Områden och byggnader kan ritas in på Vretakartan direkt efteråt eller senare ("Rita in").
 
+**Gäster:** ägaren skapar gästlänkar under Inställningar och skickar dem till familj och vänner. Den som öppnar länken loggas in anonymt och blir läsare med gästflagga – utan konto. Gäster ser en egen startsida (projekt, nytt liv, senaste fynden), kartan, saker, projekt och platser. De ser aldrig priser, kontaktuppgifter, adresser, relationer, inköp, hämtningar, uppgifter, citat eller vad Vreta gett tillbaka; människor, bidrag och journalhändelser som nämner en person syns bara med personens samtycke. Gäster kan inte ändra något och inte använda Fråga Vreta. En länk kan stängas, och då förlorar alla som använt den åtkomsten. Bara nyckelns hash sparas. Fritext som ägaren själv skrivit (t.ex. en objektbeskrivning med ett namn) filtreras inte.
+
 **Dator:** vänsterkolumn med Idag, Saker, Människor, Platser och Fråga samt Fånga och Inställningar. Listor och detaljer visas sida vid sida.
 
 **Projekt** (Project) är egna poster med namn, slag, status (idé, planerat, pågår, vilar, klart), zon eller byggnad och beskrivning. Nytt liv och bidrag kopplas med project_id; ett nytt projektnamn i formulären blir ett projekt. Projektsidan visar behov, saker, människor och projektjournal, och projektets yta kan ritas på Vretakartan (eget lager "Projekt").

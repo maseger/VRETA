@@ -406,3 +406,46 @@ describe("Fånga med kopplingar (M6–M8)", () => {
     expect((await proposeForCapture(repo, cap)).links?.project ?? null).toBeNull();
   });
 });
+
+describe("Gäster (M9)", () => {
+  it("släpper in med gästlänk, visar bara människor med namnsamtycke och stänger ute när länken stängs", async () => {
+    const everyone = (await repo.persons()).length;
+    const lena = (await repo.persons()).find((p) => p.name === "Lena")!;
+    await repo.updateConsent(lena.id, { consent_name: "yes" });
+    const { id, token } = await repo.createGuestLink("Familjen");
+    expect((await repo.guestLinks())[0]).toMatchObject({ label: "Familjen", uses: 0 });
+    await repo.setDemoRole("viewer");
+    await repo.signOut();
+    await expect(repo.enterAsGuest("fel")).rejects.toThrow(/gäller inte/);
+    // Läsaren byts mot gästen (bara medlemmar med högre roll behåller sin roll)
+    await (repo as unknown as { put: (s: string, v: unknown, k: string) => Promise<void> }).put("meta", null, "profile");
+    await repo.enterAsGuest(token);
+    const me = (await repo.session())!;
+    expect(me).toMatchObject({ role: "viewer", guest: true, name: "Familjen" });
+    const seen = await repo.persons();
+    expect(seen.map((p) => p.name)).toContain("Lena");
+    expect(seen.every((p) => p.consent_name === "yes")).toBe(true);
+    expect(seen.length).toBeLessThan(everyone);
+    expect((await repo.objects()).length).toBeGreaterThan(0);
+    expect(await repo.pickups()).toEqual([]);
+    expect(await repo.tasks()).toEqual([]);
+    expect((await repo.contributions()).every((c) => seen.some((p) => p.id === c.person_id && p.consent_contribution === "yes"))).toBe(true);
+    await expect(repo.createProject({ name: "Gästprojekt", kind: "", status: "idea", description: "", zone_id: null, structure_id: null, started_on: null, finished_on: null })).rejects.toThrow();
+    await expect(repo.guestLinks()).rejects.toThrow();
+    // Ägaren stänger länken – gästen är utloggad
+    await repo.setDemoRole("owner");
+    await repo.revokeGuestLink(id);
+    await (repo as unknown as { put: (s: string, v: unknown, k: string) => Promise<void> }).put("meta", me, "profile");
+    expect(await repo.session()).toBeNull();
+    await expect(repo.enterAsGuest(token)).rejects.toThrow(/gäller inte/);
+  });
+
+  it("visar gästvyn i demoläget och tar ägaren tillbaka vid Lämna", async () => {
+    const { leaveGuest } = await import("../services/guest");
+    const { token } = await repo.createGuestLink("Grannarna");
+    await repo.enterAsGuest(token);
+    expect((await repo.session())!.guest).toBe(true);
+    await leaveGuest(repo);
+    expect((await repo.session())!.role).toBe("owner");
+  });
+});

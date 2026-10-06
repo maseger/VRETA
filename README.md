@@ -166,6 +166,18 @@ Gamla adresser (`/samla`, `/vreta`) skickas vidare till de nya.
 
 Platstyperna för områden och byggnader är en katalog för en regenerativ återbruksfastighet (hushåll, skogsträdgård, plantering, kompost, damm, svackdike, parkering, materialgård, hönshus, regnvattentank …) med förklaring och permakulturzon 0–5; egna typer går också att skriva: `src/domain/placeTypes.ts`, `src/ui/PlaceTypeSelect.tsx`.
 
+### M9: gäster utan konto
+
+| Del | Var |
+| --- | --- |
+| Gästlänkar (bara hash sparas), `redeem_guest_link` med anonym inloggning, `revoke_guest_link`, `is_guest()`; gäster ser bara människor, bidrag och händelser med samtycke och inga hämtningar, uppgifter eller citat | `supabase/migrations/20261013000000_m9_gaster.sql` |
+| Gästlänkar under Inställningar: skapa, skicka, se användning, stäng | `src/ui/GuestLinks.tsx` |
+| `/gast/<nyckel>` och gästens startsida; Fråga, Fånga och inköp/hämtningar döljs | `src/pages/GuestEntryPage.tsx`, `src/pages/GuestHomePage.tsx`, `src/ui/AppShell.tsx` |
+| Fråga Vreta nekar gäster på servern | `supabase/functions/ask-vreta/` |
+| Databastester | `supabase/tests/m9_rls_test.sql` |
+
+**Med Supabase:** slå på anonym inloggning (Authentication → Sign In / Providers → Allow anonymous sign-ins), kör `supabase db push` och driftsätt `ask-vreta`.
+
 ### Fånga känner igen plats, projekt och tipsare
 
 | Del | Var |
