@@ -164,6 +164,8 @@ Gamla adresser (`/samla`, `/vreta`) skickas vidare till de nya.
 
 *Ny plats* under Platser (`/platser/ny`, `src/pages/NewPlacePage.tsx`): område, byggnad eller anläggning, lagerplats eller plats utanför Vreta. Områden och byggnader kan ritas in på Vretakartan direkt (`/platser?rita=zone:<id>`) eller senare via *Rita in*.
 
+Platstyperna för områden och byggnader är en katalog för en regenerativ återbruksfastighet (hushåll, skogsträdgård, plantering, kompost, damm, svackdike, parkering, materialgård, hönshus, regnvattentank …) med förklaring och permakulturzon 0–5; egna typer går också att skriva: `src/domain/placeTypes.ts`, `src/ui/PlaceTypeSelect.tsx`.
+
 ### Fånga känner igen plats, projekt och tipsare
 
 | Del | Var |

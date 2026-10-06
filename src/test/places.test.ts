@@ -46,3 +46,15 @@ describe("projekt", () => {
     expect(hits.map((x) => x.title)).toEqual(["Handslaget tegel"]);
   });
 });
+
+describe("platstyper för en regenerativ fastighet", async () => {
+  const { AREA_TYPES, STRUCTURE_TYPES, findPlaceType } = await import("../domain/placeTypes");
+  it("har unika namn och de typer som behövs", () => {
+    for (const groups of [AREA_TYPES, STRUCTURE_TYPES]) {
+      const names = groups.flatMap((g) => g.types.map((t) => t.name));
+      expect(new Set(names).size).toBe(names.length);
+    }
+    for (const n of ["Hushåll", "Plantering", "Kompost", "Parkering", "Damm", "Skogsträdgård"]) expect(findPlaceType(AREA_TYPES, n)).not.toBeNull();
+    expect(findPlaceType(STRUCTURE_TYPES, "Regnvattentank")).not.toBeNull();
+  });
+});

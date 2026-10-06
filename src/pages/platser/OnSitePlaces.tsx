@@ -303,7 +303,7 @@ export function OnSitePlaces() {
           {data?.zones.map((z) => (
             <li key={z.id}>
               <Link to={`/zon/${z.id}`} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-kalk-2/60">
-                <span><span className="font-medium">{z.name}</span><span className="block text-sm text-sot-3">{[z.geom ? formatArea(areaM2(z.geom)) : "Inte inritad", z.notes].filter(Boolean).join(" · ")}</span></span>
+                <span><span className="font-medium">{z.name}</span><span className="block text-sm text-sot-3">{[z.kind, z.geom ? formatArea(areaM2(z.geom)) : "Inte inritad"].filter(Boolean).join(" · ")}</span></span>
                 <span className="text-sm text-sot-3">{count("zone_id", z.id)} i bruk</span>
               </Link>
             </li>

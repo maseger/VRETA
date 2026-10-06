@@ -263,6 +263,12 @@ export const PLACE_KINDS: { key: string; label: string }[] = [
   { key: "butik", label: "Butik eller handlare" },
   { key: "gard", label: "Gård eller trädgård" },
   { key: "leverantor", label: "Leverantör" },
+  { key: "byggaterbruk", label: "Byggåterbruk" },
+  { key: "rivning", label: "Rivnings- eller renoveringsobjekt" },
+  { key: "auktion", label: "Auktion" },
+  { key: "plantskola", label: "Plantskola" },
+  { key: "vaxtbyte", label: "Frö- och växtbyte" },
+  { key: "skog", label: "Skog eller natur" },
   { key: "annat", label: "Annat" },
 ];
 export const placeKindLabel = (k: string) => PLACE_KINDS.find((x) => x.key === k)?.label ?? k;

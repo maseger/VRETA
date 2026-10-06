@@ -4,18 +4,18 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useApp, useData } from "../app/AppContext";
 import { PLACE_KINDS } from "../domain/labels";
 import { PageHeader } from "../ui/bits";
+import { AREA_TYPES, STRUCTURE_TYPES } from "../domain/placeTypes";
 import { LocationSelect } from "../ui/location";
+import { PlaceTypeSelect } from "../ui/PlaceTypeSelect";
 
 type Kind = "zon" | "byggnad" | "lager" | "utanfor";
 
 const KINDS: { key: Kind; label: string; text: string; icon: typeof MapPin }[] = [
-  { key: "zon", label: "Område på Vreta", text: "Trädgård, odling, äng, skog, gårdsplan", icon: Trees },
-  { key: "byggnad", label: "Byggnad eller anläggning", text: "Hus, ladugård, växthus, förråd, jordkällare", icon: Home },
+  { key: "zon", label: "Område på Vreta", text: "Skogsträdgård, odling, damm, kompost, parkering, äng", icon: Trees },
+  { key: "byggnad", label: "Byggnad eller anläggning", text: "Hus, växthus, hönshus, regnvattentank, jordkällare", icon: Home },
   { key: "lager", label: "Lagerplats", text: "Hylla, låda, pall eller vägg där saker förvaras", icon: Archive },
   { key: "utanfor", label: "Plats utanför Vreta", text: "Loppis, återvinningscentral, gård, butik", icon: Store },
 ];
-const ZONE_KINDS = ["Trädgård", "Odling", "Äng", "Skog", "Gårdsplan", "Lagerzon", "Vatten", "Annat"];
-const STRUCTURE_KINDS = ["Bostadshus", "Ladugård", "Garage", "Växthus", "Förråd", "Jordkällare", "Bod", "Anläggning", "Annat"];
 
 /** Lägg till en plats – på Vreta eller utanför. Ytan kan ritas på kartan efteråt. */
 export function NewPlacePage() {
@@ -40,7 +40,6 @@ export function NewPlacePage() {
     return { zones, structures, locations, hasMap: layers.some((l) => l.kind === "base") };
   });
 
-  const subOptions = kind === "zon" ? ZONE_KINDS : kind === "byggnad" ? STRUCTURE_KINDS : [];
   const canDraw = (kind === "zon" || kind === "byggnad") && !!data?.hasMap;
 
   async function save() {
@@ -136,13 +135,10 @@ export function NewPlacePage() {
           </>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-3">
+            <div className={`grid gap-3 ${kind === "byggnad" ? "sm:grid-cols-2" : ""}`}>
               <div>
                 <label className="field-label" htmlFor="typ">Typ</label>
-                <select id="typ" className="input" value={sub} onChange={(e) => setSub(e.target.value)}>
-                  <option value="">Välj typ</option>
-                  {subOptions.map((k) => <option key={k}>{k}</option>)}
-                </select>
+                <PlaceTypeSelect key={kind} id="typ" groups={kind === "zon" ? AREA_TYPES : STRUCTURE_TYPES} value={sub} onChange={setSub} />
               </div>
               {kind === "byggnad" && (
                 <div>
