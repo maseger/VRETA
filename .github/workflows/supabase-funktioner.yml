@@ -39,6 +39,17 @@ jobs:
             exit 1
           fi
 
+      - name: Vad får nyckeln göra?
+        run: |
+          # Skriver bara HTTP-koder, aldrig nyckeln eller svar med hemligheter
+          api="https://api.supabase.com/v1"
+          for p in "organizations" "projects" "projects/$PROJECT_REF" "projects/$PROJECT_REF/functions"; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "$api/$p")
+            echo "GET /v1/$p → $code"
+          done
+          curl -s -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "$api/projects" | jq -r '.[]? | "Projekt som nyckeln ser: \(.name) (\(.id))"' || true
+          curl -s -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "$api/projects/$PROJECT_REF/functions" | jq -r 'if type=="array" then (.[] | "Funktion: \(.slug) v\(.version) \(.status)") else "Svar: \(.message // .)" end' || true
+
       - uses: supabase/setup-cli@v1
         with:
           version: latest
