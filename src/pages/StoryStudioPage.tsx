@@ -4,7 +4,8 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useApp, useData } from "../app/AppContext";
 import { CHANNEL_LABEL, GOAL_LABEL } from "../domain/labels";
 import type { Channel, ContentGoal, ContentItem, Person } from "../domain/types";
-import { shareStory } from "../services/share";
+import { DROPS_SHARED_TEXT, copyText, shareStory } from "../services/share";
+import { PasteHint, PasteNote } from "../ui/PasteHint";
 import { draftForObject, type StoryDraftResult } from "../services/storyAgent";
 import { MediaImage, PageHeader } from "../ui/bits";
 
@@ -32,6 +33,7 @@ export function StoryStudioPage() {
   const [item, setItem] = useState<ContentItem | null>(null);
   const [busy, setBusy] = useState(false);
   const [askUrl, setAskUrl] = useState(false);
+  const [pasteHint, setPasteHint] = useState<{ text: string; where: string; copied: boolean } | null>(null);
   const [url, setUrl] = useState("");
   const [showRemoved, setShowRemoved] = useState(false);
 
@@ -76,6 +78,9 @@ export function StoryStudioPage() {
   }
 
   async function approveAndShare(channel: Channel) {
+    // Kopiera direkt vid knapptrycket – senare tillåter telefonen det inte
+    const text = texts[channel] ?? "";
+    const copied = copyText(text);
     setBusy(true);
     try {
       let current = item!;
@@ -86,9 +91,10 @@ export function StoryStudioPage() {
         const blob = await repo.mediaBlob(m);
         if (blob) images.push({ name: `vreta-${object.title.toLowerCase().replace(/[^a-zåäö0-9]+/g, "-")}-${images.length + 1}.jpg`, blob });
       }
-      const outcome = await shareStory(texts[channel] ?? "", images);
-      if (outcome === "copied") toast("Texten är kopierad och bilderna nedladdade");
+      const { outcome, textCopied } = await shareStory(text, images, copied);
+      if (outcome === "copied") toast(textCopied ? "Texten är kopierad och bilderna nedladdade" : "Bilderna är nedladdade – kopiera texten nedan");
       if (outcome !== "cancelled") setAskUrl(true);
+      if (outcome !== "cancelled" && images.length && (outcome === "copied" || DROPS_SHARED_TEXT.has(channel))) setPasteHint({ text, where: CHANNEL_LABEL[channel], copied: textCopied });
     } finally {
       setBusy(false);
     }
@@ -173,21 +179,25 @@ export function StoryStudioPage() {
           <textarea className="input mb-2 font-serif text-[16px] leading-relaxed" rows={8} value={texts[active] ?? ""} onChange={(e) => setTexts((t) => ({ ...t, [active]: e.target.value }))} aria-label={`Text för ${CHANNEL_LABEL[active]}`} />
           <p className="mb-6 text-right text-[12px] text-sot-3">{(texts[active] ?? "").length} tecken</p>
 
+          {askUrl && pasteHint && <PasteHint {...pasteHint} />}
           {askUrl ? (
             <div className="card space-y-3 p-4">
               <p className="font-semibold">Blev det delat?</p>
               <input className="input" placeholder="Klistra in länken till inlägget (valfritt)" value={url} onChange={(e) => setUrl(e.target.value)} />
               <div className="flex gap-2">
-                <button className="btn-secondary" onClick={() => setAskUrl(false)}>Inte än</button>
+                <button className="btn-secondary" onClick={() => { setAskUrl(false); setPasteHint(null); }}>Inte än</button>
                 <button className="btn-moss flex-1" onClick={confirmShared}>Ja, markera som delat</button>
               </div>
             </div>
           ) : item?.status === "shared" ? (
             <p className="card p-4 text-center font-semibold text-linolja">Delat – berättelsen syns nu i objektets resa.</p>
           ) : isOwner ? (
-            <button className="btn-primary w-full text-base" disabled={busy} onClick={() => approveAndShare(active)}>
-              <Share2 size={18} aria-hidden="true" /> Godkänn och dela till {CHANNEL_LABEL[active]}
-            </button>
+            <>
+              <button className="btn-primary w-full text-base" disabled={busy} onClick={() => approveAndShare(active)}>
+                <Share2 size={18} aria-hidden="true" /> Godkänn och dela till {CHANNEL_LABEL[active]}
+              </button>
+              {DROPS_SHARED_TEXT.has(active) && selected.length > 0 && <PasteNote where={CHANNEL_LABEL[active]} />}
+            </>
           ) : item?.status === "review" ? (
             <p className="card p-4 text-center text-sot-2">Väntar på att ägaren godkänner och delar.</p>
           ) : (
