@@ -1,0 +1,20 @@
+# Supabase CLI: används av .github/workflows/supabase-funktioner.yml för att driftsätta AI-funktionerna.
+# Projektet är "vreta" (wxwbhawiraygoyytyhgu). Alla funktioner delar importkartan i functions/deno.json
+# och kräver inloggning (verify_jwt) – som när de driftsattes förut.
+project_id = "vreta"
+
+[functions.ask-vreta]
+verify_jwt = true
+import_map = "./functions/deno.json"
+
+[functions.capture-agent]
+verify_jwt = true
+import_map = "./functions/deno.json"
+
+[functions.story-agent]
+verify_jwt = true
+import_map = "./functions/deno.json"
+
+[functions.marketplace-agent]
+verify_jwt = true
+import_map = "./functions/deno.json"

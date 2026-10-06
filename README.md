@@ -176,6 +176,10 @@ Platstyperna för områden och byggnader är en katalog för en regenerativ åte
 | Fråga Vreta nekar gäster på servern | `supabase/functions/ask-vreta/` |
 | Databastester | `supabase/tests/m9_rls_test.sql` |
 
+### Driftsätta AI-funktionerna
+
+`.github/workflows/supabase-funktioner.yml` driftsätter `ask-vreta`, `capture-agent`, `story-agent` och `marketplace-agent` med Supabase CLI när något under `supabase/functions/` ändras på `main` (eller för hand under Actions → Supabase-funktioner → Run workflow). Efteråt loggar den in anonymt och kontrollerar att varje funktion startar och svarar. Kräver repo-hemligheten `SUPABASE_ACCESS_TOKEN` – en personlig åtkomstnyckel från https://supabase.com/dashboard/account/tokens.
+
 **Med Supabase:** slå på anonym inloggning (Authentication → Sign In / Providers → Allow anonymous sign-ins), kör `supabase db push` och driftsätt `ask-vreta`.
 
 ### Fånga känner igen plats, projekt och tipsare
