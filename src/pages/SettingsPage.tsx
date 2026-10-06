@@ -36,6 +36,7 @@ export function SettingsPage() {
   const [progress, setProgress] = useState<ExportProgress | null>(null);
   const [rate, setRate] = useState(speechRate());
   const [filter, setFilter] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const last = lastExport();
   const stale = !last || Date.now() - Date.parse(last) > 30 * 864e5;
 
@@ -156,6 +157,32 @@ export function SettingsPage() {
               ))}
             </ul>
           ) : <p className="text-sot-3">Inga händelser ännu.</p>}
+        </Section>
+      )}
+
+      {repo.changePassword && !profile?.guest && (
+        <Section title="Lösenord">
+          <form
+            className="card space-y-3 p-4"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (newPassword.length < 8) return toast("Välj minst 8 tecken.");
+              try {
+                await repo.changePassword!(newPassword);
+                setNewPassword("");
+                toast("Lösenordet är bytt");
+              } catch (err) {
+                toast((err as Error).message);
+              }
+            }}
+          >
+            <p className="text-sm text-sot-2">Med ett lösenord kan du logga in utan att vänta på ett mejl.</p>
+            <div>
+              <label className="field-label" htmlFor="new-password">Nytt lösenord</label>
+              <input id="new-password" className="input" type="password" autoComplete="new-password" minLength={8} required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+            </div>
+            <button className="btn-secondary">Spara lösenord</button>
+          </form>
         </Section>
       )}
 

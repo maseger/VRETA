@@ -53,7 +53,21 @@ export class SupabaseRepo implements Repo {
     return { id: data.user.id, name: rows[0].name || data.user.email || "", role: rows[0].role, guest: !!rows[0].is_guest };
   }
   async signInWithEmail(email: string): Promise<void> {
-    const { error } = await this.client.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } });
+    const { error } = await this.client.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin + import.meta.env.BASE_URL } });
+    if (error?.code === "over_email_send_rate_limit") {
+      throw new Error("För många inloggningsmejl på kort tid. Vänta en timme och försök igen, eller använd länken i det senaste mejlet.");
+    }
+    if (error) throw new Error(error.message);
+  }
+  async signInWithPassword(email: string, password: string): Promise<void> {
+    const { error } = await this.client.auth.signInWithPassword({ email, password });
+    if (error?.code === "invalid_credentials") throw new Error("Fel e-post eller lösenord.");
+    if (error) throw new Error(error.message);
+  }
+  async changePassword(password: string): Promise<void> {
+    const { error } = await this.client.auth.updateUser({ password });
+    if (error?.code === "weak_password") throw new Error("Lösenordet är för svagt. Välj minst 8 tecken.");
+    if (error?.code === "same_password") throw new Error("Det nya lösenordet måste skilja sig från det gamla.");
     if (error) throw new Error(error.message);
   }
   async signOut(): Promise<void> {

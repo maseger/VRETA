@@ -43,6 +43,7 @@ Deno.serve(async (req: Request) => {
     if (err instanceof AgentRefusedError) return json({ error: "refused" }, 422);
     if (err instanceof Anthropic.RateLimitError) return json({ error: "rate_limited" }, 429);
     if (err instanceof Anthropic.APIError) return json({ error: "upstream", status: err.status }, 502);
+    console.error("capture-agent:", err instanceof Error ? `${err.name}: ${err.message}` : err);
     return json({ error: "internal" }, 500);
   }
 });

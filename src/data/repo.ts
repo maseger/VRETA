@@ -56,6 +56,9 @@ export interface Repo {
 
   session(): Promise<Profile | null>;
   signInWithEmail(email: string): Promise<void>;
+  /** Inloggning utan mejl, för konton som har ett lösenord. */
+  signInWithPassword?(email: string, password: string): Promise<void>;
+  changePassword?(password: string): Promise<void>;
   signOut(): Promise<void>;
   bootstrapSite(siteName: string, memberName: string): Promise<void>;
   setDemoRole?(role: Role): Promise<void>;

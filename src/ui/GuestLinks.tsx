@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useApp, useData } from "../app/AppContext";
 import { Section, formatDate } from "./bits";
 
-export const guestUrl = (token: string) => `${window.location.origin}/gast/${token}`;
+export const guestUrl = (token: string) => `${window.location.origin}${import.meta.env.BASE_URL}gast/${token}`;
 
 /** Ägarens gästlänkar: familj och vänner tittar utan konto och kan inte ändra något (M9). */
 export function GuestLinks() {
