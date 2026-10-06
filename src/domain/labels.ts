@@ -291,3 +291,8 @@ export function relationLabel(r: PersonRelation, from: string): string {
 }
 
 export const ORG_KINDS = ["Förening", "Företag", "Kommun", "Församling", "Gård", "Annat"];
+
+/** Ett foto på en person ärver aldrig högre synlighet än personens bildsamtycke. */
+export function personPhotoVisibility(consent: "yes" | "no" | "ask"): Visibility {
+  return consent === "yes" ? "internal" : "private";
+}

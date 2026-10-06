@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { canTransition, nextStep, OBJECT_TRANSITIONS } from "../domain/stateMachine";
-import { parseCaptureText, parseDeadline } from "../../supabase/functions/_shared/captureHeuristics";
+import { localityOutsideName, parseCaptureText, parseDeadline } from "../../supabase/functions/_shared/captureHeuristics";
 import { guardStoryContext, type RawStoryContext } from "../../supabase/functions/_shared/privacyGuard";
 import { draftStory } from "../../supabase/functions/_shared/storyTemplates";
 
@@ -32,6 +32,13 @@ describe("lokal tolkning av fångst", () => {
     expect(r).toMatchObject({ title: "Tegel", quantity: 400, acquisition_type: "gift", person_name: "Karin", price_total: null });
   });
   it("lägger passerade månader på nästa år", () => expect(parseDeadline("före mars", today)).toBe("2027-03-01"));
+  it("håller ihop för- och efternamn och gör aldrig efternamnet till ort", () => {
+    expect(parseCaptureText("Byrå från Torsten Lindholm", today)).toMatchObject({ person_name: "Torsten Lindholm", person_locality: null, title: "Byrå" });
+    expect(parseCaptureText("Hämta byrå hos Torsten Lindholm i Gävle", today)).toMatchObject({ person_name: "Torsten Lindholm", person_locality: "Gävle" });
+    expect(parseCaptureText("Hos Torsten Lindholm finns tegel", today).person_name).toBe("Torsten Lindholm");
+    expect(localityOutsideName("Torsten Lindholm", "Lindholm")).toBeNull();
+    expect(localityOutsideName("Torsten Lindholm", "Ockelbo")).toBe("Ockelbo");
+  });
   it("hittar inte på person när ingen nämns", () => expect(parseCaptureText("Gammal kakelugn").person_name).toBeNull());
 });
 

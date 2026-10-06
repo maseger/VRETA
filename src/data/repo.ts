@@ -22,6 +22,8 @@ export interface MediaInput {
   entity_id: string;
   role?: Media["role"];
   has_people?: boolean;
+  /** Standard är shareable; foton på personer följer personens bildsamtycke. */
+  visibility?: Media["visibility"];
 }
 
 export interface ApproveInput {
@@ -76,6 +78,8 @@ export interface Repo {
 
   saveMedia(input: MediaInput): Promise<Media>;
   mediaFor(entity_type: string, entity_id: string): Promise<Media[]>;
+  /** Tar bort en bild ur vyerna (arkiveras – filen ligger kvar för export). */
+  archiveMedia(id: string): Promise<void>;
   mediaUrl(media: Media, variant: "clean" | "original"): Promise<string | null>;
   mediaBlob(media: Media): Promise<Blob | null>;
 

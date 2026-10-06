@@ -448,4 +448,17 @@ describe("Gäster (M9)", () => {
     await leaveGuest(repo);
     expect((await repo.session())!.role).toBe("owner");
   });
+
+  it("foton på personer följer bildsamtycket och kan tas bort", async () => {
+    const p = await repo.createPerson({ name: "Torsten Lindholm", locality: "", roles: [], how_we_met: "", organization_id: null, contact: "", notes: "" });
+    const img = () => new Blob([new Uint8Array([1])], { type: "image/jpeg" });
+    const m = await repo.saveMedia({ id: crypto.randomUUID(), original: img(), clean: img(), mime: "image/jpeg", width: 1, height: 1, entity_type: "person", entity_id: p.id, has_people: true, visibility: "private" });
+    expect((await repo.mediaFor("person", p.id))[0].visibility).toBe("private");
+    await repo.updateConsent(p.id, { consent_image: "yes" });
+    expect((await repo.mediaFor("person", p.id))[0].visibility).toBe("internal");
+    await repo.updateConsent(p.id, { consent_image: "no" });
+    expect((await repo.mediaFor("person", p.id))[0].visibility).toBe("private");
+    await repo.archiveMedia(m.id);
+    expect(await repo.mediaFor("person", p.id)).toHaveLength(0);
+  });
 });
