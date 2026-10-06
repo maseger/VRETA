@@ -353,4 +353,20 @@ describe("M4: utflöde, intressenter och bidrag", () => {
     await repo.setDemoRole("viewer");
     await expect(repo.createNeed({ project_id: orangeriet.id, title: "Smygbehov", quantity: 1, unit: "st", notes: "" })).rejects.toThrow();
   });
+
+  it("håller relationer mellan människor och döljer dem för läsare (M8)", async () => {
+    const people = await repo.persons();
+    const id = (n: string) => people.find((p) => p.name === n)!.id;
+    const goran = await repo.relations(id("Göran"));
+    expect(goran).toHaveLength(1);
+    expect(goran[0]).toMatchObject({ kind: "introduced", person_id: id("Anders"), other_id: id("Göran") });
+    await expect(repo.addRelation({ person_id: id("Lena"), other_id: id("Erik"), kind: "granne", note: "" })).rejects.toThrow(/finns redan/);
+    await expect(repo.addRelation({ person_id: id("Lena"), other_id: id("Lena"), kind: "van", note: "" })).rejects.toThrow(/sig själv/);
+    const r = await repo.addRelation({ person_id: id("Göran"), other_id: id("Anders"), kind: "introduced", note: "" }); // åt andra hållet är en ny relation
+    await repo.removeRelation(r.id);
+    expect((await repo.person(id("Erik")))!.organization_id).toBeTruthy();
+    await repo.setDemoRole("viewer");
+    expect(await repo.relations()).toEqual([]);
+  });
 });
+

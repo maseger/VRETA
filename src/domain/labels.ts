@@ -1,4 +1,4 @@
-import type { UsageType, AcquisitionStatus, AcquisitionType, InteractionChannel, PickupStatus, ReceiptStatus, Channel, ContentGoal, ObjectStatus, Visibility, ListingType, ListingStatus, LeadStatus, DisposalType, ContributionKind, ProjectStatus } from "./types";
+import type { UsageType, AcquisitionStatus, AcquisitionType, InteractionChannel, PickupStatus, ReceiptStatus, Channel, ContentGoal, ObjectStatus, Visibility, ListingType, ListingStatus, LeadStatus, DisposalType, ContributionKind, PersonRelation, ProjectStatus, RelationKind } from "./types";
 
 export const STATUS_LABEL: Record<ObjectStatus, string> = {
   discovered: "Upptäckt",
@@ -266,3 +266,22 @@ export const PLACE_KINDS: { key: string; label: string }[] = [
   { key: "annat", label: "Annat" },
 ];
 export const placeKindLabel = (k: string) => PLACE_KINDS.find((x) => x.key === k)?.label ?? k;
+
+// ---------------------------------------------------------------- M8: relationer och organisationer
+export const RELATION_KINDS: { key: RelationKind; label: string }[] = [
+  { key: "familj", label: "Familj" },
+  { key: "partner", label: "Partner" },
+  { key: "granne", label: "Granne" },
+  { key: "van", label: "Vän" },
+  { key: "kollega", label: "Kollega" },
+  { key: "samarbetar", label: "Arbetar ihop" },
+  { key: "introduced", label: "Tipsade oss om" },
+];
+
+/** Relationen sedd från en av personerna: "Granne", "Tipsade oss om" eller "Kom till oss via". */
+export function relationLabel(r: PersonRelation, from: string): string {
+  if (r.kind === "introduced") return r.person_id === from ? "Tipsade oss om" : "Kom till oss via";
+  return RELATION_KINDS.find((k) => k.key === r.kind)?.label ?? r.kind;
+}
+
+export const ORG_KINDS = ["Förening", "Företag", "Kommun", "Församling", "Gård", "Annat"];

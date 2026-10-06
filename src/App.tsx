@@ -22,6 +22,7 @@ const ReviewListPage = lazy(() => import("./pages/ReviewListPage").then((m) => (
 const SakerPage = lazy(() => import("./pages/SakerPage").then((m) => ({ default: m.SakerPage })));
 const ManniskorPage = lazy(() => import("./pages/ManniskorPage").then((m) => ({ default: m.ManniskorPage })));
 const PlatserPage = lazy(() => import("./pages/PlatserPage").then((m) => ({ default: m.PlatserPage })));
+const OrganizationPage = lazy(() => import("./pages/OrganizationPage").then((m) => ({ default: m.OrganizationPage })));
 const ProjectPage = lazy(() => import("./pages/ProjectPage").then((m) => ({ default: m.ProjectPage })));
 const ExternalPlacePage = lazy(() => import("./pages/ExternalPlacePage").then((m) => ({ default: m.ExternalPlacePage })));
 const ProjectsPage = lazy(() => import("./pages/ProjectsPage").then((m) => ({ default: m.ProjectsPage })));
@@ -53,6 +54,7 @@ export default function App() {
         <Route path="/platser/projekt" element={<ProjectsPage />} />
         <Route path="/projekt/:id" element={<ProjectPage />} />
         <Route path="/plats/:id" element={<ExternalPlacePage />} />
+        <Route path="/organisation/:id" element={<OrganizationPage />} />
         <Route path="/platser/kartlager/ny" element={<MapLayerPage />} />
         {/* Äldre adresser från när Samla rymde både saker och människor */}
         <Route path="/samla" element={<OldSamla />} />

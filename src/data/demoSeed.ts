@@ -208,4 +208,16 @@ export async function seedDemo(repo: LocalRepo, withImages = true): Promise<void
     await repo.updateNeed(fonster.id, { listing_id: sokes.id });
     await repo.createNeed({ project_id: orangeriet.id, title: "Kalkbruk", quantity: null, unit: "säckar", notes: "" });
   }
+
+  // M8: relationer och organisationer
+  const everyone = await repo.persons();
+  const who = (name: string) => everyone.find((p) => p.name === name);
+  const hembygd = await repo.createOrganization({ name: "Storviks hembygdsförening", kind: "Förening", locality: "Storvik" });
+  await repo.updatePerson(erik.id, { organization_id: hembygd.id });
+  const lena = who("Lena");
+  const goran = who("Göran");
+  const johanP = who("Johan");
+  if (lena) await repo.addRelation({ person_id: erik.id, other_id: lena.id, kind: "granne", note: "" });
+  if (anders && goran) await repo.addRelation({ person_id: anders.id, other_id: goran.id, kind: "introduced", note: "Visste att Göran hade radiatorer kvar efter sin renovering" });
+  if (birgitta && johanP) await repo.addRelation({ person_id: birgitta.id, other_id: johanP.id, kind: "familj", note: "Johan är Birgittas brorson" });
 }

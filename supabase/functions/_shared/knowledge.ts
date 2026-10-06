@@ -33,6 +33,7 @@ export interface KNeed { id: string; project_id: string; title: string; quantity
 export interface KFulfillment { id: string; need_id: string; quantity: number; object_id: string | null }
 export interface KPlace { id: string; name: string; kind: string; locality: string }
 export interface KUsage { id: string; object_id: string; type: string; occurred_at: string; zone_id: string | null; structure_id: string | null; quantity: number | null; project_id?: string | null }
+export interface KRelation { id: string; person_id: string; other_id: string; kind: string; note: string }
 export interface KDecision { id: string; question: string; choice: string; rationale: string; zone_id: string | null; decided_on: string }
 
 /** Behörighetsfiltrerad läsning. Implementeras av datalagret i webbläsaren och av Supabase på servern. */
@@ -66,6 +67,8 @@ export interface KStore {
   needFulfillments(): Promise<KFulfillment[]>;
   externalPlaces(): Promise<KPlace[]>;
   usage(): Promise<KUsage[]>;
+  // M8 – tom för läsare
+  relations(): Promise<KRelation[]>;
 }
 
 export interface SourceCard {
@@ -544,6 +547,30 @@ export async function placeOverview(s: KStore, name: string): Promise<ToolResult
   };
 }
 
+// ---------------------------------------------------------------- relationer mellan människor (M8)
+const RELATION_SV: Record<string, string> = { familj: "familj", partner: "partner", granne: "granne", van: "vän", kollega: "kollega", samarbetar: "arbetar ihop med" };
+
+/** Vem en person känner, vem hen tipsade oss om och via vem hen kom till oss. */
+export async function personNetwork(s: KStore, name: string): Promise<ToolResult> {
+  if (s.role === "viewer") return { facts: null, cards: [], answer: "Relationer mellan människor visas bara för ägare och medhjälpare." };
+  const p = await findPerson(s, name);
+  if (!p) return { facts: null, cards: [], answer: `Jag hittar ingen person som heter ${name}.` };
+  const [rels, persons] = await Promise.all([s.relations(), s.persons()]);
+  const who = (id: string) => persons.find((x) => x.id === id);
+  const mine = rels.filter((r) => r.person_id === p.id || r.other_id === p.id);
+  const rows = mine.map((r) => {
+    const other = who(r.person_id === p.id ? r.other_id : r.person_id);
+    const how = r.kind === "introduced" ? (r.person_id === p.id ? "tipsade oss om" : "kom till oss via") : RELATION_SV[r.kind] ?? r.kind;
+    return { other, how, note: r.note };
+  }).filter((x): x is { other: KPerson; how: string; note: string } => !!x.other);
+  if (!rows.length) return { facts: [], cards: [personCard(p, p.roles.join(", "))], answer: `Det finns inga relationer registrerade för ${p.name}.` };
+  return {
+    facts: rows.map((x) => ({ person: x.other.name, relation: x.how, note: x.note })),
+    cards: [personCard(p, p.roles.join(", ")), ...rows.slice(0, 4).map((x) => personCard(x.other, x.how))],
+    answer: `${p.name}: ${rows.map((x) => (x.how.startsWith("tipsade") || x.how.startsWith("kom") ? `${x.how} ${x.other.name}` : `${x.how} – ${x.other.name}`)).join("; ")}.`,
+  };
+}
+
 // ---------------------------------------------------------------- åtgärder (kräver bekräftelse)
 export async function proposeMove(s: KStore, objectQuery: string, locationQuery: string): Promise<ToolResult> {
   if (s.role === "viewer") return { facts: null, cards: [], answer: "Läsare kan inte flytta saker." };
@@ -609,6 +636,7 @@ export const TOOL_DEFS = [
   { name: "project_overview", description: "Ett projekt: status, var, behov med hur långt de kommit, saker som tagits i bruk, vilka som hjälpt till och senaste händelser.", input_schema: { type: "object", properties: { project: { type: "string" } }, required: ["project"] } },
   { name: "open_needs", description: "Behov som inte är uppfyllda (för ett projekt eller alla) och vad i lager som kan fylla dem.", input_schema: { type: "object", properties: { project: { type: "string" } } } },
   { name: "place_overview", description: "En plats utanför Vreta (loppis, återvinningscentral, hämtställe): vad som kommit därifrån, lämnats där och hämtningar.", input_schema: { type: "object", properties: { place: { type: "string" } }, required: ["place"] } },
+  { name: "person_network", description: "Vem en person känner (familj, granne, vän, kollega), vem hen tipsade oss om och via vem hen kom till oss.", input_schema: { type: "object", properties: { name: { type: "string" } }, required: ["name"] } },
   { name: "search", description: "Fritextsökning i projekt, platser, objekt, personer, journal och observationer.", input_schema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } },
   { name: "propose_move", description: "Föreslå att flytta ett objekt eller partiets lagerdel till en lagerplats. Utförs först när användaren bekräftar.", input_schema: { type: "object", properties: { object: { type: "string" }, location: { type: "string" } }, required: ["object", "location"] } },
   { name: "propose_task", description: "Föreslå en ny uppgift med valfritt förfallodatum (ÅÅÅÅ-MM-DD). Utförs först efter bekräftelse.", input_schema: { type: "object", properties: { title: { type: "string" }, due: { type: "string" } }, required: ["title"] } },
@@ -635,6 +663,7 @@ export async function runTool(s: KStore, name: string, input: Record<string, unk
     case "object_history": return objectHistory(s, str("object_id"));
     case "search": return search(s, str("query"));
     case "projects": return projectsList(s);
+    case "person_network": return personNetwork(s, str("name"));
     case "project_overview": return projectOverview(s, str("project"));
     case "open_needs": return openNeeds(s, str("project") || undefined);
     case "place_overview": return placeOverview(s, str("place"));
@@ -691,6 +720,9 @@ export function planQuestion(question: string, screen: Screen, today: string): P
   if (/vad (behöver|saknas|fattas)( vi| jag)?( till projekten)?$|behov (kvar|som inte)|öppna behov/.test(l)) return { tool: "open_needs", input: {} };
   if ((m = l.match(/hur (?:går|har det gått) (?:det )?(?:med|för)\s+(.+)$/))) return { tool: "project_overview", input: { project: m[1] } };
   if ((m = l.match(/vad har (?:vi|jag) (?:köpt|fått|hämtat|hittat|lämnat)(?: på| hos| i| till)\s+(.+)$/))) return { tool: "place_overview", input: { place: m[1] } };
+  if ((m = l.match(/^(?:vem|vilka) (?:känner|är släkt med|är granne med)\s+([\p{L}-]+)/u))) return { tool: "person_network", input: { name: m[1] } };
+  if ((m = l.match(/^(?:vem|vilka) (?:tipsade|tipsade oss) om\s+([\p{L}-]+)/u))) return { tool: "person_network", input: { name: m[1] } };
+  if ((m = l.match(/^(?:hur|via vem) (?:kom|hittade) (?:vi|jag) (?:i kontakt med |till )?([\p{L}-]+)/u))) return { tool: "person_network", input: { name: m[1] } };
   if ((m = l.match(/vad har jag (?:i lager )?från\s+([\p{L}-]+)/u))) return { tool: "objects_from_person", input: { name: m[1], in_stock_only: /i lager/.test(l) } };
   if ((m = l.match(/vem (?:sålde|gav|skänkte)\s+(.+?)(?:\s+och\s+.*)?$/))) return { tool: "who_sold", input: { query: m[1] } };
   if ((m = l.match(/(?:vad har jag )?i lager som passar\s+(.+)$/))) return { tool: "stock_matching", input: { purpose: m[1] } };

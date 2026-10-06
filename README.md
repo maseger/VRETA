@@ -150,6 +150,16 @@ Gamla adresser (`/samla`, `/vreta`) skickas vidare till de nya.
 | Fråga Vreta: `projects`, `project_overview`, `open_needs`, `place_overview`, och sökning i projekt och platser | `supabase/functions/_shared/knowledge.ts` |
 | Databastester | `supabase/tests/m7_rls_test.sql` |
 
+### M8: relationer mellan människor
+
+| Del | Var |
+| --- | --- |
+| `person_relations` (symmetriska relationer + riktad "tipsade oss om"), unik oavsett håll, RLS: bara ägare och medhjälpare | `supabase/migrations/20261012000000_m8_relationer.sql` |
+| Nätverk på personkortet: organisation, relationer, "kom till oss via" | `src/ui/PersonNetwork.tsx` |
+| Organisationer under Människor och en organisationssida med medlemmar och saker | `src/pages/manniskor/OrganizationsList.tsx`, `src/pages/OrganizationPage.tsx` |
+| Fråga Vreta: `person_network` | `supabase/functions/_shared/knowledge.ts` |
+| Databastester | `supabase/tests/m8_rls_test.sql` |
+
 Med Supabase: kör `supabase db push` för att lägga in migrationerna och driftsätt `ask-vreta` igen (`supabase functions deploy ask-vreta`).
 
 ## Vad M5 innehåller (kunskap och härdning)

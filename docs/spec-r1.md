@@ -380,7 +380,7 @@ Saker, människor och platser är tre olika delar som är beroende av varandra: 
 | Idag | Nästa steg: att granska, hämtningar, förfallna uppgifter, intressenter som väntar svar, berättelseförslag |
 | Saker | Objekt och partier (lista/rutnät) med filter på status och plats; sakernas väg in och ut: inköp, hämtningar och annonser |
 | + | Global fångst, alltid tillgänglig |
-| Människor | Personer med roller, samtycke, kontakthistorik, bidrag och ömsesidighet |
+| Människor | Personer med roller, samtycke, kontakthistorik, bidrag och ömsesidighet; nätverk (relationer mellan människor); organisationer med medlemmar |
 | Platser | **På Vreta:** karta, zoner och byggnader, och det som sker där – förvaring (lager), projekt (byggen, planteringar) och observationer (djur, växter m.m.) med journal. **Utanför:** platser som loppisar, hämtställen och återvinningscentraler, och orterna där saker hämtas, köps och lämnas |
 | Fråga | Chatboten Fråga Vreta: sök, frågor och uppdrag i text eller tal (se 11.6) |
 
@@ -390,7 +390,9 @@ Saker, människor och platser är tre olika delar som är beroende av varandra: 
 
 **Behov** (Need) hör till ett projekt: rubrik, antal och enhet (antal kan lämnas tomt). NeedFulfillment kopplar en kvantitet till en sak (eller inget, t.ex. sten från egna marken). Hur långt behovet kommit räknas fram ur summan ("1 020 av 1 500 tegel") och lagras aldrig. Varje uppfyllelse blir en händelse i projektjournalen; när behovet är fyllt markeras händelsen som värd att berätta. Appen föreslår saker i lager som passar behovet, och ett behov kan efterlysas – annonsen kopplas tillbaka till behovet.
 
-**Fråga Vreta** har verktygen `projects`, `project_overview`, `open_needs` och `place_overview` ("Hur går det med orangeriet?", "Vad behöver vi till orangeriet?", "Vad har vi köpt på Återbruket?"). Adresser till platser utanför Vreta läses aldrig av chatboten.
+**Relationer mellan människor** (PersonRelation): familj, partner, granne, vän, kollega, arbetar ihop – och den riktade "tipsade oss om", som visar via vem någon kom till Vreta. Relationerna är personuppgifter och syns bara för ägare och medhjälpare. Personer kan kopplas till en organisation (förening, företag, kommun …), och organisationen har en egen sida med medlemmar och saker som kommit därifrån.
+
+**Fråga Vreta** har verktygen `person_network` ("Vem känner Erik?", "Vem tipsade om Göran?"), `projects`, `project_overview`, `open_needs` och `place_overview` ("Hur går det med orangeriet?", "Vad behöver vi till orangeriet?", "Vad har vi köpt på Återbruket?"). Adresser till platser utanför Vreta läses aldrig av chatboten.
 
 **Platser utanför Vreta** (ExternalPlace) har namn, slag, ort och en privat adress. Inköp, hämtningar och avslut kan kopplas till en plats (place_id), så att man ser vad som kom därifrån och vad som lämnades där. Orten är på kommunnivå och får synas; adressen syns bara för ägare och medhjälpare (INV-12, INV-13). Objektsidan har en flik Platser med var saken är på Vreta och var den kom ifrån och tog vägen.
 

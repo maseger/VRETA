@@ -5,6 +5,7 @@ import { useApp, useData } from "../app/AppContext";
 import { ACQ_STATUS_LABEL, ACQUISITION_LABEL, CHANNEL_INTERACTION_LABEL, CONTRIBUTION_LABEL, DISPOSAL_LABEL, PERSON_ROLES, eventLabel } from "../domain/labels";
 import type { Consent, ContributionKind, InteractionChannel, Visibility } from "../domain/types";
 import { EmptyState, MediaImage, Section, StatusStamp, formatDate } from "../ui/bits";
+import { PersonNetwork } from "../ui/PersonNetwork";
 import { ProjectInput } from "../ui/ProjectInput";
 import { useDictation } from "../ui/useDictation";
 
@@ -71,7 +72,7 @@ export function PersonPage() {
         <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-linolja-pale font-serif text-3xl font-semibold text-linolja">{person.name.charAt(0)}</span>
         <div className="min-w-0 flex-1">
           <h1>{person.name}</h1>
-          <p className="text-sot-3">{[person.locality, org?.name].filter(Boolean).join(" · ")}</p>
+          <p className="text-sot-3">{person.locality}{person.locality && org ? " · " : ""}{org && <Link to={`/organisation/${org.id}`} className="text-falu">{org.name}</Link>}</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {PERSON_ROLES.filter((r) => person.roles.includes(r) || editRoles).map((r) => {
               const on = person.roles.includes(r);
@@ -142,6 +143,8 @@ export function PersonPage() {
         )}
       </Section>
 
+      <PersonNetwork person={person} />
+
       <Section title="Objekt">
         {deals.length ? (
           <ul className="card divide-y divide-dashed divide-lera-light">
@@ -180,7 +183,7 @@ export function PersonPage() {
 
       <Contributions personId={person.id} firstName={person.name.split(" ")[0]} contributions={contributions} reciprocity={reciprocity} objects={objects} canWrite={canWrite} />
 
-      <Section title="Relationen">
+      <Section title="Kontakt med Vreta">
         {seesPrivate && canWrite && (
           <form id="logga" className="card mb-5 space-y-3 p-4" onSubmit={async (e) => {
             e.preventDefault();

@@ -1,5 +1,5 @@
 import type {
-  ExternalPlace, Need, NeedFulfillment, Project,
+  ExternalPlace, Need, NeedFulfillment, PersonRelation, Project,
   Acquisition, AcquisitionType, AuditEntry, Capture, CaptureInput, ContentItem, EventRec, Media, ObjectStatus,
   Person, Profile, Proposal, ProposalContent, Role, Site, StoryNote, Structure, Task, VObject, Zone, FieldMeta,
   AcquisitionStatus, ChecklistItem, ChecklistTemplate, Interaction, Organization, Pickup, PickupItem, PickupStatus,
@@ -208,6 +208,13 @@ export interface Repo {
   fulfillNeed(input: NewFulfillment): Promise<NeedFulfillment>;
   removeFulfillment(id: string): Promise<void>;
   setProjectGeom(id: string, geom: PolygonGeom | null): Promise<void>;
+
+  // ---- M8: relationer och organisationer
+  /** Tom för läsare – relationer är personuppgifter. */
+  relations(personId?: string): Promise<PersonRelation[]>;
+  addRelation(input: Pick<PersonRelation, "person_id" | "other_id" | "kind" | "note">): Promise<PersonRelation>;
+  removeRelation(id: string): Promise<void>;
+  updateOrganization(id: string, patch: Partial<Pick<Organization, "name" | "kind" | "locality">>): Promise<void>;
 
   storyRows(objectId: string, contentId?: string): Promise<StoryRows>;
   audit(): Promise<AuditEntry[]>;

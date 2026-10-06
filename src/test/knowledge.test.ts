@@ -198,3 +198,17 @@ describe("Fråga Vreta om projekt, behov och platser (M6–M7)", () => {
   });
 });
 
+describe("Fråga Vreta om relationer (M8)", () => {
+  it("tolkar frågor om vem som känner vem", () => {
+    expect(planQuestion("Vem känner Erik?", none, "2026-10-06")).toEqual({ tool: "person_network", input: { name: "erik" } });
+    expect(planQuestion("Vem tipsade om Göran?", none, "2026-10-06")).toEqual({ tool: "person_network", input: { name: "göran" } });
+  });
+  it("svarar med relationer för ägaren men aldrig för läsaren", async () => {
+    const a = await askLocal(repo, "owner", "Vem tipsade om Göran?", none);
+    expect(a.text).toBe("Göran: kom till oss via Anders.");
+    expect((await askLocal(repo, "owner", "Vem känner Erik?", none)).text).toContain("granne – Lena");
+    await repo.setDemoRole("viewer");
+    expect((await askLocal(repo, "viewer", "Vem känner Erik?", none)).text).toMatch(/bara för ägare och medhjälpare/);
+  });
+});
+

@@ -576,6 +576,22 @@ export interface ExternalPlace extends Base {
   address?: string;
 }
 
+// ---------------------------------------------------------------- M8: relationer mellan människor
+
+/** introduced är riktad (person_id tipsade oss om other_id); övriga gäller åt båda hållen. */
+export type RelationKind = "familj" | "partner" | "granne" | "van" | "kollega" | "samarbetar" | "introduced";
+
+export interface PersonRelation {
+  id: string;
+  site_id: string;
+  person_id: string;
+  other_id: string;
+  kind: RelationKind;
+  note: string;
+  created_at: string;
+  created_by: string;
+}
+
 // ---------------------------------------------------------------- M5: Fråga Vreta
 
 export interface AskMessage {

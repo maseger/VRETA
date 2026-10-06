@@ -3,7 +3,7 @@
 import { openDB, type IDBPDatabase } from "idb";
 import { ACQUISITION_TRANSITIONS, LEAD_TRANSITIONS, LISTING_TRANSITIONS, PICKUP_TRANSITIONS, assertTransition } from "../domain/stateMachine";
 import type {
-  ExternalPlace, Need, NeedFulfillment, Project,
+  ExternalPlace, Need, NeedFulfillment, PersonRelation, Project,
   BatchAllocation, Decision, MapLayer, Observation, UsageEvent,
   ChannelPost, ContentConsent, Contribution, Disposal, DisposalType, Lead, LeadStatus, Listing, ListingStatus, PublishMode, ReciprocityEntry, AskThread,
   AcquisitionStatus, ChecklistItem, ChecklistTemplate, Interaction, Organization, Pickup, PickupItem, PickupStatus,
@@ -32,6 +32,8 @@ const STORES = [
   "projects", "external_places", "external_place_private",
   // M7
   "needs", "need_fulfillments",
+  // M8
+  "person_relations",
 ] as const;
 
 const KEY_PATHS: Partial<Record<string, string | null>> = {
@@ -68,7 +70,7 @@ export class LocalRepo implements Repo {
   private dbp: Promise<IDBPDatabase>;
 
   constructor(dbName = "vreta-demo") {
-    this.dbp = openDB(dbName, 7, {
+    this.dbp = openDB(dbName, 8, {
       upgrade(db) {
         for (const s of STORES) {
           if (db.objectStoreNames.contains(s)) continue;
@@ -1225,6 +1227,36 @@ export class LocalRepo implements Repo {
     await this.requireWriter();
     const p = await this.get<Project>("projects", id);
     if (p) await this.put("projects", { ...p, geom, updated_at: now() });
+  }
+
+  // ------------------------------------------------------------ M8: relationer och organisationer
+  async relations(personId?: string): Promise<PersonRelation[]> {
+    const me = await this.me();
+    if (me.role === "viewer") return [];
+    return (await this.all<PersonRelation>("person_relations")).filter((r) => !personId || r.person_id === personId || r.other_id === personId);
+  }
+  async addRelation(input: Pick<PersonRelation, "person_id" | "other_id" | "kind" | "note">): Promise<PersonRelation> {
+    const me = await this.requireWriter();
+    if (input.person_id === input.other_id) throw new Error("En person kan inte ha en relation med sig själv");
+    if (!(await this.get<Person>("persons", input.person_id)) || !(await this.get<Person>("persons", input.other_id))) throw new Error("Personen finns inte");
+    const same = (r: PersonRelation) => r.kind === input.kind && (input.kind === "introduced"
+      ? r.person_id === input.person_id && r.other_id === input.other_id
+      : [r.person_id, r.other_id].sort().join() === [input.person_id, input.other_id].sort().join());
+    if ((await this.all<PersonRelation>("person_relations")).some(same)) throw new Error("Relationen finns redan");
+    const r: PersonRelation = { id: uuid(), site_id: await this.siteId(), ...input, created_at: now(), created_by: me.id };
+    await this.put("person_relations", r);
+    await this.audit_(me, "person_relation", "person", input.person_id, null, { kind: input.kind, other_id: input.other_id });
+    return r;
+  }
+  async removeRelation(id: string): Promise<void> {
+    await this.requireWriter();
+    await (await this.dbp).delete("person_relations", id);
+  }
+  async updateOrganization(id: string, patch: Partial<Pick<Organization, "name" | "kind" | "locality">>): Promise<void> {
+    await this.requireWriter();
+    const o = await this.get<Organization>("organizations", id);
+    if (!o) throw new Error("Organisationen finns inte");
+    await this.put("organizations", { ...o, ...patch, updated_at: now() });
   }
 
   async markThanked(ids: string[]): Promise<void> {

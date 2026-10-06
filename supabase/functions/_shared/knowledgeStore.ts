@@ -57,6 +57,8 @@ export function supabaseStore(sb: SupabaseClient, role: Role, today: string): KS
     // Adressen hämtas aldrig hit – den behövs inte för att svara
     externalPlaces: () => once("places", () => rows(sb.from("external_places").select("id,name,kind,locality").is("archived_at", null))),
     usage: () => once("usage", () => rows(sb.from("usage_events").select("id,object_id,type,occurred_at,zone_id,structure_id,quantity,project_id"))),
+    // RLS: läsare får inga rader
+    relations: () => once("relations", () => rows(sb.from("person_relations").select("id,person_id,other_id,kind,note"))),
     proposalsWaiting: async () => (await rows(sb.from("proposals").select("id").eq("status", "pending"))).length,
   };
 }

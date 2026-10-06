@@ -2,7 +2,7 @@
 // audit, händelser vid statusbyten) upprätthålls i databasen; klienten anropar bara.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type {
-  ExternalPlace, Need, NeedFulfillment, Project,
+  ExternalPlace, Need, NeedFulfillment, PersonRelation, Project,
   BatchAllocation, Decision, EventLink, MapLayer, Observation, UsageEvent,
   AskThread, ChannelPost, ContentConsent, Contribution, Disposal, Lead, LeadStatus, Listing, ListingStatus, PublishMode, ReciprocityEntry,
   AcquisitionStatus, ChecklistItem, ChecklistTemplate, Interaction, Organization, Pickup, PickupItem, PickupStatus,
@@ -252,7 +252,7 @@ export class SupabaseRepo implements Repo {
       "listings", "channel_posts", "leads", "disposals", "disposal_private", "contributions", "reciprocity_entries", "content_consents",
       "ask_threads",
       "projects", "external_places", "external_place_private",
-      "needs", "need_fulfillments",
+      "needs", "need_fulfillments", "person_relations",
     ];
     const out: Record<string, unknown[]> = {};
     for (const t of tables) out[t] = check(await this.client.from(t).select("*")) as unknown[];
@@ -568,6 +568,24 @@ export class SupabaseRepo implements Repo {
   }
   async setProjectGeom(id: string, geom: PolygonGeom | null): Promise<void> {
     check(await this.client.from("projects").update({ geom }).eq("id", id));
+  }
+
+  // ------------------------------------------------------------ M8: relationer och organisationer
+  async relations(personId?: string): Promise<PersonRelation[]> {
+    let q = this.client.from("person_relations").select("*").order("created_at");
+    if (personId) q = q.or(`person_id.eq.${personId},other_id.eq.${personId}`);
+    return check(await q) as PersonRelation[];
+  }
+  async addRelation(input: Pick<PersonRelation, "person_id" | "other_id" | "kind" | "note">): Promise<PersonRelation> {
+    const res = await this.client.from("person_relations").insert({ ...input, site_id: await this.siteId() }).select().single();
+    if (res.error?.message.includes("person_relations_unique")) throw new Error("Relationen finns redan");
+    return check(res) as PersonRelation;
+  }
+  async removeRelation(id: string): Promise<void> {
+    check(await this.client.from("person_relations").delete().eq("id", id));
+  }
+  async updateOrganization(id: string, patch: Partial<Pick<Organization, "name" | "kind" | "locality">>): Promise<void> {
+    check(await this.client.from("organizations").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id));
   }
 
   async markThanked(ids: string[]): Promise<void> {
