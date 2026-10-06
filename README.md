@@ -160,7 +160,16 @@ Gamla adresser (`/samla`, `/vreta`) skickas vidare till de nya.
 | Fråga Vreta: `person_network` | `supabase/functions/_shared/knowledge.ts` |
 | Databastester | `supabase/tests/m8_rls_test.sql` |
 
-Med Supabase: kör `supabase db push` för att lägga in migrationerna och driftsätt `ask-vreta` igen (`supabase functions deploy ask-vreta`).
+### Fånga känner igen plats, projekt och tipsare
+
+| Del | Var |
+| --- | --- |
+| Lokal tolkning: "på Återbruket", "till orangeriet", "Anders tipsade" / "tips från" / "via" | `supabase/functions/_shared/captureHeuristics.ts` |
+| Capture Agent: fälten `place`, `project`, `introduced_by`; får namnen på kända projekt och platser | `supabase/functions/_shared/agentSchemas.ts`, `agents.ts`, `capture-agent/` |
+| Matchning mot platser, projekt, behov och personer, och kopplingarna vid godkännande | `src/services/proposalLinks.ts` |
+| Kopplingar under Att granska | `src/ui/ProposalLinksCard.tsx`, `src/pages/ProposalPage.tsx` |
+
+Med Supabase: kör `supabase db push` för att lägga in migrationerna och driftsätt `ask-vreta` och `capture-agent` igen (`supabase functions deploy ask-vreta capture-agent`).
 
 ## Vad M5 innehåller (kunskap och härdning)
 

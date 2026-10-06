@@ -24,6 +24,11 @@ Deno.serve(async (req: Request) => {
 
   const body = (await req.json()) as { text?: string; kind?: string; images?: CaptureImage[] };
   const images = (body.images ?? []).slice(0, 6);
+  // Namn på projekt och platser hjälper agenten att använda samma namn (läses med användarens inloggning)
+  const [{ data: projects }, { data: places }] = await Promise.all([
+    supabase.from("projects").select("name").neq("status", "done").is("archived_at", null).limit(50),
+    supabase.from("external_places").select("name").is("archived_at", null).limit(50),
+  ]);
 
   try {
     const proposal = await runCaptureAgent(anthropic, {
@@ -31,6 +36,7 @@ Deno.serve(async (req: Request) => {
       kind: body.kind ?? "find",
       images,
       today: new Date().toISOString().slice(0, 10),
+      known: { projects: (projects ?? []).map((p) => p.name as string), places: (places ?? []).map((p) => p.name as string) },
     }, (model, usage) => member ? logUsage(supabase, member.site_id, "capture-agent", model, usage) : undefined);
     return json({ proposal });
   } catch (err) {

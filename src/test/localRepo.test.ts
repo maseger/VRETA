@@ -370,3 +370,39 @@ describe("M4: utflöde, intressenter och bidrag", () => {
   });
 });
 
+
+describe("Fånga med kopplingar (M6–M8)", () => {
+  it("kopplar plats, behov och tipsare när förslaget godkänns", async () => {
+    const { proposeForCapture } = await import("../services/captureAgent");
+    const { applyLinks } = await import("../services/proposalLinks");
+    const { initialChoice } = await import("../ui/ProposalLinksCard");
+    const cap = await repo.saveCapture(crypto.randomUUID(), { text: "Köpte 150 tegel från Göran på Återbruket till orangeriet, 300 kr. Anders tipsade", kind: "find", media_ids: [] });
+    const content = await proposeForCapture(repo, cap);
+    const places = await repo.externalPlaces();
+    const orangeriet = (await repo.projects()).find((p) => p.name === "Orangeriet")!;
+    const tegelBehov = (await repo.needs(orangeriet.id)).find((n) => n.title === "Tegel till södra muren")!;
+    expect(content.links?.place?.existing_place_id).toBe(places.find((p) => p.name === "Återbruket")!.id);
+    expect(content.links?.project).toMatchObject({ existing_project_id: orangeriet.id, need_id: tegelBehov.id });
+    expect(content.links?.introduced_by?.existing_person_id).toBeTruthy();
+    const prop = await repo.attachProposal(cap.id, content);
+    const goran = (await repo.persons()).find((p) => p.name === "Göran")!;
+    const objectId = await repo.approveProposal({
+      proposal_id: prop.id, partial: false,
+      object: { title: "Tegel", category: "Tegel och sten", description: "", material: "", dimensions: "", quantity: 150, unit: "st", condition: null, field_meta: {} },
+      person: { name: "Göran", locality: "", existing_person_id: goran.id },
+      acquisition: { type: "purchase", price: 300, deadline: null }, task: null, why: "", media_ids: [],
+    });
+    const done = await applyLinks(repo, objectId, initialChoice(content.links));
+    expect(done).toHaveLength(3);
+    expect((await repo.acquisitionsFor(objectId))[0].place_id).toBe(content.links!.place!.existing_place_id);
+    // 250 fanns, 150 behövdes till 400
+    expect((await repo.needFulfillments([tegelBehov.id])).reduce((s, f) => s + f.quantity, 0)).toBe(400);
+    expect((await repo.relations(goran.id)).filter((r) => r.kind === "introduced" && r.other_id === goran.id)).toHaveLength(1); // Anders → Göran fanns redan
+  });
+
+  it("gissar inte projekt som inte finns i den lokala tolkningen", async () => {
+    const { proposeForCapture } = await import("../services/captureAgent");
+    const cap = await repo.saveCapture(crypto.randomUUID(), { text: "Tre ekdörrar till salu från Lena", kind: "find", media_ids: [] });
+    expect((await proposeForCapture(repo, cap)).links?.project ?? null).toBeNull();
+  });
+});

@@ -181,6 +181,14 @@ export interface ProposalContent {
   task: { title: ProposedValue<string>; due: ProposedValue<string | null> } | null;
   why: ProposedValue<string>;
   agent: "claude" | "local";
+  /** Kopplingar till platser, projekt och människor (M6–M8). Saknas i äldre förslag. */
+  links?: ProposalLinks;
+}
+
+export interface ProposalLinks {
+  place: { name: ProposedValue<string>; existing_place_id: string | null } | null;
+  project: { name: ProposedValue<string>; existing_project_id: string | null; need_id: string | null } | null;
+  introduced_by: { name: ProposedValue<string>; existing_person_id: string | null } | null;
 }
 
 export interface Proposal extends Base {

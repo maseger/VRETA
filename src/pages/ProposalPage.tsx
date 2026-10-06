@@ -5,7 +5,9 @@ import { useApp, useData } from "../app/AppContext";
 import { ACQUISITION_LABEL, CATEGORIES } from "../domain/labels";
 import type { AcquisitionType, FieldMeta, Proposal } from "../domain/types";
 import { MediaImage, PageHeader } from "../ui/bits";
+import { ProposalLinksCard, initialChoice } from "../ui/ProposalLinksCard";
 import { SuggestedField } from "../ui/SuggestedField";
+import { applyLinks, type LinkChoice } from "../services/proposalLinks";
 
 interface F {
   value: string;
@@ -57,13 +59,15 @@ function initialFields(p: Proposal): Fields {
 
 export function ProposalPage() {
   const { id } = useParams();
-  const { repo, refresh, profile } = useApp();
+  const { repo, refresh, profile, toast } = useApp();
   const navigate = useNavigate();
   const { data } = useData(async (r) => {
     const p = await r.proposal(id!);
     if (!p) return null;
-    const [capture, media, people] = await Promise.all([r.capture(p.capture_id), r.mediaFor("capture", p.capture_id), r.persons()]);
-    return { p, capture, media, people };
+    const [capture, media, people, places, projects, needs] = await Promise.all([
+      r.capture(p.capture_id), r.mediaFor("capture", p.capture_id), r.persons(), r.externalPlaces(), r.projects(), r.needs(),
+    ]);
+    return { p, capture, media, people, places, projects, needs };
   }, [id]);
 
   const [fields, setFields] = useState<Fields | null>(null);
@@ -71,11 +75,15 @@ export function ProposalPage() {
   const [useAcq, setUseAcq] = useState(true);
   const [useTask, setUseTask] = useState(true);
   const [useExisting, setUseExisting] = useState(true);
+  const [links, setLinks] = useState<LinkChoice>(initialChoice(undefined));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (data?.p) setFields(initialFields(data.p));
+    if (data?.p) {
+      setFields(initialFields(data.p));
+      setLinks(initialChoice(data.p.content.links));
+    }
   }, [data?.p]);
 
   const existing = useMemo(
@@ -122,7 +130,10 @@ export function ProposalPage() {
         why: val("why"),
         media_ids: media.map((m) => m.id),
       });
+      // Saken är sparad; misslyckas en koppling kan den göras för hand på objektsidan
+      const done = await applyLinks(repo, objectId, { ...links, introduced_by: usePerson ? links.introduced_by : null }).catch(() => ["Kopplingarna kunde inte göras – lägg till dem på objektsidan"]);
       await refresh();
+      if (done.length) toast(done.join(" · "));
       navigate(`/objekt/${objectId}?ny=1`, { replace: true });
     } catch (e) {
       setError((e as Error).message);
@@ -230,6 +241,11 @@ export function ProposalPage() {
             </>
           )}
         </section>
+      )}
+
+      {p.content.links && (
+        <ProposalLinksCard links={p.content.links} choice={links} onChange={setLinks} places={data.places} projects={data.projects} needs={data.needs} people={data.people}
+          hasSeller={!!p.content.person && usePerson && !!p.content.acquisition && useAcq} />
       )}
 
       <section className="card mb-8 space-y-4 p-4">
