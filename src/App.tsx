@@ -23,6 +23,7 @@ const SakerPage = lazy(() => import("./pages/SakerPage").then((m) => ({ default:
 const ManniskorPage = lazy(() => import("./pages/ManniskorPage").then((m) => ({ default: m.ManniskorPage })));
 const PlatserPage = lazy(() => import("./pages/PlatserPage").then((m) => ({ default: m.PlatserPage })));
 const OrganizationPage = lazy(() => import("./pages/OrganizationPage").then((m) => ({ default: m.OrganizationPage })));
+const NewPlacePage = lazy(() => import("./pages/NewPlacePage").then((m) => ({ default: m.NewPlacePage })));
 const ProjectPage = lazy(() => import("./pages/ProjectPage").then((m) => ({ default: m.ProjectPage })));
 const ExternalPlacePage = lazy(() => import("./pages/ExternalPlacePage").then((m) => ({ default: m.ExternalPlacePage })));
 const ProjectsPage = lazy(() => import("./pages/ProjectsPage").then((m) => ({ default: m.ProjectsPage })));
@@ -51,6 +52,7 @@ export default function App() {
         <Route path="/saker" element={<SakerPage />} />
         <Route path="/manniskor" element={<ManniskorPage />} />
         <Route path="/platser" element={<PlatserPage />} />
+        <Route path="/platser/ny" element={<NewPlacePage />} />
         <Route path="/platser/projekt" element={<ProjectsPage />} />
         <Route path="/projekt/:id" element={<ProjectPage />} />
         <Route path="/plats/:id" element={<ExternalPlacePage />} />

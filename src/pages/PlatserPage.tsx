@@ -1,4 +1,4 @@
-import { BookOpen } from "lucide-react";
+import { BookOpen, Plus } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useApp } from "../app/AppContext";
 import { PageHeader } from "../ui/bits";
@@ -10,7 +10,7 @@ import { OnSitePlaces } from "./platser/OnSitePlaces";
  * och orterna utanför där saker hämtas, köps och lämnas.
  */
 export function PlatserPage() {
-  const { site } = useApp();
+  const { site, profile } = useApp();
   const [params, setParams] = useSearchParams();
   const view = params.get("vy") === "utanfor" ? "utanfor" : "vreta";
   const name = site?.name ?? "Vreta";
@@ -18,6 +18,7 @@ export function PlatserPage() {
     <div>
       <PageHeader kicker="Platser" title={view === "vreta" ? name : "Utanför Vreta"}>
         {view === "vreta" && <Link to="/journal" className="btn-secondary"><BookOpen size={18} aria-hidden="true" /> Journal</Link>}
+        {profile?.role !== "viewer" && <Link to={view === "vreta" ? "/platser/ny" : "/platser/ny?typ=utanfor"} className="btn-primary"><Plus size={18} aria-hidden="true" /> Ny plats</Link>}
       </PageHeader>
       <div role="tablist" className="mb-6 flex gap-1 rounded-md border border-lera-light bg-kalk-2/60 p-1">
         {([["vreta", `På ${name}`], ["utanfor", "Utanför"]] as const).map(([key, label]) => (

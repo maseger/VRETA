@@ -16,7 +16,7 @@ export function ZonePage() {
     const zones = await r.zones();
     const zone = zones.find((z) => z.id === id);
     if (!zone) return null;
-    const [events, objects, usage] = await Promise.all([r.eventsFor("zone", id!), r.objects(), r.allUsageEvents()]);
+    const [events, objects, usage, layers] = await Promise.all([r.eventsFor("zone", id!), r.objects(), r.allUsageEvents(), r.mapLayers()]);
     const [links, people] = await Promise.all([r.eventLinks(events.map((e) => e.id)), r.persons()]);
     const usedHere = new Set(usage.filter((u) => u.zone_id === id && u.type !== "removed").map((u) => u.object_id));
     const here = objects.filter((o) => usedHere.has(o.id) || (o.zone_id === id && o.status === "in_use"));
@@ -25,7 +25,7 @@ export function ZonePage() {
     for (const o of objects) names[o.id] = o.title;
     for (const z of zones) names[z.id] = z.name;
     for (const p of people) names[p.id] = p.name;
-    return { zone, zones, events: events.filter((e) => e.event_type !== "object.status_changed"), links, names, here: here.map((o, i) => ({ o, cover: covers[i] })) };
+    return { zone, zones, events: events.filter((e) => e.event_type !== "object.status_changed"), links, names, here: here.map((o, i) => ({ o, cover: covers[i] })), hasMap: layers.some((l) => l.kind === "base") };
   }, [id]);
 
   if (data === null) return <EmptyState title="Zonen finns inte" />;
@@ -37,6 +37,7 @@ export function ZonePage() {
       <Link to="/platser" className="text-sm font-semibold text-falu">← Platser</Link>
       <PageHeader kicker={`Zon${zone.geom ? ` · ${formatArea(areaM2(zone.geom))}` : ""}`} title={zone.name} />
       {zone.notes && <p className="-mt-3 mb-6 text-sot-3">{zone.notes}</p>}
+      {canWrite && !zone.geom && data.hasMap && <Link to={`/platser?rita=zone:${zone.id}`} className="-mt-2 mb-6 inline-block text-sm font-semibold text-falu">Rita in området på Vretakartan</Link>}
 
       {canWrite && (
         <div className="mb-6 flex flex-wrap gap-2">

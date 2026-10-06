@@ -160,6 +160,10 @@ Gamla adresser (`/samla`, `/vreta`) skickas vidare till de nya.
 | Fråga Vreta: `person_network` | `supabase/functions/_shared/knowledge.ts` |
 | Databastester | `supabase/tests/m8_rls_test.sql` |
 
+### Lägga till platser
+
+*Ny plats* under Platser (`/platser/ny`, `src/pages/NewPlacePage.tsx`): område, byggnad eller anläggning, lagerplats eller plats utanför Vreta. Områden och byggnader kan ritas in på Vretakartan direkt (`/platser?rita=zone:<id>`) eller senare via *Rita in*.
+
 ### Fånga känner igen plats, projekt och tipsare
 
 | Del | Var |

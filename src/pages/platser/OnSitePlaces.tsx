@@ -298,7 +298,7 @@ export function OnSitePlaces() {
       )}
 
       <div className="h-4" />
-      <Section title="Zoner">
+      <Section title="Områden" action={canWrite ? <Link to="/platser/ny?typ=zon" className="inline-flex items-center gap-1 text-sm font-semibold text-falu"><Plus size={16} aria-hidden="true" /> Nytt område</Link> : undefined}>
         <ul className="card divide-y divide-dashed divide-lera-light">
           {data?.zones.map((z) => (
             <li key={z.id}>
@@ -308,17 +308,22 @@ export function OnSitePlaces() {
               </Link>
             </li>
           ))}
+          {data && !data.zones.length && <li className="px-4 py-4 text-sm text-sot-3">Inga områden ännu. Lägg till trädgården, odlingen eller ängen – kartan kan ritas in senare.</li>}
         </ul>
       </Section>
 
-      <Section title="Byggnader och anläggningar">
+      <Section title="Byggnader och anläggningar" action={canWrite ? <Link to="/platser/ny?typ=byggnad" className="inline-flex items-center gap-1 text-sm font-semibold text-falu"><Plus size={16} aria-hidden="true" /> Ny byggnad</Link> : undefined}>
         <ul className="card divide-y divide-dashed divide-lera-light">
           {data?.structures.map((s) => (
             <li key={s.id} className="flex items-center justify-between px-4 py-3">
               <span><span className="font-medium">{s.name}</span><span className="block text-sm text-sot-3">{[s.kind, s.geom ? formatArea(areaM2(s.geom)) : "Inte inritad"].filter(Boolean).join(" · ")}</span></span>
-              <span className="text-sm text-sot-3">{count("structure_id", s.id)} i bruk</span>
+              <span className="flex items-center gap-3 text-sm text-sot-3">
+                {canWrite && !s.geom && bases.length > 0 && <Link to={`/platser?rita=structure:${s.id}`} className="font-semibold text-falu">Rita in</Link>}
+                {count("structure_id", s.id)} i bruk
+              </span>
             </li>
           ))}
+          {data && !data.structures.length && <li className="px-4 py-4 text-sm text-sot-3">Inga byggnader ännu. Lägg till huset, ladugården eller växthuset.</li>}
         </ul>
       </Section>
     </div>

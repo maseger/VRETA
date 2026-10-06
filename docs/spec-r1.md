@@ -384,6 +384,8 @@ Saker, människor och platser är tre olika delar som är beroende av varandra: 
 | Platser | **På Vreta:** karta, zoner och byggnader, och det som sker där – förvaring (lager), projekt (byggen, planteringar) och observationer (djur, växter m.m.) med journal. **Utanför:** platser som loppisar, hämtställen och återvinningscentraler, och orterna där saker hämtas, köps och lämnas |
 | Fråga | Chatboten Fråga Vreta: sök, frågor och uppdrag i text eller tal (se 11.6) |
 
+**Lägga till platser:** knappen *Ny plats* under Platser lägger till ett område på Vreta, en byggnad eller anläggning, en lagerplats eller en plats utanför Vreta – utan att kartan behövs. Områden och byggnader kan ritas in på Vretakartan direkt efteråt eller senare ("Rita in").
+
 **Dator:** vänsterkolumn med Idag, Saker, Människor, Platser och Fråga samt Fånga och Inställningar. Listor och detaljer visas sida vid sida.
 
 **Projekt** (Project) är egna poster med namn, slag, status (idé, planerat, pågår, vilar, klart), zon eller byggnad och beskrivning. Nytt liv och bidrag kopplas med project_id; ett nytt projektnamn i formulären blir ett projekt. Projektsidan visar behov, saker, människor och projektjournal, och projektets yta kan ritas på Vretakartan (eget lager "Projekt").
