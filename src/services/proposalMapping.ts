@@ -1,7 +1,7 @@
 // Översätter AI-svar eller den lokala tolkningen till ett ProposalContent.
 import type { ProposalContent, Person } from "../domain/types";
 import type { CaptureProposalOut } from "../../supabase/functions/_shared/agentSchemas";
-import type { HeuristicResult } from "../../supabase/functions/_shared/captureHeuristics";
+import { localityOutsideName, type HeuristicResult } from "../../supabase/functions/_shared/captureHeuristics";
 import { resolveLinks, type LinkContext } from "./proposalLinks";
 
 const LOCAL_CONFIDENCE = 0.45;
@@ -17,7 +17,8 @@ export function matchPerson(name: string | null | undefined, locality: string | 
 
 export function fromAgent(out: CaptureProposalOut, people: Person[], ctx?: Omit<LinkContext, "people">): ProposalContent {
   const o = out.object;
-  const match = out.person ? matchPerson(out.person.name, out.person.locality, people) : null;
+  const personLocality = out.person ? localityOutsideName(out.person.name, out.person.locality) ?? "" : "";
+  const match = out.person ? matchPerson(out.person.name, personLocality, people) : null;
   return {
     object: o
       ? {
@@ -32,7 +33,7 @@ export function fromAgent(out: CaptureProposalOut, people: Person[], ctx?: Omit<
         }
       : null,
     person: out.person
-      ? { name: { value: out.person.name, confidence: out.person.confidence }, locality: { value: out.person.locality, confidence: out.person.confidence }, existing_person_id: match?.id ?? null }
+      ? { name: { value: out.person.name, confidence: out.person.confidence }, locality: { value: personLocality, confidence: out.person.confidence }, existing_person_id: match?.id ?? null }
       : null,
     acquisition: out.acquisition
       ? {

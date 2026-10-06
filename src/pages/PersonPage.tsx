@@ -5,6 +5,7 @@ import { useApp, useData } from "../app/AppContext";
 import { ACQ_STATUS_LABEL, ACQUISITION_LABEL, CHANNEL_INTERACTION_LABEL, CONTRIBUTION_LABEL, DISPOSAL_LABEL, PERSON_ROLES, eventLabel } from "../domain/labels";
 import type { Consent, ContributionKind, InteractionChannel, Visibility } from "../domain/types";
 import { EmptyState, MediaImage, Section, StatusStamp, formatDate } from "../ui/bits";
+import { EditablePersonAvatar } from "../ui/PersonAvatar";
 import { PersonNetwork } from "../ui/PersonNetwork";
 import { ProjectInput } from "../ui/ProjectInput";
 import { useDictation } from "../ui/useDictation";
@@ -19,8 +20,8 @@ export function PersonPage() {
   const { data } = useData(async (r) => {
     const person = await r.person(id!);
     if (!person) return null;
-    const [acqs, objects, events, orgs, contributions, reciprocity, disposals] = await Promise.all([
-      r.allAcquisitions(), r.objects(), r.eventsFor("person", id!), r.organizations(), r.contributions(id!), r.reciprocity(id!), r.disposals(),
+    const [acqs, objects, events, orgs, contributions, reciprocity, disposals, photos] = await Promise.all([
+      r.allAcquisitions(), r.objects(), r.eventsFor("person", id!), r.organizations(), r.contributions(id!), r.reciprocity(id!), r.disposals(), r.mediaFor("person", id!),
     ]);
     const outgoing = disposals.filter((d) => d.person_id === id).map((d) => ({ d, o: objects.find((o) => o.id === d.object_id) })).filter((x) => x.o);
     const deals = acqs.filter((a) => a.person_id === id).map((a) => ({ a, o: objects.find((o) => o.id === a.object_id) })).filter((x) => x.o);
@@ -28,7 +29,7 @@ export function PersonPage() {
     const interactions = person.notes !== undefined ? await r.interactions(id!) : [];
     return {
       person, deals: deals.map((d, i) => ({ ...d, cover: covers[i] })), events, interactions, org: orgs.find((o) => o.id === person.organization_id),
-      contributions, reciprocity, outgoing, objects,
+      contributions, reciprocity, outgoing, objects, photo: photos.at(-1) ?? null,
     };
   }, [id]);
 
@@ -37,6 +38,7 @@ export function PersonPage() {
   const [followUp, setFollowUp] = useState("");
   const [editPrivate, setEditPrivate] = useState(false);
   const [editRoles, setEditRoles] = useState(false);
+  const [editName, setEditName] = useState<{ name: string; locality: string } | null>(null);
   const [contact, setContact] = useState("");
   const [notes, setNotes] = useState("");
   const append = useCallback((t: string) => setSummary((s) => (s ? `${s} ${t}` : t)), []);
@@ -44,7 +46,7 @@ export function PersonPage() {
 
   if (data === null) return <EmptyState title="Personen finns inte" />;
   if (!data) return null;
-  const { person, deals, events, interactions, org, contributions, reciprocity, outgoing, objects } = data;
+  const { person, deals, events, interactions, org, contributions, reciprocity, outgoing, objects, photo } = data;
   const unthanked = contributions.filter((c) => !c.thanked_at).length;
   const newLife = deals.filter((d) => d.o!.status === "in_use");
   const seesPrivate = person.notes !== undefined;
@@ -69,10 +71,35 @@ export function PersonPage() {
     <div className="mx-auto max-w-3xl">
       <Link to="/manniskor" className="text-sm font-semibold text-falu">← Människor</Link>
       <header className="mb-6 mt-2 flex items-start gap-4">
-        <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-linolja-pale font-serif text-3xl font-semibold text-linolja">{person.name.charAt(0)}</span>
+        <EditablePersonAvatar person={person} photo={photo} canWrite={canWrite} />
         <div className="min-w-0 flex-1">
-          <h1>{person.name}</h1>
-          <p className="text-sot-3">{person.locality}{person.locality && org ? " · " : ""}{org && <Link to={`/organisation/${org.id}`} className="text-falu">{org.name}</Link>}</p>
+          {editName ? (
+            <form className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]" onSubmit={async (e) => {
+              e.preventDefault();
+              await repo.updatePerson(person.id, { name: editName.name.trim() || person.name, locality: editName.locality.trim() });
+              setEditName(null);
+              await refresh();
+            }}>
+              <input className="input" aria-label="Namn" value={editName.name} onChange={(e) => setEditName({ ...editName, name: e.target.value })} required autoFocus />
+              <input className="input" aria-label="Ort" placeholder="Ort (kommun eller tätort)" value={editName.locality} onChange={(e) => setEditName({ ...editName, locality: e.target.value })} />
+              <span className="flex gap-2">
+                <button className="btn-primary">Spara</button>
+                <button type="button" className="btn-secondary" onClick={() => setEditName(null)}>Avbryt</button>
+              </span>
+            </form>
+          ) : (
+            <>
+              <h1>{person.name}</h1>
+              <p className="text-sot-3">
+                {person.locality}{person.locality && org ? " · " : ""}{org && <Link to={`/organisation/${org.id}`} className="text-falu">{org.name}</Link>}
+                {canWrite && (
+                  <button onClick={() => setEditName({ name: person.name, locality: person.locality })} className={`${person.locality || org ? "ml-2 " : ""}text-[12px] font-semibold text-falu underline-offset-2 hover:underline`}>
+                    {person.locality ? "Ändra namn eller ort" : "Ändra namn · lägg till ort"}
+                  </button>
+                )}
+              </p>
+            </>
+          )}
           <div className="mt-2 flex flex-wrap gap-1.5">
             {PERSON_ROLES.filter((r) => person.roles.includes(r) || editRoles).map((r) => {
               const on = person.roles.includes(r);

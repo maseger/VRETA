@@ -62,12 +62,14 @@ export function parseDeadline(text: string, today = new Date()): string | null {
 }
 
 const NAME = "[A-ZÅÄÖ][a-zåäöé]+";
+/** För- och efternamn, med bindestreck: "Torsten Lindholm", "Anna-Karin Berg". */
+const FULL_NAME = `${NAME}(?:-${NAME})?(?:\\s+${NAME}(?:-${NAME})?)?`;
 const PLACE_WORDS = /\b(?:på|vid)\s+(loppis(?:en)?|återvinning(?:en|scentralen)?|återbruk(?:et)?|tippen|auktion(?:en)?|byggåterbruk(?:et)?)\b/i;
 
 export function parseCaptureText(text: string, today = new Date()): HeuristicResult {
   const original = text.replace(/\s+/g, " ").trim();
   // Vem som tipsade tas bort innan säljaren letas upp, så att "tips från Anders" inte gör Anders till säljare
-  const tip = original.match(new RegExp(`(${NAME})\\s+tipsade`)) ?? original.match(new RegExp(`(?:tips(?:at)?\\s+(?:från|av)|via)\\s+(${NAME})`));
+  const tip = original.match(new RegExp(`(${FULL_NAME})\\s+tipsade`)) ?? original.match(new RegExp(`(?:tips(?:at)?\\s+(?:från|av)|via)\\s+(${FULL_NAME})`));
   const introduced_by = tip?.[1] ?? null;
   const clean = tip ? original.replace(tip[0], "").replace(/\s+/g, " ").trim() : original;
 
@@ -111,17 +113,18 @@ export function parseCaptureText(text: string, today = new Date()): HeuristicRes
   const isGift = /gratis|skänk|gåva|ge bort|bortskänk/i.test(clean);
   const acquisition_type = isGift ? "gift" : price_total !== null ? "purchase" : null;
 
-  // Person och ort: "Anders i Ockelbo", "från Lena", "hos Karin i Gävle"
+  // Person och ort: "Anders i Ockelbo", "från Lena", "hos Karin Berg i Gävle". Efternamn hör till namnet, aldrig till orten.
   let person_name: string | null = null;
   let person_locality: string | null = null;
-  const pl = clean.match(/(?:^|[\s,])(?:från\s+|av\s+|hos\s+)?([A-ZÅÄÖ][a-zåäöé]+)\s+i\s+([A-ZÅÄÖ][a-zåäöé]+)/);
+  const pl = clean.match(new RegExp(`(?:^|[\\s,])(?:(?:[Ff]rån|[Aa]v|[Hh]os)\\s+)?(${FULL_NAME})\\s+i\\s+([A-ZÅÄÖ][a-zåäöé]+)`));
   if (pl) {
     person_name = pl[1];
     person_locality = pl[2];
   } else {
-    const pn = clean.match(/(?:från|av|hos)\s+([A-ZÅÄÖ][a-zåäöé]+)/);
+    const pn = clean.match(new RegExp(`(?:^|\\s)(?:[Ff]rån|[Aa]v|[Hh]os)\\s+(${FULL_NAME})`));
     if (pn) person_name = pn[1];
   }
+  person_locality = localityOutsideName(person_name, person_locality);
 
   const category = CATEGORY_KEYWORDS.find(([re]) => re.test(clean))?.[1] ?? "Övrigt";
   const deadline = parseDeadline(clean, today);
@@ -143,4 +146,12 @@ export function parseCaptureText(text: string, today = new Date()): HeuristicRes
     project_name,
     introduced_by,
   };
+}
+
+/** En ort som är en del av personens namn är ett feltolkat efternamn ("Torsten Lindholm" ≠ Lindholm som ort). */
+export function localityOutsideName(name: string | null | undefined, locality: string | null | undefined): string | null {
+  const loc = (locality ?? "").trim();
+  if (!loc) return null;
+  const words = new Set((name ?? "").toLocaleLowerCase("sv").split(/[\s-]+/).filter(Boolean));
+  return loc.toLocaleLowerCase("sv").split(/[\s-]+/).some((w) => words.has(w)) ? null : loc;
 }

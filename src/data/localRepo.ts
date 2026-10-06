@@ -2,6 +2,7 @@
 // regler som databasen: tillståndsmaskin, INV-05, roller, privata fält och audit.
 import { openDB, type IDBPDatabase } from "idb";
 import { ACQUISITION_TRANSITIONS, LEAD_TRANSITIONS, LISTING_TRANSITIONS, PICKUP_TRANSITIONS, assertTransition } from "../domain/stateMachine";
+import { personPhotoVisibility } from "../domain/labels";
 import type {
   ExternalPlace, GuestLink, Need, NeedFulfillment, PersonRelation, Project,
   BatchAllocation, Decision, MapLayer, Observation, UsageEvent,
@@ -256,7 +257,7 @@ export class LocalRepo implements Repo {
       id: input.id, site_id, created_at: t, created_by: me.id, updated_at: t, archived_at: null,
       kind: input.mime.startsWith("audio") ? "audio" : "image", original_path: originalPath, clean_path: cleanPath,
       mime: input.mime, width: input.width, height: input.height, caption: "", role: input.role ?? "general",
-      has_people: input.has_people ?? false, visibility: "shareable", entity_type: input.entity_type, entity_id: input.entity_id,
+      has_people: input.has_people ?? false, visibility: input.visibility ?? "shareable", entity_type: input.entity_type, entity_id: input.entity_id,
     };
     await this.put("media", m);
     return m;
@@ -267,6 +268,11 @@ export class LocalRepo implements Repo {
       .filter((m) => m.entity_type === entity_type && m.entity_id === entity_id && !m.archived_at)
       .filter((m) => m.visibility !== "private" || this.seesPrivate(me, m.created_by))
       .sort((a, b) => a.created_at.localeCompare(b.created_at));
+  }
+  async archiveMedia(id: string): Promise<void> {
+    await this.requireWriter();
+    const m = await this.get<Media>("media", id);
+    if (m) await this.put("media", { ...m, archived_at: now(), updated_at: now() });
   }
   async mediaBlob(media: Media): Promise<Blob | null> {
     if (!media.clean_path) return null;
@@ -394,6 +400,11 @@ export class LocalRepo implements Repo {
     const p = await this.get<Person>("persons", id);
     if (!p) return;
     await this.put("persons", { ...p, ...patch, updated_at: now() });
+    if (patch.consent_image && patch.consent_image !== p.consent_image) {
+      const visibility = personPhotoVisibility(patch.consent_image);
+      for (const m of await this.all<Media>("media"))
+        if (m.entity_type === "person" && m.entity_id === id) await this.put("media", { ...m, visibility, updated_at: now() });
+    }
     await this.audit_(me, "consent_change", "person", id,
       { name: p.consent_name, image: p.consent_image, contribution: p.consent_contribution },
       { name: patch.consent_name ?? p.consent_name, image: patch.consent_image ?? p.consent_image, contribution: patch.consent_contribution ?? p.consent_contribution });

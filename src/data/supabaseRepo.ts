@@ -1,6 +1,7 @@
 // Supabase-implementation av datalagret. Regler (tillståndsmaskin, roller, privata fält,
 // audit, händelser vid statusbyten) upprätthålls i databasen; klienten anropar bara.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { personPhotoVisibility } from "../domain/labels";
 import type {
   ExternalPlace, GuestLink, Need, NeedFulfillment, PersonRelation, Project,
   BatchAllocation, Decision, EventLink, MapLayer, Observation, UsageEvent,
@@ -127,11 +128,15 @@ export class SupabaseRepo implements Repo {
         id: input.id, site_id, kind: input.mime.startsWith("audio") ? "audio" : "image", original_path: originalPath,
         clean_path: cleanPath, mime: input.mime, width: input.width, height: input.height, role: input.role ?? "general",
         has_people: input.has_people ?? false, entity_type: input.entity_type, entity_id: input.entity_id,
+        visibility: input.visibility ?? "shareable",
       }).select().single(),
     ) as Media;
   }
   async mediaFor(entity_type: string, entity_id: string): Promise<Media[]> {
-    return check(await this.client.from("media").select("*").eq("entity_type", entity_type).eq("entity_id", entity_id).order("created_at")) as Media[];
+    return check(await this.client.from("media").select("*").eq("entity_type", entity_type).eq("entity_id", entity_id).is("archived_at", null).order("created_at")) as Media[];
+  }
+  async archiveMedia(id: string): Promise<void> {
+    check(await this.client.from("media").update({ archived_at: new Date().toISOString() }).eq("id", id));
   }
   async mediaUrl(media: Media, variant: "clean" | "original"): Promise<string | null> {
     const bucket = variant === "clean" ? "media-clean" : "media-original";
@@ -198,6 +203,8 @@ export class SupabaseRepo implements Repo {
   }
   async updateConsent(id: string, patch: Partial<Pick<Person, "consent_name" | "consent_image" | "consent_contribution">>): Promise<void> {
     check(await this.client.from("persons").update(patch).eq("id", id));
+    if (patch.consent_image)
+      check(await this.client.from("media").update({ visibility: personPhotoVisibility(patch.consent_image) }).eq("entity_type", "person").eq("entity_id", id));
   }
   async acquisitionsFor(objectId: string): Promise<Acquisition[]> {
     const acqs = check(await this.client.from("acquisitions").select("*").eq("object_id", objectId)) as Acquisition[];

@@ -47,7 +47,7 @@ Regler:
 - condition är skick 1–5 (5 = mycket gott) och sätts bara om bild eller text visar det.
 - price_total_sek är totalpris i kronor; räkna om "200 kr styck" med antalet.
 - deadline och task.due anges som ÅÅÅÅ-MM-DD om ett datum eller en månad nämns; dagens datum står i meddelandet.
-- person är den som säljer eller ger bort saken. Ange ort bara om den nämns.
+- person är den som säljer eller ger bort saken. name är hela namnet med efternamn ("Torsten Lindholm"). Ange ort bara om en ort nämns som plats ("i Ockelbo") – ett efternamn är aldrig en ort.
 - why är en kort mening om varför fyndet är intressant, bara om användaren säger det, annars tom sträng.
 - place är platsen utanför Vreta där saken köps eller hämtas (loppis, återvinningscentral, butik, gård), inte säljarens hemort. Använd namnet från listan över kända platser om det passar.
 - project är projektet på Vreta som saken ska användas till ("till orangeriet"). Använd namnet från listan över kända projekt om det passar.
