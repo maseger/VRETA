@@ -543,7 +543,7 @@ begin
       -- Ta från raden med mest kvar om kvantiteten räcker, annars be användaren välja
       select * into v_row from resources.batch_allocation a
       where a.object_id = p_object and (p_from is null or a.status = any (p_from)) and a.quantity >= coalesce(p_qty, 0)
-      order by a.quantity desc limit 1 for update;
+      order by array_position(p_from, a.status) nulls last, a.quantity desc limit 1 for update;
       if not found then
         perform core.fail('choose_allocation', 'Välj vilken del av partiet det gäller', jsonb_build_object('choices', v_choices));
       end if;
@@ -597,7 +597,7 @@ end $$;
 create function resources.object_label(p_object uuid, p_qty numeric default null) returns text
 language sql stable set search_path = '' as $$
   select case when b.object_id is not null then
-           format('%s %s %s', trim(to_char(coalesce(p_qty, b.total_quantity), 'FM999999990.##')), b.unit, lower(o.title))
+           format('%s %s %s', core.fmt_num(coalesce(p_qty, b.total_quantity)), b.unit, lower(o.title))
          else o.title end
   from resources.object o left join resources.object_batch b on b.object_id = o.id where o.id = p_object
 $$;
@@ -844,7 +844,7 @@ begin
   if v_to is not null then perform place.assert_place(v_to); end if;
   v_alloc := resources.take_allocation(v_id, core.opt_uuid(p, 'allocation_id'), v_qty, '{in_use}');
   select coalesce((select place_id from resources.batch_allocation where id = v_alloc), (select place_id from resources.object where id = v_id)) into v_from_place;
-  perform resources.set_status(v_id, v_alloc, case when coalesce((p ->> 'to_processing')::boolean, false) then 'processing' else 'stored' end,
+  perform resources.set_status(v_id, v_alloc, (case when coalesce((p ->> 'to_processing')::boolean, false) then 'processing' else 'stored' end)::resources.object_status,
                                null, v_at, v_to, v_to is null);
   if v_alloc is not null then update resources.batch_allocation set project_id = null where id = v_alloc; perform resources.compact_allocations(v_id); perform resources.refresh_batch_object(v_id); end if;
   v_event := core.record_history('usage.dismantled', format('%s demonterad från %s', resources.object_label(v_id, v_qty), place.path_label(v_from_place)),
@@ -1490,7 +1490,7 @@ begin
   end if;
   if v_listing is not null and v_qty is null then select quantity into v_qty from resources.listing where id = v_listing; end if;
   v_from_statuses := case when v_type = 'discarded' then '{stored,processing,in_use}'::resources.object_status[]
-                          else '{reserved_out,listed,stored,in_use,collected}'::resources.object_status[] end;
+                          else '{reserved_out,listed,stored,collected,processing,in_use}'::resources.object_status[] end;
   -- Prioritera raden som är reserverad för köparen
   v_alloc := resources.take_allocation(v_object,
     coalesce(core.opt_uuid(p, 'allocation_id'),

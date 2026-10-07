@@ -410,6 +410,13 @@ begin
   return v_type;
 end $$;
 
+-- Tal på svenska: mellanslag som tusentalsavgränsare och decimalkomma ("1 020", "2,5").
+create function core.fmt_num(n numeric) returns text
+language sql immutable set search_path = '' as $$
+  select case when n is null then null else
+    replace(replace(regexp_replace(regexp_replace(to_char(n, 'FM999G999G999G990.999'), '(\.\d*?)0+$', '\1'), '\.$', ''), ',', ' '), '.', ',') end
+$$;
+
 create function core.state_label(p_machine text, p_state text) returns text
 language sql stable set search_path = '' as $$
   select coalesce((select label_sv from core.state where machine = p_machine and state = p_state), p_state) $$;

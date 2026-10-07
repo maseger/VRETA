@@ -5,6 +5,9 @@
 -- funktioner som kan anropas av vem som helst (NFR-019).
 
 -- ================================================================== Commerce (reserverad, tom till R3)
+-- Schemat nås av inloggade men tabellerna bara av ägaren (RLS). Inga kommandon förrän R3.
+grant usage on schema commerce to authenticated;
+
 create table commerce.catalog_item (
   like core.entity_template including all,
   title text not null,
@@ -1621,7 +1624,7 @@ begin
       ('core', 'sites_with_role'), ('core', 'my_role'), ('core', 'is_owner'), ('core', 'is_staff'), ('core', 'can_read'),
       ('core', 'my_host_entities'), ('core', 'my_host_events'), ('core', 'qsite'), ('core', 'entity_ref'), ('core', 'media_ref'),
       ('core', 'media_for'), ('core', 'cover'), ('core', 'timeline'), ('core', 'allowed_next'), ('core', 'person_brief'),
-      ('core', 'state_label'), ('core', 'weather_at'), ('core', 'weather_signals'), ('core', 'word_re'), ('core', 'policy_expr'),
+      ('core', 'state_label'), ('core', 'fmt_num'), ('core', 'weather_at'), ('core', 'weather_signals'), ('core', 'word_re'), ('core', 'policy_expr'),
       ('place', 'lineage'), ('place', 'path_label'), ('place', 'zone_of'), ('place', 'zone_at'),
       ('resources', 'object_label'), ('resources', 'status_group'), ('resources', 'allocation_summary'),
       ('change', 'need_fulfilled_quantity'), ('change', 'need_is_met'), ('change', 'need_progress_label'),

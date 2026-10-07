@@ -259,8 +259,8 @@ $$;
 create function change.need_progress_label(p_need uuid) returns text
 language sql stable set search_path = '' as $$
   select case when n.quantity is null then case when change.need_is_met(n.id) then 'Uppfyllt' else 'Inget ännu' end
-    else format('%s av %s%s', trim(to_char(change.need_fulfilled_quantity(n.id), 'FM999G999G990.##')),
-                trim(to_char(n.quantity, 'FM999G999G990.##')), coalesce(' ' || n.unit, '')) end
+    else format('%s av %s%s', core.fmt_num(change.need_fulfilled_quantity(n.id)),
+                core.fmt_num(n.quantity), coalesce(' ' || n.unit, '')) end
   from change.need n where n.id = p_need
 $$;
 
@@ -366,7 +366,7 @@ begin
   values (v_id, core.ctx_site(), v_project, core.req(p, 'title'), coalesce(nullif(p ->> 'kind_code', ''), 'material'),
           (nullif(p ->> 'quantity', ''))::numeric, nullif(p ->> 'unit', ''), resources.category_id(p), p ->> 'note');
   perform core.record_history('need.added', format('Behov: %s%s', p ->> 'title',
-      coalesce(' (' || trim(to_char((nullif(p ->> 'quantity', ''))::numeric, 'FM999G999G990.##')) || coalesce(' ' || nullif(p ->> 'unit', ''), '') || ')', '')),
+      coalesce(' (' || core.fmt_num((nullif(p ->> 'quantity', ''))::numeric) || coalesce(' ' || nullif(p ->> 'unit', ''), '') || ')', '')),
     jsonb_build_array(jsonb_build_object('id', v_id), jsonb_build_object('id', v_project, 'role', 'project')));
   return jsonb_build_object('need_id', v_id);
 end $$;

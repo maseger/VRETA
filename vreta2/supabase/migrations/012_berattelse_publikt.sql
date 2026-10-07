@@ -579,7 +579,10 @@ begin
   -- 8. Senaste fynden
   insert into rm.today_item (site_id, kind, priority, entity_id, title, subtitle, due_at, visibility, created_by)
   select p_site, 'recent_find', 80, o.id, resources.object_label(o.id), core.state_label('object', o.status::text), o.created_at, o.visibility, o.created_by
-  from resources.object o where o.site_id = p_site and o.archived_at is null and o.created_at > now() - interval '14 days'
+  from resources.object o
+  where o.site_id = p_site and o.archived_at is null
+    and coalesce((select min(e.occurred_at) from core.history_event_link l join core.history_event e on e.id = l.event_id where l.entity_id = o.id),
+                 o.created_at) > now() - interval '14 days'
   order by o.created_at desc limit 5;
 end $$;
 
