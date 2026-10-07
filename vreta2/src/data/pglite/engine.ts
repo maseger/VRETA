@@ -80,6 +80,10 @@ export async function processJobs(db: Db, claims: Claims): Promise<number> {
 // Feltexten från databasen är "kod: Svensk förklaring".
 export function reasonText(reason?: string): string {
   if (!reason) return "Något gick fel";
+  // Tekniska databasfel översätts till något begripligt
+  if (/invalid input syntax for type uuid/.test(reason)) return "Det finns inget här – länken kan vara fel.";
+  if (/permission denied|row-level security/.test(reason)) return "Det här har du inte behörighet till.";
+  if (/Failed to fetch|NetworkError|Load failed/.test(reason)) return "Ingen kontakt med servern just nu.";
   const i = reason.indexOf(": ");
   return i > 0 && /^[a-z_]+$/.test(reason.slice(0, i)) ? reason.slice(i + 2) : reason;
 }

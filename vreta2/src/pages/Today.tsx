@@ -24,6 +24,7 @@ function greeting(): string {
 
 export default function Today() {
   const { ctx } = useApp();
+  const can = useCan();
   const { data, error, loading } = useQuery<{ items: Item[]; today_events: any[]; sync_issues: number; weather: any }>("q_today");
   const name = ctx?.display_name && !["Ägaren", "Medhjälparen", "Läsaren"].includes(ctx.display_name) ? `, ${ctx.display_name.split(" ")[0]}` : "";
   return (
@@ -39,7 +40,8 @@ export default function Today() {
       {data?.weather?.now && <WeatherCard w={data.weather} />}
       {data && data.items.length === 0 && <Empty>Inget som väntar just nu. Fånga något nytt med den röda knappen.</Empty>}
       {data && GROUPS.map((g) => {
-        const items = data.items.filter((i) => g.kinds.includes(i.kind));
+        // Granskning och inskick visas bara för den som kan avgöra dem
+        const items = data.items.filter((i) => g.kinds.includes(i.kind) && (!["review", "submissions"].includes(i.kind) || can("ApproveProposal")));
         if (!items.length) return null;
         return (
           <Section key={g.title} title={g.title}>

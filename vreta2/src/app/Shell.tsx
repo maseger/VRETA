@@ -62,7 +62,7 @@ function DemoSwitcher() {
 }
 
 export function Shell({ children }: { children: ReactNode }) {
-  const { ctx } = useApp();
+  const { ctx, repo } = useApp();
   const can = useCan();
   const loc = useLocation();
   const nav = useNavigate();
@@ -72,10 +72,20 @@ export function Shell({ children }: { children: ReactNode }) {
   // Fråga-knappen döljs där sidan har egna knappar längst ner (granskning, formulär)
   const hideAsk = guest || /^\/(fraga|fanga|granska\/|beratta|synk)|\/ny$/.test(loc.pathname);
 
+  // Lämna gästvyn: i demoläget tillbaka till ägaren, annars avslutas den anonyma sessionen
+  const leave = async () => {
+    if (repo.switchDemoUser) await repo.switchDemoUser("owner");
+    else await repo.signOut();
+    nav("/", { replace: true });
+  };
+
   if (guest) {
     return (
       <div className="min-h-screen bg-kalk">
-        <div className="bg-sot px-4 py-2 text-center text-sm text-kalk">Du ser Vreta som gäst – bara det som är delat med familj och vänner.</div>
+        <div className="flex items-center justify-center gap-3 bg-sot px-4 py-2 text-center text-sm text-kalk">
+          <span>Du ser {ctx?.site?.name ?? "Vreta"} som gäst – bara det som är delat med familj och vänner.</span>
+          <button type="button" className="rounded-md border border-kalk/40 px-2 py-0.5 font-semibold" onClick={leave}>Lämna</button>
+        </div>
         <header className="mx-auto flex max-w-falt items-center justify-between px-4 py-3">
           <Link to="/gast" className="font-serif text-2xl text-falu no-underline">{ctx?.site?.name ?? "Vreta"}</Link>
           <DemoSwitcher />

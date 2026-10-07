@@ -12,7 +12,7 @@ import { Gallery, PhotoPicker, Thumb, useUpload } from "../ui/media";
 import { NumberField, Select, TextArea, TextField, Toggle, numOrNull, strOrNull } from "../ui/fields";
 import { BusyButton, Sheet } from "../ui/sheet";
 import { Timeline } from "../ui/timeline";
-import { VretaMap } from "../ui/VretaMap";
+import { VretaMap, type MapFeature } from "../ui/VretaMap";
 import { PhotoSheet, TaskSheet } from "./ObjectPage";
 
 export default function ProjectPage() {
@@ -32,6 +32,7 @@ function ProjectView({ p }: { p: any }) {
   const [sheet, setSheet] = useState<null | "need" | "moment" | "decision" | "task" | "photo">(null);
   const [fulfill, setFulfill] = useState<any>(null);
   const close = () => setSheet(null);
+  const { data: map } = useQuery<{ features: MapFeature[] }>(p.geometry ? "q_map" : null);
   return (
     <div>
       <PageHeader kicker={<>{code("project_kind", p.kind_code) || "Projekt"}{p.parent && <> · del av <Link to={`/projekt/${p.parent.id}`}>{p.parent.title}</Link></>}</>} title={p.name}
@@ -39,7 +40,7 @@ function ProjectView({ p }: { p: any }) {
           {p.place && <Link to={p.place.route}>{p.place_path}</Link>}{p.started_on && <span>sedan {d(p.started_on)}</span>}</span>} />
       {p.description && <p className="mb-3">{p.description}</p>}
       <Gallery media={p.media ?? []} />
-      {p.geometry && <div className="my-3"><VretaMap features={[{ id: p.id, layer: "projects", entity_id: p.id, entity_type: "project", label: p.name, reality_mode: "now", status: p.status, props: {}, geometry: p.geometry }]} height={200} fitTo={p.geometry} /></div>}
+      {p.geometry && map && <div className="my-3"><VretaMap features={map.features} height={220} fitTo={p.geometry} highlight={p.id} /></div>}
 
       <div className="my-4 grid grid-cols-3 gap-2 sm:grid-cols-6">
         {can("RecordMoment") && <Tile icon={Sparkles} label="Ögonblick" onClick={() => setSheet("moment")} />}

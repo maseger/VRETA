@@ -337,7 +337,10 @@ begin
   where person_id = v_id returning * into v_new;
   perform people.apply_image_consent(v_id);
   perform core.record_history('person.consent_changed',
-    format('Samtycke: namn %s · bild %s · bidrag %s', v_new.name, v_new.image, v_new.contribution),
+    format('Samtycke: namn %s · bild %s · bidrag %s',
+      case v_new.name when 'yes' then 'ja' when 'no' then 'nej' else 'fråga först' end,
+      case v_new.image when 'yes' then 'ja' when 'no' then 'nej' else 'fråga först' end,
+      case v_new.contribution when 'yes' then 'ja' when 'no' then 'nej' else 'fråga först' end),
     jsonb_build_array(jsonb_build_object('id', v_id)), p_visibility => 'internal');
   if (v_old.name = 'yes' and v_new.name <> 'yes') or (v_old.image = 'yes' and v_new.image <> 'yes')
      or (v_old.contribution = 'yes' and v_new.contribution <> 'yes') then
