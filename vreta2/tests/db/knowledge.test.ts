@@ -14,6 +14,13 @@ describe("Fråga Vreta (lokal)", () => {
     expect(a.text).toMatch(/Hylla 3/);
     expect(a.sources[0].id).toBe(s.ids.handtag);
   });
+  test("Var är fönstren från Ockelbo? – bestämd form och ursprung (givarens ort)", async () => {
+    const a = await ask(s.owner, "Var är fönstren från Ockelbo?");
+    expect(a.text).toMatch(/gjutjärnsfönster/i);
+    expect(a.text).toMatch(/Södra väggen/);
+    const none = await ask(s.owner, "Var är fönstren från Gävle?");
+    expect(none.text).toMatch(/hittar inget/);
+  });
   test("AC-14: vilka har bidragit och vilka har inte tackats", async () => {
     const a = await ask(s.owner, "Vilka har bidragit till Vreta i år, och vilka har jag inte tackat?");
     expect(a.text).toMatch(/Johan Ek/);

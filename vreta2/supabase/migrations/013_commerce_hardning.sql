@@ -1362,12 +1362,22 @@ begin
   end if;
   return case v_tool
     when 'search' then api.q_search(v_args)
+    -- "fönstren från Ockelbo": ursprunget (givarens namn, ort eller platsen saken hämtades på) filtrerar träffarna
     when 'find_object' then (select coalesce(jsonb_agg(jsonb_build_object('source', core.entity_ref(o.id), 'label', resources.object_label(o.id),
         'status', core.state_label('object', o.status::text), 'place', place.path_label(o.place_id),
-        'allocations', resources.allocation_summary(o.id))), '[]')
+        'allocations', resources.allocation_summary(o.id),
+        'from', (select pe.display_name from resources.acquisition a join people.person pe on pe.id = a.counterpart_person_id where a.object_id = o.id limit 1))), '[]')
       from resources.object o where o.site_id = core.qsite(p) and o.archived_at is null
         and (o.title ilike '%' || (v_args ->> 'q') || '%' or o.description ilike '%' || (v_args ->> 'q') || '%' or o.material ilike '%' || (v_args ->> 'q') || '%'
-             or exists (select 1 from core.search_document d where d.entity_id = o.id and d.tsv @@ websearch_to_tsquery('swedish', v_args ->> 'q'))))
+             or exists (select 1 from core.search_document d where d.entity_id = o.id and d.tsv @@ websearch_to_tsquery('swedish', v_args ->> 'q')))
+        and (nullif(v_args ->> 'origin', '') is null or exists (
+             select 1 from resources.acquisition a
+             left join people.person pe on pe.id = a.counterpart_person_id
+             left join place.locality pl on pl.id = pe.locality_id
+             left join place.external_place ep on ep.id = a.external_place_id
+             left join place.locality el on el.id = ep.locality_id
+             where a.object_id = o.id and (pe.display_name ilike '%' || (v_args ->> 'origin') || '%' or pl.name ilike (v_args ->> 'origin')
+                                           or ep.name ilike '%' || (v_args ->> 'origin') || '%' or el.name ilike (v_args ->> 'origin')))))
     when 'stock_from_person' then (select jsonb_build_object('person', core.entity_ref(v_person), 'objects', coalesce(jsonb_agg(jsonb_build_object(
         'source', core.entity_ref(o.id), 'label', resources.object_label(o.id), 'status', core.state_label('object', o.status::text),
         'place', place.path_label(o.place_id), 'price', ap.price)), '[]'))

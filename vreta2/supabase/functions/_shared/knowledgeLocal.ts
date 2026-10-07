@@ -57,6 +57,9 @@ export function stems(word: string): string[] {
   for (const suf of ["arna", "erna", "orna", "ena", "en", "et", "na", "n", "ar", "er", "or"]) {
     if (w.length > suf.length + 3 && w.endsWith(suf)) out.push(w.slice(0, -suf.length));
   }
+  // fönstren → fönster, cyklarna → cykel: bestämd form där e:et i stammen faller bort
+  if (w.length > 5 && /[^aeiouyåäö][rl]en$/.test(w)) out.push(w.slice(0, -3) + "e" + w.slice(-3, -2));
+  if (w.length > 6 && /[^aeiouyåäö][rl]arna$/.test(w)) out.push(w.slice(0, -5) + "e" + w.slice(-5, -4));
   return [...new Set(out)];
 }
 
@@ -68,8 +71,12 @@ function strip(s: string): string {
 }
 
 async function find(run: ToolRunner, what: string): Promise<any[]> {
-  for (const q of stems(strip(what))) {
-    const r = await run("find_object", { q });
+  // "fönstren från Ockelbo" → saken "fönstren", ursprunget "Ockelbo" (givare, ort eller plats)
+  const [thing, origin] = strip(what).split(/\s+från\s+/i);
+  const words = thing.split(/\s+/).filter((x) => x.length > 2);
+  const candidates = [...stems(thing), ...words.reverse().flatMap((x) => stems(x))];
+  for (const q of [...new Set(candidates)]) {
+    const r = await run("find_object", { q, origin: origin?.trim() || null });
     if (Array.isArray(r) && r.length) return r;
   }
   return [];
@@ -130,7 +137,7 @@ export async function answerLocally(question: string, run: ToolRunner, ctx: AskC
   }
   if ((m = q.match(/^berätta\s+om\s+(.+?)[.!]?$/i))) {
     const objects = await find(run, m[1]);
-    if (objects.length) return { text: `Jag öppnar Berätta för ${objects[0].label}.`, sources: [objects[0].source], navigate: `/beratta/ny?kalla=${objects[0].source.id}` };
+    if (objects.length) return { text: `Jag öppnar Berätta för ${objects[0].label}.`, sources: [objects[0].source], navigate: `/beratta?kalla=${objects[0].source.id}` };
   }
 
   // --- frågor

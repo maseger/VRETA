@@ -472,9 +472,10 @@ begin
     values (v_thread, core.ctx_site(), left(coalesce(p -> 'messages' -> 0 ->> 'content', 'Fråga Vreta'), 80), coalesce(p -> 'screen', '{}'));
   end if;
   for v_msg in select * from jsonb_array_elements(coalesce(p -> 'messages', '[]')) loop
-    insert into core.assistant_message (site_id, thread_id, role, content, sources, general_advice, action_preview_id)
+    -- clock_timestamp: meddelanden i samma anrop får stigande tider och visas i rätt ordning
+    insert into core.assistant_message (site_id, thread_id, role, content, sources, general_advice, action_preview_id, created_at)
     values (core.ctx_site(), v_thread, v_msg ->> 'role', v_msg ->> 'content', coalesce(v_msg -> 'sources', '[]'),
-            v_msg ->> 'general_advice', core.opt_uuid(v_msg, 'action_preview_id'));
+            v_msg ->> 'general_advice', core.opt_uuid(v_msg, 'action_preview_id'), clock_timestamp());
   end loop;
   update core.assistant_thread set updated_at = now() where id = v_thread;
   return jsonb_build_object('thread_id', v_thread);

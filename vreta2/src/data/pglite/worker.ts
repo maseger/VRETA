@@ -38,8 +38,9 @@ async function init(): Promise<{ fresh: boolean }> {
   dbName = `vreta2-demo-${version}`;
   progress("Startar databasen …");
   db = await PGlite.create(`idb://${dbName}`, { extensions: { vector, postgis, pg_trgm, pgcrypto }, relaxedDurability: true });
-  const ready = await db.query<{ ok: boolean }>("select to_regclass('core.command_catalog') is not null and exists (select 1 from core.command_catalog) as ok");
-  if (ready.rows[0].ok) return { fresh: false };
+  // Tabellen måste finnas innan den kan frågas (relationen slås upp redan när frågan tolkas)
+  const exists = await db.query<{ ok: boolean }>("select to_regclass('core.command_catalog') is not null as ok");
+  if (exists.rows[0].ok && (await db.query("select 1 from core.command_catalog limit 1")).rows.length) return { fresh: false };
   progress("Bygger databasen för första gången …");
   await db.exec(shim);
   for (const [name, sql] of migrations) {

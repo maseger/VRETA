@@ -420,11 +420,16 @@ declare
   v_id uuid := coalesce(core.opt_uuid(p, 'id'), gen_random_uuid());
   v_place uuid := core.opt_uuid(p, 'place_id');
   v_geom extensions.geometry := place.geom_from_geojson(p -> 'geometry');
+  v_project uuid := core.opt_uuid(p, 'project_id');
   v_media uuid;
   v_person uuid;
   v_event uuid;
 begin
   if exists (select 1 from change.moment where id = v_id) then return jsonb_build_object('moment_id', v_id, 'existing', true); end if;
+  if v_project is not null then
+    perform core.assert_entity(v_project, '{project}');
+    v_place := coalesce(v_place, (select place_id from change.project where id = v_project));
+  end if;
   if v_place is null and v_geom is not null then
     v_place := place.zone_at(core.ctx_site(), extensions.st_x(v_geom), extensions.st_y(v_geom));
   end if;
@@ -435,7 +440,7 @@ begin
     insert into core.media_link (site_id, media_id, entity_id, role) values (core.ctx_site(), v_media, v_id, 'photo') on conflict do nothing;
   end loop;
   v_event := core.record_history('moment.recorded', coalesce(nullif(p ->> 'title', ''), 'Ett ögonblick'),
-    jsonb_build_array(jsonb_build_object('id', v_id)) ||
+    jsonb_build_array(jsonb_build_object('id', v_id), jsonb_build_object('id', v_project, 'role', 'project')) ||
     coalesce((select jsonb_agg(jsonb_build_object('id', x, 'role', 'person')) from jsonb_array_elements_text(p -> 'person_ids') x), '[]'),
     core.opt_ts(p, 'occurred_at'), v_place, coalesce((p ->> 'story_value')::boolean, true), p ->> 'note', p_geom => v_geom);
   return jsonb_build_object('moment_id', v_id, 'history_event_id', v_event);

@@ -530,10 +530,11 @@ begin
     and (t.due_at is null or t.due_at < now() + interval '7 days')
   order by t.due_at nulls last limit 30;
   -- 4. Väntar på svar: intressenter och anskaffningar
-  insert into rm.today_item (site_id, kind, priority, entity_id, title, subtitle, due_at, visibility, created_by)
+  insert into rm.today_item (site_id, kind, priority, entity_id, title, subtitle, due_at, visibility, created_by, payload)
   select p_site, 'lead_waiting', 35, l.id,
          format('%s väntar på svar', coalesce((select display_name from people.person where id = l.person_id), 'En intressent')),
-         (select title from resources.listing where id = l.listing_id), l.created_at, l.visibility, l.created_by
+         (select title from resources.listing where id = l.listing_id), l.created_at, l.visibility, l.created_by,
+         jsonb_build_object('listing_id', l.listing_id)
   from resources.lead l where l.site_id = p_site and l.status = 'new' and l.archived_at is null;
   insert into rm.today_item (site_id, kind, priority, entity_id, title, subtitle, due_at, visibility, created_by)
   select p_site, 'acquisition_waiting', 36, a.id,

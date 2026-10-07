@@ -77,7 +77,7 @@ $$;
 create function core.weather_signals(p_site uuid, p_hours integer default 48) returns jsonb
 language plpgsql stable set search_path = '' as $$
 declare
-  v_th jsonb := coalesce(core.setting(p_site, 'weather_thresholds'),
+  v_th jsonb := coalesce((select value from core.site_setting where site_id = p_site and key = 'weather_thresholds'),
                          '{"frost_c":0,"heavy_rain_mm_h":4,"strong_wind_ms":12,"heat_c":28,"dry_days":14}');
   v_out jsonb := '[]';
   r record;

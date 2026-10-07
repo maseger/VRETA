@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Globe2, Home, Link2, Lock, Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 
-export function PageHeader({ kicker, title, children, sub }: { kicker?: string; title: ReactNode; children?: ReactNode; sub?: ReactNode }) {
+export function PageHeader({ kicker, title, children, sub }: { kicker?: ReactNode; title: ReactNode; children?: ReactNode; sub?: ReactNode }) {
   return (
     <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
       <div className="min-w-0">
