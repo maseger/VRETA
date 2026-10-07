@@ -32,11 +32,17 @@ beforeAll(async () => {
   const sens = (await h.sql("select id from life.taxon where scientific_name = 'Accipiter nisus'"))[0].id;
   await h.ok(owner, "RecordObservation", { taxon_id: sens, description: "Sparvhök häckar i granen", geometry: { type: "Point", coordinates: [17.5851, 59.8421] }, place_id: ids.skogstradgarden });
   await h.jobs(owner);
-  const dump = async (table: string) => JSON.stringify(await h.sql(`select * from ${table}`));
+  // Id:n, tidsstämplar och koordinater tas bort före kontrollen – annars kan "800" råka finnas i ett slumpat id
+  const scrub = (t: string) => t.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, "<id>")
+    .replace(/\d{4}-\d{2}-\d{2}[T ][\d:.]+(?:[+-]\d{2}(?::\d{2})?|Z)?/g, "<tid>").replace(/-?\d+\.\d{4,}/g, "<koordinat>");
+  const dump = async (table: string) => scrub(JSON.stringify(await h.sql(`select * from ${table}`)));
   pubText = (await Promise.all(["pub.live_item", "pub.wanted", "pub.tour", "pub.tour_stop", "pub.map_feature", "pub.hosted_event", "pub.accommodation", "pub.person", "pub.story"].map(dump))).join("\n");
   guestText = await dump("pub.guest_item");
   secrets = ["Byvägen", "070-123", "Industrigatan", "Vretavägen", "hemlig@exempel.se", "Hemlig Gäst", "Pall A", "Hylla 3", "Inplantering", "Hyllorna vänster vägg", "1200", "3100", "800", "Karin", "Torsten", "Lena", "Sara", "Swish", "Sparvhök"];
 });
+
+// Belopp räknas bara som läckage när de står som egna tal (inte som del av ett längre tal)
+const leaks = (text: string, secret: string) => /^\d+$/.test(secret) ? new RegExp(`(?<![\\d])${secret}(?![\\d])`).test(text) : text.includes(secret);
 
 describe("publika projektioner", () => {
   test("VRETA Live innehåller det som är publikt", async () => {
@@ -48,13 +54,13 @@ describe("publika projektioner", () => {
   });
 
   test("inga privata uppgifter, personer utan samtycke, lagerplatser, priser eller vistelser läcker", () => {
-    for (const secret of secrets) expect(pubText.includes(secret), `"${secret}" i publik projektion`).toBe(false);
+    for (const secret of secrets) expect(leaks(pubText, secret), `"${secret}" i publik projektion`).toBe(false);
     expect(pubText).not.toMatch(/stay|checked_in|requester/);
   });
 
   test("gästvyn visar människor bara med samtycke och aldrig priser, adresser eller lagerplatser (INV-14)", () => {
     for (const secret of ["Byvägen", "070-123", "Industrigatan", "Vretavägen", "hemlig@exempel.se", "Hemlig Gäst", "Pall A", "Hylla 3", "Hyllorna", "Karin Söder", "Torsten", "Lena Berg", "Sara Nyman", "Swish", "1200", "3100", "\"price\""]) {
-      expect(guestText.includes(secret), `"${secret}" i gästvyn`).toBe(false);
+      expect(leaks(guestText, secret), `"${secret}" i gästvyn`).toBe(false);
     }
     expect(guestText).toContain("Anders Lind");
     expect(guestText).toContain("Johan Ek");
