@@ -448,6 +448,10 @@ declare
   v_link jsonb;
   v_place uuid;
 begin
+  -- Sammansatta kommandon (t.ex. ApproveProposal) skriver en gemensam händelse i stället för en per steg
+  if current_setting('vreta.suppress_history', true) = 'on' then
+    return null;
+  end if;
   insert into core.history_event (id, site_id, event_type, occurred_at, place_id, geom, location_precision,
                                   summary, note, story_value, visibility)
   values (v_id, core.ctx_site(), p_event_type, coalesce(p_occurred_at, now()), p_place_id, p_geom, p_precision,

@@ -128,7 +128,7 @@ create table place.map_basemap (
   is_default boolean not null default false,
   sort integer not null default 0
 );
-alter table place.map_basemap alter column visibility set default 'private';
+-- Vretakartan är alltid intern, aldrig publik (R1.1 7.6); originalfilerna är privata media.
 select core.register_table('place.map_basemap', 'standard', 'map_basemap', 'name');
 
 create table place.map_overlay (
@@ -143,7 +143,7 @@ create table place.map_overlay (
   layer_code text,
   sort integer not null default 0
 );
-alter table place.map_overlay alter column visibility set default 'private';
+
 select core.register_table('place.map_overlay', 'standard', 'map_overlay', 'name');
 
 -- Vektorobjekt med verklighetsläge: NU, PLAN, VISION eller borttaget (R2.2). Precision exakt, zon eller dold.
@@ -245,7 +245,7 @@ create policy read on place.tour_stop_media for select to authenticated
 -- Platsen och alla dess överordnade platser: lagerplats → space → struktur → zon → överordnad zon;
 -- plats utanför → ort. Används för att samma händelse ska synas i plats- och zonjournal (AC-05).
 create function place.lineage(p_id uuid) returns uuid[]
-language plpgsql stable security definer set search_path = '' as $$
+language plpgsql stable set search_path = '' as $$
 declare
   v_out uuid[] := '{}';
   v_cur uuid := p_id;
@@ -271,7 +271,7 @@ end $$;
 
 -- Läsbar platsväg, t.ex. "Garage › Vänster vägg › Hylla 3".
 create function place.path_label(p_id uuid) returns text
-language sql stable security definer set search_path = '' as $$
+language sql stable set search_path = '' as $$
   select string_agg(e.title, ' › ' order by x.ord desc)
   from unnest(place.lineage(p_id)) with ordinality as x(id, ord)
   join core.entity e on e.id = x.id
@@ -279,7 +279,7 @@ $$;
 
 -- Närmaste zon för en plats (eller null).
 create function place.zone_of(p_id uuid) returns uuid
-language sql stable security definer set search_path = '' as $$
+language sql stable set search_path = '' as $$
   select x.id from unnest(place.lineage(p_id)) with ordinality as x(id, ord)
   join core.entity e on e.id = x.id and e.entity_type = 'zone' order by x.ord limit 1
 $$;
@@ -306,7 +306,7 @@ $$;
 
 -- Zonen som innehåller en punkt (för "Här" med GPS, FR-066).
 create function place.zone_at(p_site uuid, p_lon float8, p_lat float8) returns uuid
-language sql stable security definer set search_path = '' as $$
+language sql stable set search_path = '' as $$
   select z.id from place.zone z
   where z.site_id = p_site and z.archived_at is null and z.reality_mode = 'now' and z.geom is not null
     and extensions.st_contains(z.geom, extensions.st_setsrid(extensions.st_makepoint(p_lon, p_lat), 4326))
@@ -436,11 +436,11 @@ begin
     insert into place.map_basemap (id, site_id, name, captured_on, source_projection, media_id, corners, opacity, is_default, visibility)
     values (v_id, core.ctx_site(), core.req(p, 'name'), (p ->> 'captured_on')::date, p ->> 'source_projection', v_media, p -> 'corners',
             coalesce((p ->> 'opacity')::numeric, 1),
-            coalesce((p ->> 'is_default')::boolean, not exists (select 1 from place.map_basemap where site_id = core.ctx_site())), 'private');
+            coalesce((p ->> 'is_default')::boolean, not exists (select 1 from place.map_basemap where site_id = core.ctx_site())), 'internal');
   else
     insert into place.map_overlay (id, site_id, name, captured_on, source_projection, basemap_id, media_id, corners, opacity, layer_code, visibility)
     values (v_id, core.ctx_site(), core.req(p, 'name'), (p ->> 'captured_on')::date, p ->> 'source_projection',
-            core.opt_uuid(p, 'basemap_id'), v_media, p -> 'corners', coalesce((p ->> 'opacity')::numeric, 0.7), p ->> 'layer_code', 'private');
+            core.opt_uuid(p, 'basemap_id'), v_media, p -> 'corners', coalesce((p ->> 'opacity')::numeric, 0.7), p ->> 'layer_code', 'internal');
   end if;
   return jsonb_build_object('id', v_id, 'kind', v_kind);
 end $$;
