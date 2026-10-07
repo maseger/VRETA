@@ -31,12 +31,18 @@ export default defineConfig({
         icons: [{ src: "icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any maskable" }],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,svg,woff2}"],
+        globPatterns: ["**/*.{js,mjs,css,html,svg,woff2}"],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         // Demodatabasen (PGlite, PostGIS) är stor: cachas vid första användning så att demot fungerar offline
         runtimeCaching: [
           { urlPattern: /\.(?:wasm|data|tar\.gz)$/, handler: "CacheFirst", options: { cacheName: "vreta-pglite", expiration: { maxEntries: 20 } } },
           { urlPattern: /\.(?:sql)$/, handler: "StaleWhileRevalidate", options: { cacheName: "vreta-sql" } },
+          // Bilder och kartunderlag från Supabase Storage: signerade adresser byter token, så frågan ignoreras
+          { urlPattern: /\/storage\/v1\/object\/sign\//, handler: "CacheFirst",
+            options: { cacheName: "vreta-media", matchOptions: { ignoreSearch: true }, expiration: { maxEntries: 600, maxAgeSeconds: 60 * 60 * 24 * 60 } } },
+          // Bakgrundskartan (valfri) från OpenStreetMap
+          { urlPattern: /^https:\/\/tile\.openstreetmap\.org\//, handler: "CacheFirst",
+            options: { cacheName: "vreta-osm", expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 30 } } },
         ],
         navigateFallbackDenylist: [/^\/functions\//],
       },
@@ -44,6 +50,7 @@ export default defineConfig({
   ],
   build: {
     target: "es2022",
+    chunkSizeWarningLimit: 1200,
     rollupOptions: {
       output: {
         manualChunks: {

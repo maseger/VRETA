@@ -6,6 +6,8 @@ import { useCan, useLabels, useQuery } from "../app/AppContext";
 import { Chip, Empty, ErrorNote, List, PageHeader, Progress, Row, Spinner, Stamp, Tabs, statusTone } from "../ui/base";
 import { Thumb } from "../ui/media";
 import { VretaMap, type MapFeature } from "../ui/VretaMap";
+import { useMapImages, type MapLayerRow } from "../ui/mapImages";
+import { LayerChips } from "./MapLayers";
 
 type Tab = "karta" | "omraden" | "utanfor" | "projekt";
 const LAYERS = [
@@ -35,15 +37,21 @@ export default function Places() {
 
 function MapTab() {
   const nav = useNavigate();
+  const can = useCan();
   const { route } = useLabels();
-  const { data, error, loading } = useQuery<{ features: MapFeature[]; basemaps: any[]; overlays: any[] }>("q_map");
+  const { data, error, loading } = useQuery<{ features: MapFeature[]; basemaps: MapLayerRow[]; overlays: MapLayerRow[] }>("q_map");
   const [layers, setLayers] = useState(["zones", "structures", "projects", "reuse_in_use", "observations"]);
   const [mode, setMode] = useState<"now" | "all">("all");
+  const [shown, setShown] = useState<string[] | null>(null);
   const features = useMemo(() => (data?.features ?? []).filter((f) => mode === "all" || f.reality_mode === "now"), [data, mode]);
+  // Standardgrundbilden visas från början; övriga underlag slås på med chips
+  const imageIds = shown ?? (data?.basemaps ?? []).filter((b) => b.is_default).map((b) => b.id);
+  const images = useMapImages([...(data?.basemaps ?? []), ...(data?.overlays ?? [])].filter((l) => imageIds.includes(l.id)));
   if (loading) return <Spinner />;
   if (error) return <ErrorNote>{error}</ErrorNote>;
   return (
     <div>
+      <LayerChips basemaps={data?.basemaps ?? []} overlays={data?.overlays ?? []} value={imageIds} onChange={setShown} />
       <div className="mb-2 flex gap-2 overflow-x-auto pb-1">
         {LAYERS.map((l) => <Chip key={l.code} on={layers.includes(l.code)} onClick={() => setLayers((x) => x.includes(l.code) ? x.filter((y) => y !== l.code) : [...x, l.code])}>{l.label}</Chip>)}
       </div>
@@ -51,9 +59,10 @@ function MapTab() {
         <Chip on={mode === "now"} onClick={() => setMode("now")}>Som det är nu</Chip>
         <Chip on={mode === "all"} onClick={() => setMode("all")}>Med planer och visioner</Chip>
       </div>
-      <VretaMap features={features} layers={layers} height="62vh"
+      <VretaMap features={features} layers={layers} height="62vh" images={images}
         onSelect={(f) => { const r = f.entity_type === "storage_location" ? `/lager/${f.entity_id}` : route(f.entity_type, f.entity_id); if (r) nav(r); }} />
-      <p className="mt-2 text-sm text-sot-3">Heldraget = som det är nu · streckat = plan · ockra = vision. Tryck på något för att öppna det.</p>
+      <p className="mt-2 text-sm text-sot-3">Heldraget = som det är nu · streckat = plan · ockra = vision. Tryck på något för att öppna det.
+        {can("AddMapLayer") && <> · <Link to="/platser/kartlager">Kartunderlag</Link></>}</p>
     </div>
   );
 }

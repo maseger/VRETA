@@ -27,6 +27,7 @@ const PersonPage = lazy(() => import("./pages/PersonPage"));
 const OrganizationPage = lazy(() => import("./pages/OrganizationPage"));
 const Places = lazy(() => import("./pages/Places"));
 const NewPlace = lazy(() => import("./pages/NewPlace"));
+const MapLayers = lazy(() => import("./pages/MapLayers"));
 const PlacePage = lazy(() => import("./pages/PlacePage"));
 const ProjectPage = lazy(() => import("./pages/ProjectPage"));
 const NewProject = lazy(() => import("./pages/NewProject"));
@@ -97,6 +98,7 @@ export function App() {
           <Route path="/organisation/:id" element={<OrganizationPage />} />
           <Route path="/platser" element={<Places />} />
           <Route path="/platser/ny" element={<NewPlace />} />
+          <Route path="/platser/kartlager" element={<MapLayers />} />
           <Route path="/zon/:id" element={<PlacePage />} />
           <Route path="/byggnad/:id" element={<PlacePage />} />
           <Route path="/space/:id" element={<PlacePage />} />

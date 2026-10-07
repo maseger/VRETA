@@ -2,7 +2,7 @@
 // Nu ritas heldraget, plan streckat och vision skrafferat i ockra (Designdokument 2.0, Kartlägen). Ingen extern
 // karttjänst behövs; bakgrundskarta från OpenStreetMap och egna flygbilder/ritningar kan läggas under.
 import { useEffect, useRef, useState } from "react";
-import { LngLatBounds, Map as MLMap, Marker, NavigationControl, setWorkerUrl, type GeoJSONSource, type StyleSpecification } from "maplibre-gl";
+import { LngLatBounds, Map as MLMap, Marker, NavigationControl, setWorkerUrl, type GeoJSONSource, type ImageSource, type StyleSpecification } from "maplibre-gl";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import "maplibre-gl/dist/maplibre-gl.css";
 
@@ -124,15 +124,24 @@ export function VretaMap({ features, layers, onSelect, height = 420, draw, onDra
     m.setFilter("highlight", ["==", ["get", "entity_id"], highlight ?? ""]);
   }, [features, layers, ready, highlight]);
 
-  // Bildlager (egen flygbild eller ritning, georefererad med fyra hörn)
+  // Bildlager (egen flygbild eller ritning, georefererad med fyra hörn): läggs under zonerna
   useEffect(() => {
     const m = map.current;
     if (!m || !ready) return;
+    const want = new Set(images.map((i) => `img-${i.id}`));
+    for (const l of m.getStyle().layers ?? []) {
+      if (l.id.startsWith("img-") && !want.has(l.id)) { m.removeLayer(l.id); m.removeSource(l.id); }
+    }
     for (const img of images) {
       const sid = `img-${img.id}`;
-      if (m.getSource(sid)) continue;
-      m.addSource(sid, { type: "image", url: img.url, coordinates: img.corners as any });
-      m.addLayer({ id: sid, type: "raster", source: sid, paint: { "raster-opacity": img.opacity ?? 0.8 } }, "zones-fill");
+      const src = m.getSource(sid) as ImageSource | undefined;
+      if (!src) {
+        m.addSource(sid, { type: "image", url: img.url, coordinates: img.corners as any });
+        m.addLayer({ id: sid, type: "raster", source: sid, paint: { "raster-opacity": img.opacity ?? 0.8 } }, "zones-fill");
+      } else {
+        src.setCoordinates(img.corners as any);
+        m.setPaintProperty(sid, "raster-opacity", img.opacity ?? 0.8);
+      }
     }
   }, [images, ready]);
 
