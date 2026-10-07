@@ -23,7 +23,10 @@ Utan Supabase-nycklar körs **hela VRETA i webbläsaren**: samma migreringar och
 
 ## Driftsätta med Supabase
 
-VRETA 2 är ett eget Supabase-projekt.
+VRETA 2 är ett eget Supabase-projekt: **vreta2** (`xokxunmudyjpiavmruws`, eu-north-1), bredvid prototypens projekt. Migrering 001–013 är körda och registrerade i migreringshistoriken, och de sex serverfunktionerna är uppe (från commit `8845670`; nästa driftsättning från `main` ersätter dem med samma kod). Kvar att göra i Supabase-panelen: punkt 2 och 4 nedan.
+
+För att köra appen mot projektet: lägg `VITE_SUPABASE_URL=https://xokxunmudyjpiavmruws.supabase.co` och `VITE_SUPABASE_ANON_KEY=<publishable key>` i `vreta2/.env.local` (filen checkas aldrig in) och kör `npm run dev`. Första inloggningen skapar platsen och gör dig till ägare.
+
 
 1. **Skapa projektet** och notera projektreferensen, den publika nyckeln och databaslösenordet.
 2. **Inställningar** (görs av `supabase config push` från `supabase/config.toml`, eller för hand):
@@ -125,7 +128,7 @@ Klartkriteriet för R2.0 – att kriterierna går igenom på en riktig telefon u
 
 ## Öppna frågor
 
-1. Vilket Supabase-projekt ska VRETA 2 använda? (Hemligheterna ovan behövs för automatisk driftsättning.)
+1. ~~Vilket Supabase-projekt?~~ **vreta2** är skapat. Hemligheterna ovan behövs i GitHub för automatisk driftsättning.
 2. Var ska appen publiceras – t.ex. GitHub Pages under `/VRETA/v2/` bredvid prototypen?
 3. Finns Specifikation R2? Den bör stämmas av mot det som byggts.
 4. Taltjänst för svenska med VRETA:s ordlista (ADR-003) – webbläsarens räcker för fälttestet?
