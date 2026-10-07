@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-tap-highlight-color: transparent; }
+  body { @apply bg-kalk font-sans text-[16px] leading-relaxed text-sot antialiased; }
+  h1, h2, h3 { @apply font-serif text-sot; }
+  :focus-visible { outline: 3px solid #B9852B; outline-offset: 2px; border-radius: 6px; }
+  a { @apply text-falu underline-offset-2 hover:underline; }
+}
+
+@layer components {
+  /* Kort: ljus pappersyta, tunn lerram, mjuk skugga */
+  .card { @apply rounded-xl border border-lera-light bg-papper shadow-papper; }
+  .card-pad { @apply p-4; }
+  /* Knappar: primär falu, sekundär ram, mossa i linolja för "klart", spöke bara text */
+  .btn { @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg px-4 py-2 text-[15px] font-semibold no-underline transition disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn-primary { @apply btn bg-falu text-kalk shadow-papper hover:bg-falu-dark hover:no-underline; }
+  .btn-secondary { @apply btn border border-sot-3/40 bg-papper text-sot hover:border-sot-2 hover:no-underline; }
+  .btn-done { @apply btn bg-linolja text-kalk hover:bg-linolja/90 hover:no-underline; }
+  .btn-ghost { @apply btn px-2 text-falu hover:bg-kalk-2 hover:no-underline; }
+  .btn-small { @apply min-h-[36px] px-3 py-1 text-sm; }
+  /* Stämplar: status och roller som små ramade etiketter, som på en fraktsedel */
+  .stamp { @apply inline-flex items-center gap-1 rounded border px-1.5 py-[1px] text-[11px] font-semibold uppercase tracking-wider; }
+  /* Chips: rundade filterknappar; vald chip fylls */
+  .chip { @apply inline-flex min-h-[36px] items-center gap-1 rounded-full border border-lera bg-papper px-3 text-sm text-sot-2 hover:border-sot-3; }
+  .chip-on { @apply border-sot bg-sot text-kalk; }
+  .kicker { @apply text-[11px] font-semibold uppercase tracking-[0.16em] text-sot-3; }
+  .divider { @apply border-t border-dashed border-lera; }
+  .input { @apply min-h-[44px] w-full rounded-lg border border-lera bg-papper px-3 py-2 text-[16px] text-sot placeholder:text-sot-3 focus:border-sot-2 focus:outline-none; }
+  .label { @apply mb-1 block text-sm font-semibold text-sot-2; }
+  /* AI-fält: förslag markeras med streckad kant och gnista tills någon bekräftat dem */
+  .ai-field { @apply rounded-lg border-2 border-dashed border-ockra/70 bg-ockra-light/10; }
+  .ai-uncertain { @apply border-ockra bg-ockra-light/30; }
+  /* Kartlägen */
+  .hatch { background-image: repeating-linear-gradient(45deg, rgba(185,133,43,0.35) 0 6px, transparent 6px 12px); }
+}
+
+.maplibregl-ctrl-attrib { font-size: 10px; }
