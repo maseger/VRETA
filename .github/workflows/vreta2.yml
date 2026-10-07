@@ -1,0 +1,98 @@
+# VRETA 2: typkontroll, alla tester (databas i PGlite, RLS, kommandon, acceptanskriterier, serverfunktioner)
+# och bygge vid varje ändring under vreta2/. Driftsättning till Supabase sker bara när hemligheterna finns:
+#   VRETA2_SUPABASE_ACCESS_TOKEN – personlig åtkomstnyckel (supabase.com/dashboard/account/tokens)
+#   VRETA2_PROJECT_REF           – projektets referens (VRETA 2 är ett eget projekt)
+#   VRETA2_DB_PASSWORD           – databaslösenordet (för supabase db push)
+#   VRETA2_ANON_KEY              – den publika nyckeln (för röktestet)
+# ANTHROPIC_API_KEY läggs in som hemlighet i Supabase-projektet (supabase secrets set), inte här.
+name: VRETA 2
+
+on:
+  push:
+    paths: ["vreta2/**", ".github/workflows/vreta2.yml"]
+  pull_request:
+    paths: ["vreta2/**", ".github/workflows/vreta2.yml"]
+  workflow_dispatch:
+    inputs:
+      driftsatt:
+        description: "Driftsätt databas och funktioner till Supabase"
+        type: boolean
+        default: false
+
+concurrency:
+  group: vreta2-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: vreta2
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: vreta2/package-lock.json
+      - run: npm ci
+      - name: Typkontroll (app, tester, serverfunktioner)
+        run: npx tsc -b
+      - name: Tester
+        run: npm test
+      - name: Bygge (demoläge)
+        run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vreta2-dist
+          path: vreta2/dist
+          retention-days: 7
+
+  driftsatt:
+    needs: test
+    if: github.event_name == 'workflow_dispatch' && inputs.driftsatt
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.VRETA2_SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: ${{ secrets.VRETA2_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.VRETA2_DB_PASSWORD }}
+      ANON_KEY: ${{ secrets.VRETA2_ANON_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Finns hemligheterna?
+        run: |
+          for v in SUPABASE_ACCESS_TOKEN PROJECT_REF SUPABASE_DB_PASSWORD; do
+            if [ -z "${!v}" ]; then echo "::error::Hemligheten för $v saknas – se kommentaren överst i arbetsflödet."; exit 1; fi
+          done
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Länka projektet
+        run: supabase link --project-ref "$PROJECT_REF" -p "$SUPABASE_DB_PASSWORD"
+      - name: Migreringar (001–013)
+        run: supabase db push -p "$SUPABASE_DB_PASSWORD"
+      - name: Inställningar (exponerat schema, anonym inloggning)
+        run: supabase config push --project-ref "$PROJECT_REF" || echo "::warning::config push misslyckades – sätt 'Exposed schemas' till api och slå på anonym inloggning i Supabase-panelen"
+      - name: Serverfunktioner
+        run: |
+          for f in capture-agent story-agent marketplace-agent ask-vreta mcp weather; do
+            supabase functions deploy "$f" --project-ref "$PROJECT_REF" --use-api
+          done
+      - name: Röktest
+        run: |
+          url="https://$PROJECT_REF.supabase.co"
+          # Funktionerna ska svara på CORS och neka anrop utan inloggning
+          for f in capture-agent story-agent marketplace-agent ask-vreta mcp; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -X OPTIONS "$url/functions/v1/$f")
+            echo "OPTIONS $f → $code"; [ "$code" = "200" ] || exit 1
+            code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$url/functions/v1/$f" -H 'content-type: application/json' -d '{}')
+            echo "POST utan inloggning $f → $code"; [ "$code" = "401" ] || exit 1
+          done
+          # Domain API är exponerat och den anonyma rollen når bara de publika ingångarna
+          if [ -n "$ANON_KEY" ]; then
+            code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$url/rest/v1/rpc/q_context" -H "apikey: $ANON_KEY" -H "Content-Profile: api" -H 'content-type: application/json' -d '{"p":{}}')
+            echo "anon q_context → $code (ska nekas)"; [ "$code" != "200" ] || exit 1
+          fi

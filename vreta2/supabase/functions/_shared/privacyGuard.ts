@@ -57,7 +57,7 @@ export function scrubText(text: string | null | undefined, opts: { forbiddenName
 }
 
 // Kontrollerar en färdig text (efter AI eller manuell redigering). Tom lista = inget hittat.
-export function checkText(text: string, opts: { forbiddenNames?: string[]; storagePlaces?: string[]; allowPrices?: boolean } = {}): RemovedItem[] {
+export function checkText(text: string, opts: { forbiddenNames?: string[]; storagePlaces?: string[]; forbiddenPlaces?: string[]; allowPrices?: boolean } = {}): RemovedItem[] {
   const found: RemovedItem[] = [];
   for (const [re, kind] of [[EMAIL, "email"], [PHONE, "phone"], [STREET, "address"], [POSTCODE, "address"]] as const) {
     for (const m of text.matchAll(re)) found.push({ kind, text: m[0] });
@@ -69,6 +69,7 @@ export function checkText(text: string, opts: { forbiddenNames?: string[]; stora
     if (f !== n && f.length >= 3 && nameRe(f).test(text)) found.push({ kind: "name", text: f });
   }
   for (const s of opts.storagePlaces ?? []) if (s.length >= 4 && nameRe(s).test(text)) found.push({ kind: "storage_location", text: s });
+  for (const pl of opts.forbiddenPlaces ?? []) if (pl.length >= 3 && nameRe(pl).test(text)) found.push({ kind: "locality", text: pl });
   return dedupe(found);
 }
 
@@ -83,10 +84,7 @@ export function guardStory(raw: StoryContextRaw, opts: { goal: string; channelKi
     // Ett förnamn som också tillhör någon med samtycke tas inte bort
     .filter((n) => !allowedPeople.some((a) => a.display_name === n || firstName(a.display_name) === n));
 
-  const forbiddenPlaces = [...new Set([
-    ...raw.sources.map((x) => x.facts?.from_locality).filter((x): x is string => typeof x === "string" && !!x),
-    ...raw.people.map((p) => p.locality).filter((x): x is string => !!x),
-  ])];
+  const forbiddenPlaces = forbiddenPlacesFor(raw);
 
   // Källor: privata poster berättas aldrig; interna bara i privata meddelanden (R1.1 12.1)
   const blocked = raw.sources.filter((s) => s.visibility === "private" || (opts.channelKind === "public" && s.visibility === "internal"));
@@ -187,4 +185,12 @@ export function forbiddenNamesFor(raw: StoryContextRaw): string[] {
   return raw.people.filter((p) => consentFor(p, "name") !== "yes")
     .flatMap((p) => [p.display_name, firstName(p.display_name)])
     .filter((n) => n.length >= 3 && !allowed.some((a) => a.display_name === n || firstName(a.display_name) === n));
+}
+
+// Givares och medverkandes hemorter nämns aldrig (R1.1 8.6) – samma lista används före och efter AI-anropet.
+export function forbiddenPlacesFor(raw: StoryContextRaw): string[] {
+  return [...new Set([
+    ...raw.sources.map((x) => x.facts?.from_locality).filter((x): x is string => typeof x === "string" && !!x),
+    ...raw.people.map((p) => p.locality).filter((x): x is string => !!x),
+  ])];
 }

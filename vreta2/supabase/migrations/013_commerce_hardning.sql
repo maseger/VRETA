@@ -1623,7 +1623,7 @@ begin
   -- Kommandoutföraren och frågorna
   for r in
     select p.oid::regprocedure as fn from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-    where n.nspname = 'api' and p.proname not in ('ingest_weather')
+    where n.nspname = 'api' and p.proname not in ('ingest_weather', 'weather_sites')
   loop
     execute format('grant execute on function %s to authenticated', r.fn);
   end loop;
@@ -1648,6 +1648,7 @@ begin
   execute 'grant execute on function api.submit_contribution(jsonb) to anon';
   if exists (select 1 from pg_roles where rolname = 'service_role') then
     execute 'grant execute on function api.ingest_weather(uuid, jsonb) to service_role';
+    execute 'grant execute on function api.weather_sites() to service_role';
     execute 'grant execute on function core.process_jobs(integer, uuid) to service_role';
   end if;
 end $$;

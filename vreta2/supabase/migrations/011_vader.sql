@@ -131,6 +131,14 @@ begin
   return jsonb_build_object('forecast', v_f, 'observed', v_o);
 end $$;
 
+-- Platser som vädertjänsten ska hämta väder för (bara tjänsterollen): ungefärligt läge räcker.
+create function api.weather_sites() returns jsonb
+language sql stable security definer set search_path = '' as $$
+  select coalesce(jsonb_agg(jsonb_build_object('site_id', s.id, 'lat', s.approx_lat, 'lon', s.approx_lon, 'timezone', s.timezone)), '[]')
+  from core.site s join core.feature_flag f on f.site_id = s.id and f.flag = 'weather' and f.enabled
+  where s.approx_lat is not null and s.approx_lon is not null
+$$;
+
 create function cmd.reference_weather(p jsonb) returns jsonb
 language plpgsql set search_path = '' as $$
 declare v_entity uuid := core.req_uuid(p, 'entity_id'); v_ctx jsonb; v_id uuid := gen_random_uuid();
