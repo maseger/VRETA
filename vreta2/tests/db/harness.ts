@@ -1,15 +1,20 @@
-import type { PGlite } from "@electric-sql/pglite";
 import { randomUUID } from "node:crypto";
 import { freshDb } from "./pglite";
+import { realDb } from "./realPg";
+import type { SqlTx } from "../../src/data/pglite/engine";
+
+// PGlite som standard; VRETA_PG_URL kör samma tester mot en riktig Postgres.
+export type HarnessDb = SqlTx & { transaction<T>(fn: (tx: SqlTx) => Promise<T>): Promise<T> };
 import { asRole, callApi, processJobs, runCommand, runQuery, type Claims, type CommandOptions, type CommandResult } from "../../src/data/pglite/engine";
 
 export type User = { id: string; name: string; claims: Claims };
 
 export class Harness {
-  constructor(public db: PGlite) {}
+  constructor(public db: HarnessDb) {}
 
   static async create(): Promise<Harness> {
-    return new Harness(await freshDb());
+    const url = process.env.VRETA_PG_URL;
+    return new Harness(url ? await realDb(url) : await freshDb());
   }
 
   async user(name: string, anon = false): Promise<User> {

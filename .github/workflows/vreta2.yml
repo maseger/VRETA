@@ -51,8 +51,32 @@ jobs:
           path: vreta2/dist
           retention-days: 7
 
+  # Samma databas- och funktionstester mot en riktig Postgres med PostGIS och pgvector (inte bara PGlite)
+  postgres:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: vreta2/package-lock.json
+      - name: Postgres 16 med PostGIS och pgvector
+        working-directory: .
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q postgresql-16-postgis-3 postgresql-16-pgvector
+          sudo systemctl start postgresql
+          sudo -u postgres psql -c "alter user postgres password 'vreta-test'"
+      - run: npm ci
+      - name: Databastester mot Postgres
+        env:
+          VRETA_PG_URL: postgres://postgres:vreta-test@127.0.0.1:5432/postgres
+        run: npx vitest run tests/db tests/functions
+
   driftsatt:
-    needs: test
+    needs: [test, postgres]
     if: github.event_name == 'workflow_dispatch' && inputs.driftsatt
     runs-on: ubuntu-latest
     env:

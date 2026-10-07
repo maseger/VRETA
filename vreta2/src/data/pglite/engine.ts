@@ -1,6 +1,5 @@
 // Kör Domain API i PGlite med samma roller och JWT-anspråk som Supabase (demoläget och databastesterna).
 // Varje anrop är en egen transaktion: set_config('request.jwt.claims') + set local role, precis som PostgREST.
-import type { PGlite, Transaction } from "@electric-sql/pglite";
 
 export type Claims = {
   sub?: string;
@@ -27,9 +26,11 @@ export type CommandResult<T = Record<string, unknown>> = {
   duplicate?: boolean;
 };
 
-type Db = Pick<PGlite, "transaction">;
+// Det som behövs av databasen: PGlite i demoläget och testerna, eller en riktig Postgres (tests/db/realPg.ts).
+export type SqlTx = { query<T = any>(text: string, params?: any[]): Promise<{ rows: T[] }>; exec(sql: string): Promise<unknown> };
+type Db = { transaction<T>(fn: (tx: SqlTx) => Promise<T>): Promise<T> };
 
-export async function asRole<T>(db: Db, claims: Claims | null, fn: (tx: Transaction) => Promise<T>): Promise<T> {
+export async function asRole<T>(db: Db, claims: Claims | null, fn: (tx: SqlTx) => Promise<T>): Promise<T> {
   const c = claims ?? { role: "anon" };
   return db.transaction(async (tx) => {
     await tx.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify(c)]);
