@@ -3,7 +3,7 @@
 // utan att någon karttjänst behövs. Underlagen är interna och visas aldrig publikt (INV-12).
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ImagePlus, Trash2 } from "lucide-react";
+import { ImagePlus, Package, Trash2 } from "lucide-react";
 import { useApp, useCan, useCommand, useQuery } from "../app/AppContext";
 import { cornersFromControlPoints, type LonLat } from "../services/geo";
 import { d } from "../app/format";
@@ -12,7 +12,7 @@ import { TextField, Select } from "../ui/fields";
 import { BusyButton, ConfirmButton } from "../ui/sheet";
 import { VretaMap, type MapFeature } from "../ui/VretaMap";
 import type { MapLayerRow } from "../ui/mapImages";
-import { useUpload } from "../ui/media";
+import { useToast } from "../app/toast";
 
 export default function MapLayers() {
   const can = useCan();
@@ -25,6 +25,7 @@ export default function MapLayers() {
   return (
     <div>
       <PageHeader kicker={<Link to="/platser">Platser</Link>} title="Kartunderlag" sub="Flygbilder, ritningar och gamla kartor som läggs under Vretakartan. De är interna och visas aldrig utåt.">
+        {can("AddMapLayer") && !adding && <PackageButton />}
         {can("AddMapLayer") && !adding && <button type="button" className="btn-primary btn-small" onClick={() => setAdding(true)}><ImagePlus size={16} /> Läs in</button>}
       </PageHeader>
       {adding && <AddLayer features={data?.features ?? []} onDone={() => setAdding(false)} />}
@@ -61,9 +62,8 @@ export default function MapLayers() {
 type Pt = { px: [number, number]; geo: LonLat | null };
 
 function AddLayer({ features, onDone }: { features: MapFeature[]; onDone: () => void }) {
-  const { repo } = useApp();
+  const { repo, ctx } = useApp();
   const run = useCommand();
-  const upload = useUpload();
   const [file, setFile] = useState<File | null>(null);
   const [url, setUrl] = useState<string | null>(null);
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
@@ -139,7 +139,7 @@ function AddLayer({ features, onDone }: { features: MapFeature[]; onDone: () => 
           </div>
           <div className="flex flex-wrap gap-2">
             <BusyButton className="btn-primary" disabled={!corners || !name.trim()} onClick={async () => {
-              const [mediaId] = await upload([file]);
+              const mediaId = await repo.uploadMedia({ file, kind: "photo", filename: file.name, map: true }, ctx!.site!.id);
               const r = await run("AddMapLayer", { kind, name: name.trim(), media_id: mediaId, corners, captured_on: captured || null, opacity }, { success: "Kartunderlaget är inläst" });
               if (r) onDone();
             }}>Spara</BusyButton>
@@ -160,5 +160,51 @@ export function LayerChips({ basemaps, overlays, value, onChange }: { basemaps: 
         <Chip key={l.id} on={value.includes(l.id)} onClick={() => onChange(value.includes(l.id) ? value.filter((x) => x !== l.id) : [...value, l.id])}>{l.name}</Chip>
       ))}
     </div>
+  );
+}
+
+// Kartpaket från prototypens verktyg (scripts/prepare-basemap.py + kartpaket.py): bilder som redan är
+// georefererade från originalfilerna (GeoTIFF, GeoPDF) läses in med rätt hörn direkt.
+type KartpaketLayer = { name: string; kind: "base" | "overlay"; taken_on?: string | null; corners: [number, number][]; source_crs?: string; image: string };
+
+export function parseKartpaket(text: string): KartpaketLayer[] {
+  const pkg = JSON.parse(text);
+  if (pkg?.format !== "vreta-kartpaket" || !Array.isArray(pkg.layers)) throw new Error("Filen är inget kartpaket från VRETA");
+  for (const l of pkg.layers) {
+    if (!Array.isArray(l.corners) || l.corners.length !== 4 || !String(l.image ?? "").startsWith("data:image/")) throw new Error(`Lagret ${l.name ?? "?"} saknar bild eller hörn`);
+  }
+  return pkg.layers;
+}
+
+function PackageButton() {
+  const { repo, ctx } = useApp();
+  const run = useCommand();
+  const toast = useToast();
+  const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  return (
+    <>
+      <button type="button" className="btn-secondary btn-small" disabled={!!busy} onClick={() => input.current?.click()}><Package size={16} /> {busy ?? "Kartpaket"}</button>
+      <input ref={input} type="file" accept="application/json,.json" hidden onChange={async (e) => {
+        const f = e.target.files?.[0];
+        e.target.value = "";
+        if (!f) return;
+        try {
+          const layers = parseKartpaket(await f.text());
+          for (const [i, l] of layers.entries()) {
+            setBusy(`Lager ${i + 1} av ${layers.length}`);
+            const blob = await (await fetch(l.image)).blob();
+            const mediaId = await repo.uploadMedia({ file: blob, kind: "photo", filename: `${l.name}.webp`, map: true }, ctx!.site!.id);
+            await run("AddMapLayer", { kind: l.kind === "base" ? "basemap" : "overlay", name: l.name, media_id: mediaId, corners: l.corners,
+              captured_on: l.taken_on || null, source_projection: l.source_crs || null, opacity: l.kind === "base" ? 1 : 0.7 });
+          }
+          toast(`${layers.length} kartlager inlästa`);
+        } catch (err) {
+          toast((err as Error).message, "error");
+        } finally {
+          setBusy(null);
+        }
+      }} />
+    </>
   );
 }

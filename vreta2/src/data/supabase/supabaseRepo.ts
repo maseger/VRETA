@@ -134,7 +134,7 @@ export class SupabaseRepo implements Repo {
     let width: number | undefined;
     let height: number | undefined;
     if (input.kind === "photo") {
-      const d = await makeDerivatives(input.file);
+      const d = await makeDerivatives(input.file, input.map ? { max: 4096, type: "image/webp" } : {});
       share = `${siteId}/${id}/share.${extOf(d.share.type, "jpg")}`;
       thumb = `${siteId}/${id}/thumb.${extOf(d.thumb.type, "jpg")}`;
       files.push([share, d.share], [thumb, d.thumb]);

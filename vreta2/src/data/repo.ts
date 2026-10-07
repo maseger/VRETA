@@ -17,6 +17,8 @@ export type MediaInput = {
   caption?: string;
   hasPeople?: boolean;
   transcript?: string;
+  // Kartunderlag: större delningsversion i WebP
+  map?: boolean;
 };
 
 export type JournalEntry = {
