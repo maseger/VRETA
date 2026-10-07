@@ -14,7 +14,68 @@ on:
     paths: ["vreta2/**", ".github/workflows/vreta2.yml"]
   workflow_dispatch:
     inputs:
-      # AC-31: på main driftsätts databas och funktioner automatiskt när hemligheterna finns; annars hoppas det över.
+      driftsatt:
+        description: "Driftsätt databas och funktioner till Supabase"
+        type: boolean
+        default: false
+
+concurrency:
+  group: vreta2-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: vreta2
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: vreta2/package-lock.json
+      - run: npm ci
+      - name: Typkontroll (app, tester, serverfunktioner)
+        run: npx tsc -b
+      - name: Tester
+        run: npm test
+      - name: Bygge (demoläge)
+        run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vreta2-dist
+          path: vreta2/dist
+          retention-days: 7
+
+  # Samma databas- och funktionstester mot en riktig Postgres med PostGIS och pgvector (inte bara PGlite)
+  postgres:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: vreta2/package-lock.json
+      - name: Postgres 16 med PostGIS och pgvector
+        working-directory: .
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q postgresql-16-postgis-3 postgresql-16-pgvector
+          sudo systemctl start postgresql
+          sudo -u postgres psql -c "alter user postgres password 'vreta-test'"
+      - run: npm ci
+      - name: Databastester mot Postgres
+        env:
+          VRETA_PG_URL: postgres://postgres:vreta-test@127.0.0.1:5432/postgres
+        run: npx vitest run tests/db tests/functions
+
+  # AC-31: på main driftsätts databas och funktioner automatiskt när hemligheterna finns; annars hoppas det över.
   driftsatt:
     needs: [test, postgres]
     if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.driftsatt)
