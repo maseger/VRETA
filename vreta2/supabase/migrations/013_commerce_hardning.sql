@@ -294,7 +294,8 @@ begin
         (select c.context -> 'geometry' from core.capture c where c.id = v_prop.capture_id)));
     elsif v_card ->> 'kind' = 'moment' then
       v_other := v_other || cmd.record_moment(f || jsonb_build_object('capture_id', v_prop.capture_id, 'media_ids',
-        (select coalesce(jsonb_agg(media_id), '[]') from core.media_link where entity_id = v_prop.capture_id)));
+        (select coalesce(jsonb_agg(media_id), '[]') from core.media_link where entity_id = v_prop.capture_id),
+        'geometry', (select c.context -> 'geometry' from core.capture c where c.id = v_prop.capture_id), 'project_id', v_project));
     else
       v_other := v_other || cmd.record_contribution(f || jsonb_build_object('person_id', coalesce(core.opt_uuid(f, 'person_id'), v_person),
         'project_id', coalesce(core.opt_uuid(f, 'project_id'), v_project), 'need_id', v_need));

@@ -2,11 +2,28 @@
 // riktig telefon (kamera, delningsmeny, flygplansläge) prövas i fälttestet; här prövas reglerna bakom.
 import { beforeAll, describe, expect, test } from "vitest";
 import { seeded, type Seeded } from "./seeded";
+import { point } from "../../src/data/seed/demoSeed";
 
 let s: Seeded;
 beforeAll(async () => { s = await seeded(); });
 
 describe("acceptanskriterier", () => {
+  test("AC-23: en fångst med \"Här\" blir en nål i rätt zon på Vretakartan när den godkänns", async () => {
+    const { h, owner, helper, ids } = s;
+    const id = crypto.randomUUID();
+    await h.ok(helper, "RecordCapture", { id, text: "Humlor i hallonen", kind_hint: "observation", context: { geometry: point(-15, 12) } });
+    const p = await h.ok(helper, "CreateProposal", { capture_id: id, agent: "test", summary: "Humlor", cards: [{ key: "observation", kind: "observation",
+      fields: [{ field: "description", value: "Humlor i hallonen", confidence: 0.9 }, { field: "kind_code", value: "species", confidence: 0.8 }] }] });
+    const r = await h.ok(helper, "ApproveProposal", { proposal_id: p.proposal_id,
+      cards: [{ key: "observation", kind: "observation", decision: "accept", fields: { description: "Humlor i hallonen", kind_code: "species" } }] });
+    const obsId = r.other[0].observation_id;
+    const obs = await h.sql("select place_id from life.observation where id = $1", [obsId]);
+    expect(obs[0].place_id).toBe(ids.skogstradgarden);
+    await h.jobs(owner);
+    const map = await h.q(owner, "q_map");
+    expect(map.features.some((f: any) => f.entity_id === obsId && f.geometry.type === "Point")).toBe(true);
+  });
+
   test("AC-05: ett monterat objekt syns i objekt-, plats- och byggnadsjournal från en och samma händelse", async () => {
     const { h, owner, ids } = s;
     const obj = await h.q(owner, "q_object", { id: ids.fonster });

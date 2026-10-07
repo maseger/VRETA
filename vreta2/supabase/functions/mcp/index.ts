@@ -3,6 +3,7 @@
 // sin VRETA-inloggning som Bearer-token. Inget kan godkännas, delas eller raderas härifrån – fångster
 // blir förslag som en människa granskar i appen (INV-02).
 import { command, context, corsHeaders, handle, HttpError, json, query, type Ctx } from "../_server/http.ts";
+import { adapterFromCode, browserAgentInstruction, buildChannelPackage } from "../_shared/listingPackage.ts";
 
 const PROTOCOL = "2025-06-18";
 type Rpc = { jsonrpc: "2.0"; id?: string | number | null; method: string; params?: any };
@@ -18,6 +19,11 @@ const TOOLS = [
   { name: "contributors", description: "Vilka som bidragit och vilka som inte fått tack.", inputSchema: obj({ year: { type: "integer" } }) },
   { name: "longest_stored", description: "Saker som legat längst i lager.", inputSchema: obj({}) },
   { name: "period_summary", description: "Vad som hänt under en period.", inputSchema: obj({ from: { type: "string" }, to: { type: "string" } }) },
+  { name: "listings", description: "Aktiva annonser med status, kanaler och intressenter.", inputSchema: obj({}) },
+  { name: "listing_package", description: "Färdigt annonspaket för en kanal: rubrik, text och kategori – utan givare, adress, lagerplats eller inköpspris.",
+    inputSchema: obj({ listing_id: { type: "string" }, channel: { type: "string", description: "t.ex. blocket eller facebook_marketplace" } }, ["listing_id", "channel"]) },
+  { name: "mark_channel_posted", description: "Skriv tillbaka att annonsen är publicerad i en kanal, med annonsens adress. Görs efter att människan tryckt på publicera.",
+    inputSchema: obj({ listing_id: { type: "string" }, channel: { type: "string" }, external_url: { type: "string" } }, ["listing_id", "channel"]) },
   { name: "capture", description: "Fånga något nytt (text). Blir ett förslag som granskas i appen – inget blir fakta direkt.", inputSchema: obj({ text: { type: "string" }, kind_hint: { type: "string", enum: ["find", "contribution", "observation", "moment", "task", "person"] } }, ["text"]) },
 ];
 
@@ -30,6 +36,23 @@ async function call(ctx: Ctx, name: string, args: Record<string, any>) {
       context: { screen: { route: "mcp" } } }, "mcp");
     if (r.status !== "accepted") throw new Error(r.reason ?? "Kunde inte spara");
     return { capture_id: id, message: "Sparat. Fångsten tolkas och väntar under Granska i appen." };
+  }
+  if (name === "listings") return query(ctx.sb, "q_listings");
+  if (name === "listing_package") {
+    const code = (ctx.raw.codes?.channel ?? []).find((c: any) => c.code === args.channel);
+    if (!code) throw new Error(`Okänd kanal ${args.channel}`);
+    const [pkg, listing, storage] = await Promise.all([query<any>(ctx.sb, "q_listing_package", { listing_id: args.listing_id }),
+      query<any>(ctx.sb, "q_listing", { id: args.listing_id }), query<any[]>(ctx.sb, "q_storage_tree").catch(() => [])]);
+    if (!pkg) throw new Error("Annonsen finns inte");
+    const forbiddenNames = (listing?.object?.acquisitions ?? []).flatMap((a: any) => a.counterpart ? [a.counterpart.display_name, a.counterpart.display_name.split(" ")[0]] : []);
+    const saved = (listing?.channels ?? []).find((c: any) => c.channel === args.channel);
+    const built = buildChannelPackage(pkg, adapterFromCode(code), { forbiddenNames, storagePlaces: (storage ?? []).map((x) => x.name) });
+    return { ...built, title: saved?.title || built.title, body: saved?.body || built.body, instruction: browserAgentInstruction(built, code.label) };
+  }
+  if (name === "mark_channel_posted") {
+    const r = await command(ctx.sb, "MarkChannelPosted", { listing_id: args.listing_id, channel_code: args.channel, external_url: args.external_url ?? null, publish_mode: "browser_agent" }, "mcp");
+    if (r.status !== "accepted") throw new Error(r.reason ?? "Kunde inte spara");
+    return { ok: true };
   }
   if (!TOOLS.some((t) => t.name === name)) throw new Error(`Okänt verktyg ${name}`);
   return query(ctx.sb, "q_tool", { tool: name, args });

@@ -183,6 +183,15 @@ describe("serverfunktionerna mot Domain API", () => {
     expect(list.result.tools.map((t: any) => t.name)).toContain("find_object");
     const found = await (await rpc({ jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "find_object", arguments: { q: "handtag" } } })).json();
     expect(found.result.content[0].text).toMatch(/mässingshandtag/i);
+    // AC-18: annonspaket utan givare och inköpspris, och länken skrivs tillbaka efter publicering
+    const pkg = await (await rpc({ jsonrpc: "2.0", id: 31, method: "tools/call", params: { name: "listing_package", arguments: { listing_id: s.ids.listing_dorrar, channel: "blocket" } } })).json();
+    expect(pkg.result.isError).toBeUndefined();
+    expect(pkg.result.content[0].text).not.toMatch(/Torsten|450|Pall A/);
+    expect(pkg.result.structuredContent.instruction).toMatch(/tryck inte på publicera/);
+    const posted = await (await rpc({ jsonrpc: "2.0", id: 32, method: "tools/call", params: { name: "mark_channel_posted", arguments: { listing_id: s.ids.listing_dorrar, channel: "blocket", external_url: "https://www.blocket.se/annons/ny-lank" } } })).json();
+    expect(posted.result.isError).toBeUndefined();
+    const l = await s.h.q(s.owner, "q_listing", { id: s.ids.listing_dorrar });
+    expect(l.channels.find((c: any) => c.channel === "blocket").external_url).toBe("https://www.blocket.se/annons/ny-lank");
     const cap = await (await rpc({ jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "capture", arguments: { text: "Hittade en gammal smidesgrind vid ladan" } } }, "reader")).json();
     expect(cap.result.isError).toBe(true);
     const ok = await (await rpc({ jsonrpc: "2.0", id: 5, method: "tools/call", params: { name: "capture", arguments: { text: "Hittade en gammal smidesgrind vid ladan" } } })).json();

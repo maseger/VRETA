@@ -93,6 +93,8 @@ export default function Capture() {
       const places = placeId ? { place_id: placeId } : {};
       const context = {
         here: gps || placeId ? { ...gps, ...places } : null,
+        // "Här": positionen blir en nål i rätt zon när fångsten godkänns (AC-23)
+        geometry: gps ? { type: "Point", coordinates: [gps.lon, gps.lat] } : null,
         screen: useScreenCtx && screen ? { route: screen.route, entity_id: screen.entity_id, entity_type: screen.entity_type, title: screen.title } : null,
       };
       const r = await run<{ capture_id: string; queued?: boolean }>("RecordCapture", {

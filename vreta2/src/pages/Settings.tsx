@@ -13,6 +13,7 @@ import { Card, ErrorNote, Kv, PageHeader, Section, Spinner, Stamp } from "../ui/
 import { NumberField, Select, TextArea, TextField, Toggle, numOrNull } from "../ui/fields";
 import { BusyButton, ConfirmButton, Sheet } from "../ui/sheet";
 import { useToast } from "../app/toast";
+import { zip, type ZipEntry } from "../services/zip";
 
 export default function Settings() {
   const { repo, ctx, refreshContext } = useApp();
@@ -259,31 +260,47 @@ function CodeLists({ s }: { s: any }) {
 function Export() {
   const { repo } = useApp();
   const [progress, setProgress] = useState<string | null>(null);
-  const [withMedia, setWithMedia] = useState(false);
+  const [originals, setOriginals] = useState(true);
   return (
     <Section title="Export">
       <Card>
-        <p className="mb-2 text-sot-2">Allt du har rätt att se, som JSON – en fil per tabell i ett paket. Platsens data är din.</p>
-        <Toggle label="Ta med bildernas sökvägar" checked={withMedia} onChange={setWithMedia} />
+        <p className="mb-2 text-sot-2">Allt du har rätt att se, i ett paket: varje tabell som JSON och originalbilderna. Platsens data är din (AC-16).</p>
+        <Toggle label="Ta med originalbilderna" checked={originals} onChange={setOriginals} hint="Originalen kan innehålla platsdata – förvara paketet säkert." />
         <BusyButton className="btn-secondary" onClick={async () => {
           const tables = await repo.query<string[]>("q_export", {});
           const out: Record<string, unknown[]> = {};
           for (const [i, t] of tables.entries()) {
-            setProgress(`${i + 1} av ${tables.length}: ${t}`);
+            setProgress(`Data ${i + 1} av ${tables.length}: ${t}`);
             const rows: unknown[] = [];
             for (let offset = 0; ; offset += 1000) {
               const page = await repo.query<unknown[]>("q_export", { table: t, limit: 1000, offset });
               rows.push(...page);
               if (page.length < 1000) break;
             }
-            if (rows.length && (withMedia || t !== "core.media")) out[t] = rows;
+            if (rows.length) out[t] = rows;
           }
-          const blob = new Blob([JSON.stringify({ exported_at: new Date().toISOString(), format: "vreta-2.0", tables: out }, null, 1)], { type: "application/json" });
+          const enc = new TextEncoder();
+          const entries: ZipEntry[] = [{ name: "vreta.json", data: enc.encode(JSON.stringify({ exported_at: new Date().toISOString(), format: "vreta-2.0", tables: out }, null, 1)) }];
+          let missing = 0;
+          if (originals) {
+            // Originalen ligger i den privata tabellen media_original (bara ägaren ser den)
+            const media = (out["core.media_original"] ?? []) as { media_id: string; storage_path: string; original_filename?: string | null }[];
+            for (const [i, m] of media.entries()) {
+              setProgress(`Bild ${i + 1} av ${media.length}`);
+              try {
+                const url = await repo.mediaUrl(m.storage_path);
+                const blob = url ? await (await fetch(url)).blob() : null;
+                if (!blob) { missing++; continue; }
+                const name = (m.original_filename || m.storage_path.split("/").pop() || "original").replace(/[^\w.\-åäöÅÄÖ ]/g, "_");
+                entries.push({ name: `media/${m.media_id}/${name}`, data: new Uint8Array(await blob.arrayBuffer()) });
+              } catch { missing++; }
+            }
+          }
           const a = document.createElement("a");
-          a.href = URL.createObjectURL(blob);
-          a.download = `vreta-export-${new Date().toISOString().slice(0, 10)}.json`;
+          a.href = URL.createObjectURL(zip(entries));
+          a.download = `vreta-export-${new Date().toISOString().slice(0, 10)}.zip`;
           a.click();
-          setProgress(`Klart – ${num(Object.values(out).reduce((n, r) => n + r.length, 0))} rader`);
+          setProgress(`Klart – ${num(Object.values(out).reduce((n, r) => n + r.length, 0))} rader och ${entries.length - 1} bilder${missing ? ` (${missing} saknades)` : ""}`);
         }}><Download size={16} /> Exportera</BusyButton>
         {progress && <div className="mt-2 text-sm text-sot-3">{progress}</div>}
       </Card>
