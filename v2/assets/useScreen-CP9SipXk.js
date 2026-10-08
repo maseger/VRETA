@@ -1,0 +1,1 @@
+import{u as t,r}from"./react-ssM23zPL.js";import{s}from"./screen-FeKRdYRB.js";function p(e){const o=t();r.useEffect(()=>{e?.id&&s({route:o.pathname,entity_id:e.id,entity_type:e.type??void 0,title:e.title??void 0})},[e?.id,e?.type,e?.title,o.pathname])}export{p as u};

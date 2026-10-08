@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/VRETA/v2/sw.js', { scope: '/VRETA/v2/' })})}
