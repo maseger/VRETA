@@ -35,16 +35,17 @@ export function Section({ title, children, action, className = "" }: { title?: R
 }
 
 const TONES: Record<string, string> = {
-  neutral: "border-jarn text-jarn",
-  ok: "border-linolja text-linolja",
-  warn: "border-ockra text-ockra",
-  falu: "border-falu text-falu",
+  // Profilen: ockra och solros är aldrig text på kalk – de bär ram och fyllning, texten är skogsgrön eller bark
+  neutral: "border-jarn text-sot-2",
+  ok: "border-forest text-forest",
+  warn: "border-rust-pressed text-rust-pressed",
+  falu: "border-rust-pressed text-rust-pressed",
   plan: "border-lera border-dashed text-sot-3",
-  vision: "border-ockra text-ockra hatch",
-  forecast: "border-jarn text-jarn italic",
-  uncertain: "border-ockra border-dashed text-ockra",
+  vision: "border-ockra text-forest hatch",
+  forecast: "border-jarn text-sot-2 italic",
+  uncertain: "border-ockra border-dashed text-forest",
   inspiration: "border-lera text-sot-3",
-  dark: "border-sot bg-sot text-kalk",
+  dark: "border-forest bg-forest text-cream",
 };
 export function Stamp({ children, tone = "neutral", title }: { children: ReactNode; tone?: keyof typeof TONES | string; title?: string }) {
   return <span className={`stamp ${TONES[tone] ?? TONES.neutral}`} title={title}>{children}</span>;
@@ -65,10 +66,10 @@ export function Chip({ on, children, onClick, title }: { on?: boolean; children:
 // Flikrad: segmenterad kontroll med vald flik som upphöjt papper.
 export function Tabs<T extends string>({ value, onChange, tabs, label }: { value: T; onChange: (v: T) => void; tabs: { value: T; label: ReactNode; count?: number }[]; label: string }) {
   return (
-    <div role="tablist" aria-label={label} className="mb-4 flex gap-1 overflow-x-auto rounded-xl bg-kalk-2 p-1">
+    <div role="tablist" aria-label={label} className="mb-4 flex gap-1 overflow-x-auto rounded-full bg-mist/60 p-1">
       {tabs.map((t) => (
         <button key={t.value} role="tab" type="button" aria-selected={value === t.value} onClick={() => onChange(t.value)}
-          className={`min-h-[40px] flex-1 whitespace-nowrap rounded-lg px-3 text-[15px] font-semibold transition ${value === t.value ? "bg-papper text-sot shadow-papper" : "text-sot-3 hover:text-sot"}`}>
+          className={`min-h-[40px] flex-1 whitespace-nowrap rounded-full px-4 text-[14px] font-semibold transition ${value === t.value ? "bg-papper text-forest shadow-papper" : "text-sot-2 hover:text-forest"}`}>
           {t.label}{t.count !== undefined && t.count > 0 && <span className="ml-1 text-sot-3">{t.count}</span>}
         </button>
       ))}
@@ -78,7 +79,7 @@ export function Tabs<T extends string>({ value, onChange, tabs, label }: { value
 
 // Listor i kort med streckade avdelare och 44 px träffytor.
 export function List({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <ul className={`card divide-y divide-dashed divide-lera ${className}`}>{children}</ul>;
+  return <ul className={`card divide-y divide-mist ${className}`}>{children}</ul>;
 }
 export function Row({ to, onClick, children, right, leading }: { to?: string; onClick?: () => void; children: ReactNode; right?: ReactNode; leading?: ReactNode }) {
   const inner = (
@@ -98,13 +99,13 @@ export function Avatar({ name, url, size = 40 }: { name: string; url?: string | 
   return url ? (
     <img src={url} alt="" width={size} height={size} className="shrink-0 rounded-full object-cover" style={{ width: size, height: size }} />
   ) : (
-    <span aria-hidden className="inline-flex shrink-0 items-center justify-center rounded-full bg-linolja-pale font-serif font-semibold text-linolja" style={{ width: size, height: size, fontSize: size * 0.42 }}>{initial}</span>
+    <span aria-hidden className="inline-flex shrink-0 items-center justify-center rounded-full bg-forest-pale font-sans font-bold text-forest" style={{ width: size, height: size, fontSize: size * 0.42 }}>{initial}</span>
   );
 }
 
 export function Empty({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
-    <div className="rounded-xl border border-dashed border-lera px-4 py-8 text-center text-sot-3">
+    <div className="rounded-lg border border-dashed border-lera px-4 py-8 text-center text-sot-3">
       <div>{children}</div>
       {action && <div className="mt-3">{action}</div>}
     </div>
@@ -116,7 +117,7 @@ export function Spinner({ label = "Laddar …" }: { label?: string }) {
 }
 
 export function ErrorNote({ children }: { children: ReactNode }) {
-  return <div role="alert" className="rounded-lg border border-falu/40 bg-falu/5 px-3 py-2 text-falu">{children}</div>;
+  return <div role="alert" className="rounded-lg border border-rust/40 bg-rust/5 px-3 py-2 text-rust-pressed">{children}</div>;
 }
 
 // Synlighet syns: lås (privat), hus (internt), länk (delbart), jordglob (publikt).
@@ -136,9 +137,9 @@ export function Progress({ value, max, tone = "ok" }: { value: number; max: numb
 }
 
 const ALLOC_COLORS: Record<string, string> = {
-  in_use: "#7C8A5C", stored: "#B49E7E", collected: "#D6C7AE", processing: "#E3C27E", listed: "#B9852B", reserved_out: "#B9852B",
-  lent: "#B9BBB3", sold: "#4A463F", donated: "#6E685E", exchanged: "#6E685E", discarded: "#B9BBB3", discovered: "#E3C27E",
-  contacted: "#E3C27E", reserved: "#E3C27E", pickup_planned: "#E3C27E",
+  in_use: "#6B7F46", stored: "#A2724D", collected: "#CFC6B4", processing: "#EDCB86", listed: "#D99D36", reserved_out: "#D99D36",
+  lent: "#D8D8D3", sold: "#5A4636", donated: "#1F4D2E", exchanged: "#75604F", discarded: "#D8D8D3", discovered: "#EDCB86",
+  contacted: "#EDCB86", reserved: "#EDCB86", pickup_planned: "#EDCB86",
 };
 // Partiets fördelning som stapel: "250 i bruk · 120 i lager · 30 sålda".
 export function AllocationBar({ parts }: { parts: { status: string; label: string; quantity: number }[] }) {
@@ -146,7 +147,7 @@ export function AllocationBar({ parts }: { parts: { status: string; label: strin
   return (
     <div>
       <div className="flex h-3 w-full overflow-hidden rounded-full bg-kalk-3" aria-hidden>
-        {parts.map((p) => <div key={p.status} style={{ width: `${(Number(p.quantity) / total) * 100}%`, background: ALLOC_COLORS[p.status] ?? "#B9BBB3" }} />)}
+        {parts.map((p) => <div key={p.status} style={{ width: `${(Number(p.quantity) / total) * 100}%`, background: ALLOC_COLORS[p.status] ?? "#D8D8D3" }} />)}
       </div>
       <div className="mt-1 text-sm text-sot-2">{parts.map((p) => `${Number(p.quantity).toLocaleString("sv-SE")} ${p.label.toLowerCase()}`).join(" · ")}</div>
     </div>
@@ -158,7 +159,7 @@ export function AiBadge({ confidence }: { confidence?: number | null }) {
   const pct = confidence != null ? Math.round(confidence * 100) : null;
   const unsure = confidence != null && confidence < 0.7;
   return (
-    <span className={`inline-flex items-center gap-1 text-xs ${unsure ? "font-semibold text-ockra" : "text-sot-3"}`} title="Förslag – inte bekräftat">
+    <span className={`inline-flex items-center gap-1 text-xs ${unsure ? "font-semibold text-rust-pressed" : "text-sot-3"}`} title="Förslag – inte bekräftat">
       <Sparkles size={13} aria-hidden />{pct !== null ? `${pct} %` : "förslag"}{unsure ? " · osäkert" : ""}
     </span>
   );

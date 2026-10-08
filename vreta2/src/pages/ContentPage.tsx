@@ -2,7 +2,7 @@
 // Databasen gör den sista integritetskontrollen innan godkännandet.
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Copy, Share2, ShieldCheck } from "lucide-react";
+import { Copy, Share2, ShieldCheck, TriangleAlert } from "lucide-react";
 import { useApp, useCan, useCommand, useQuery } from "../app/AppContext";
 import { CONSENT } from "../app/labels";
 import { d } from "../app/format";
@@ -98,7 +98,7 @@ function Variant({ v, content, label }: { v: any; content: any; label: string })
         {editable ? <TextArea label="Text" value={body} onChange={setBody} rows={8} /> : <p className="whitespace-pre-wrap">{v.body}</p>}
         {(v.media ?? []).length > 0 && <div className="mb-2 flex gap-2">{v.media.map((m: any) => <MediaImg key={m.id} m={m} className="h-20 w-20 rounded-lg" />)}</div>}
         {(v.removed_by_guard ?? []).length > 0 && <div className="mb-2 text-sm text-sot-3">Togs bort av integritetsfiltret: {v.removed_by_guard.map((r: any) => r.text).join(", ")}</div>}
-        {(v.warnings ?? []).map((w: string, i: number) => <div key={i} className="text-sm text-ockra">⚠ {w}</div>)}
+        {(v.warnings ?? []).map((w: string, i: number) => <div key={i} className="flex items-start gap-1.5 text-sm font-semibold text-rust-pressed"><TriangleAlert size={15} className="mt-0.5 shrink-0" aria-hidden />{w}</div>)}
         <div className="mt-2 flex flex-wrap gap-2">
           {editable && body !== v.body && <BusyButton className="btn-secondary btn-small" onClick={() => run("SaveChannelVariant", { content_id: content.id, channel_code: v.channel_code, body, media_ids: v.media_ids }, { success: "Sparat" })}>Spara ändringen</BusyButton>}
           <button type="button" className="btn-ghost btn-small" onClick={async () => { await copyText(v.body ?? ""); toast("Texten är kopierad"); }}><Copy size={14} /> Kopiera</button>

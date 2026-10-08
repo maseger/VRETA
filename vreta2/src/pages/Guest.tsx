@@ -58,7 +58,7 @@ function Redeem({ token }: { token: string }) {
 function NoAccess() {
   return (
     <Card className="mt-8 text-center">
-      <h1 className="mb-2 text-2xl">VRETA</h1>
+      <h1 className="mb-2 text-2xl">Vreta</h1>
       <p>Du behöver en länk från platsen för att se den här vyn.</p>
     </Card>
   );
@@ -74,7 +74,7 @@ function GuestHome() {
   return (
     <div>
       <header className="mb-6">
-        <h1 className="font-serif text-4xl text-falu">{data.site?.name}</h1>
+        <h1 className="text-4xl">{data.site?.name}</h1>
         {data.site?.description && <p className="mt-1 text-lg text-sot-2">{data.site.description}</p>}
       </header>
       {data.items.length === 0 && <Empty>Inget delat än.</Empty>}

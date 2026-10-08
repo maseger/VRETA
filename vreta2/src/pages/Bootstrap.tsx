@@ -7,6 +7,7 @@ import { here } from "../services/geo";
 import { ErrorNote } from "../ui/base";
 import { TextArea, TextField, strOrNull } from "../ui/fields";
 import { BusyButton } from "../ui/sheet";
+import { Lockup } from "../ui/brand";
 
 export default function Bootstrap() {
   const { repo, refreshContext } = useApp();
@@ -20,7 +21,8 @@ export default function Bootstrap() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-kalk p-4">
       <div className="card card-pad w-full max-w-md">
-        <div className="mb-1 font-serif text-4xl text-falu">Välkommen</div>
+        <div className="mb-5"><Lockup /></div>
+        <h1 className="mb-1 text-4xl">Välkommen</h1>
         {pending ? (
           <>
             <p className="mb-4 text-sot-2">Du har en inbjudan till en plats.</p>

@@ -1,6 +1,6 @@
 // Journalen: allt som hänt på Vreta, filtrerbart på slag och berättelsevärde.
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, Star } from "lucide-react";
 import { useQuery } from "../app/AppContext";
 import { Chip, ErrorNote, PageHeader, Spinner } from "../ui/base";
 import { Timeline } from "../ui/timeline";
@@ -26,7 +26,7 @@ export default function Journal() {
       </form>
       <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
         {TYPES.map((t) => <Chip key={t.value} on={type === t.value} onClick={() => setType(t.value)}>{t.label}</Chip>)}
-        <Chip on={story} onClick={() => setStory((s) => !s)}>★ Värt att berätta</Chip>
+        <Chip on={story} onClick={() => setStory((s) => !s)}><Star size={14} aria-hidden /> Värt att berätta</Chip>
       </div>
       {error && <ErrorNote>{error}</ErrorNote>}
       {loading ? <Spinner /> : <Timeline events={data ?? []} empty="Inget hittades." />}

@@ -65,7 +65,7 @@ export default function Ask() {
 
   return (
     <div className="flex min-h-[calc(100vh-180px)] flex-col">
-      <PageHeader kicker="Fråga Vreta" title="Vad undrar du?" sub={screen?.title ? <>Utgår från {screen.title}</> : "Svaren kommer från det som finns i VRETA – med källor."}>
+      <PageHeader kicker="Fråga Vreta" title="Vad undrar du?" sub={screen?.title ? <>Utgår från {screen.title}</> : "Svaren kommer från det som finns i Vreta – med källor."}>
         <button type="button" className={voice ? "btn-primary btn-small" : "btn-secondary btn-small"} aria-pressed={voice}
           onClick={() => { if (voice) stopSpeaking(); setVoice(!voice); }}>{voice ? <Volume2 size={16} /> : <VolumeX size={16} />} Röstläge</button>
         <button type="button" className="btn-ghost btn-small" onClick={() => setHistory(true)}><History size={16} /> Tidigare</button>
@@ -77,9 +77,9 @@ export default function Ask() {
         )}
         <div className="flex flex-col gap-3">
           {msgs.map((m, i) => m.role === "user" ? (
-            <div key={i} className="ml-auto max-w-[85%] rounded-2xl rounded-br-sm bg-sot px-4 py-2.5 text-kalk">{m.content}</div>
+            <div key={i} className="ml-auto max-w-[85%] rounded-2xl rounded-br-sm bg-forest px-4 py-2.5 text-cream">{m.content}</div>
           ) : <AnswerCard key={i} m={m} onNavigate={(to) => nav(to)} />)}
-          {busy && <div className="max-w-[85%] animate-pulse rounded-2xl bg-papper px-4 py-3 text-sot-3 shadow-papper">Letar i VRETA …</div>}
+          {busy && <div className="max-w-[85%] animate-pulse rounded-2xl bg-papper px-4 py-3 text-sot-3 shadow-papper">Letar i Vreta …</div>}
           <div ref={bottom} />
         </div>
       </div>
@@ -105,7 +105,7 @@ function AnswerCard({ m, onNavigate }: { m: Msg; onNavigate: (to: string) => voi
       <p className="whitespace-pre-wrap">{m.content}</p>
       {m.general_advice && (
         <div className="mt-2 rounded-lg border border-dashed border-lera px-3 py-2 text-sot-2">
-          <div className="kicker mb-0.5">Allmänt råd – inte från VRETA:s data</div>{m.general_advice}
+          <div className="kicker mb-0.5">Allmänt råd – inte från Vreta:s data</div>{m.general_advice}
         </div>
       )}
       {(m.sources ?? []).length > 0 && (
@@ -118,7 +118,7 @@ function AnswerCard({ m, onNavigate }: { m: Msg; onNavigate: (to: string) => voi
       )}
       {m.navigate && <button type="button" className="btn-secondary btn-small mt-2" onClick={() => onNavigate(m.navigate!)}>Öppna</button>}
       {(m.actions ?? []).length > 0 && <ActionPreview actions={m.actions!} />}
-      {m.local && <div className="mt-1 text-xs text-sot-3">Svarat utan AI, ur VRETA:s data.</div>}
+      {m.local && <div className="mt-1 text-xs text-sot-3">Svarat utan AI, ur Vreta:s data.</div>}
     </div>
   );
 }
@@ -138,7 +138,7 @@ function ActionPreview({ actions }: { actions: ProposedAction[] }) {
             checked={chosen.includes(a.key) && !a.requires_own_tap} onChange={(e) => setChosen((x) => e.target.checked ? [...x, a.key] : x.filter((y) => y !== a.key))} />
           <span><span className="font-semibold">{a.label}</span>{done.includes(a.key) && <Stamp tone="ok">Gjort</Stamp>}
             <span className="block text-sm text-sot-2">{a.effect}</span>
-            {a.requires_own_tap && <span className="block text-sm text-ockra">Görs med ett eget tryck på sin sida.</span>}</span>
+            {a.requires_own_tap && <span className="block text-sm text-rust-pressed">Görs med ett eget tryck på sin sida.</span>}</span>
         </label>
       ))}
       {chosen.some((k) => !done.includes(k)) && (

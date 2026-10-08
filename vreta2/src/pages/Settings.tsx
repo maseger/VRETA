@@ -26,19 +26,19 @@ export default function Settings() {
   const owner = ctx?.role === "owner";
   return (
     <div>
-      <PageHeader kicker="VRETA" title="Inställningar" sub={<>{ctx?.site?.name} · du är {roleLabel(ctx?.role).toLowerCase()}{repo.mode === "demo" && " · demoläge i webbläsaren"}</>} />
+      <PageHeader kicker="Vreta" title="Inställningar" sub={<>{ctx?.site?.name} · du är {roleLabel(ctx?.role).toLowerCase()}{repo.mode === "demo" && " · demoläge i webbläsaren"}</>} />
       {error && <ErrorNote>{error}</ErrorNote>}
 
       <Section title="Du">
         <Card>
           <form className="flex items-end gap-2" onSubmit={async (e) => { e.preventDefault(); if (await run("SetDisplayName", { display_name: name.trim() }, { success: "Sparat" })) refreshContext(); }}>
-            <div className="flex-1"><TextField label="Ditt namn i VRETA" value={name} onChange={setName} mic={false} /></div>
+            <div className="flex-1"><TextField label="Ditt namn i Vreta" value={name} onChange={setName} mic={false} /></div>
             <button type="submit" className="btn-secondary mb-3">Spara</button>
           </form>
           <label className="label" htmlFor="tts">Uppläsningens hastighet ({rate.toFixed(1)}×)</label>
           <div className="mb-2 flex items-center gap-2">
             <input id="tts" type="range" min={0.7} max={1.5} step={0.1} value={rate} className="flex-1 accent-falu" onChange={(e) => { setRate(Number(e.target.value)); setSpeechRate(Number(e.target.value)); }} />
-            <button type="button" className="btn-ghost btn-small" onClick={() => speak("Hej! Så här låter VRETA.")}>Prova</button>
+            <button type="button" className="btn-ghost btn-small" onClick={() => speak("Hej! Så här låter Vreta.")}>Prova</button>
           </div>
           <div className="flex flex-wrap gap-2">
             <Link to="/synk" className="btn-secondary btn-small">Synk att lösa{s?.rejected_commands ? ` (${s.rejected_commands})` : ""}</Link>
@@ -102,7 +102,7 @@ export default function Settings() {
           {owner && <Export />}
         </>
       )}
-      <p className="mt-8 text-center text-sm text-sot-3">VRETA 2.0 · {repo.mode === "demo" ? "Demoläge: allt sparas bara i den här webbläsaren" : "Ansluten till servern"}</p>
+      <p className="mt-8 text-center text-sm text-sot-3">Vreta 2.0 · {repo.mode === "demo" ? "Demoläge: allt sparas bara i den här webbläsaren" : "Ansluten till servern"}</p>
     </div>
   );
 }

@@ -43,7 +43,7 @@ export default function NewListing() {
         <TextArea label="Beskrivning" value={desc} onChange={setDesc} rows={3} />
         {o?.batch && <NumberField label="Antal" value={qty} onChange={setQty} unit={o.batch.unit} />}
         {objectId && <Select label="Skick" value={condition} onChange={setCondition} empty="Okänt" options={Object.entries(CONDITION).map(([value, label]) => ({ value, label }))} />}
-        {["sell", "exchange", "lend"].includes(type) && <NumberField label="Pris" value={price} onChange={setPrice} unit="kr" hint="Lämna tomt så föreslår VRETA ett pris i nästa steg." />}
+        {["sell", "exchange", "lend"].includes(type) && <NumberField label="Pris" value={price} onChange={setPrice} unit="kr" hint="Lämna tomt så föreslår Vreta ett pris i nästa steg." />}
         <div className="mb-1 text-sm font-semibold text-sot-2">Kanaler</div>
         <div className="flex flex-wrap gap-2">
           {marketplaces.map((c) => <Chip key={c.code} on={channels.includes(c.code)} onClick={() => setChannels((x) => x.includes(c.code) ? x.filter((y) => y !== c.code) : [...x, c.code])}>{c.label}</Chip>)}

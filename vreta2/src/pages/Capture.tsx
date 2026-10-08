@@ -15,7 +15,7 @@ import { PlacePicker, TextArea } from "../ui/fields";
 import { useToast } from "../app/toast";
 
 const KINDS = [
-  { code: "", label: "Låt VRETA gissa" },
+  { code: "", label: "Låt Vreta gissa" },
   { code: "find", label: "Fynd eller inköp" },
   { code: "contribution", label: "Någon hjälpte till" },
   { code: "observation", label: "Något jag såg" },
@@ -120,7 +120,7 @@ export default function Capture() {
 
   return (
     <div>
-      <PageHeader kicker="Fånga" title="Vad har hänt?" sub="Ta en bild, tala in eller skriv – VRETA gör ett förslag som du granskar." />
+      <PageHeader kicker="Fånga" title="Vad har hänt?" sub="Ta en bild, tala in eller skriv – Vreta gör ett förslag som du granskar." />
 
       <div className="card card-pad mb-4">
         <PhotoPicker files={files} onChange={setFiles} />

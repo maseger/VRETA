@@ -2,39 +2,46 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Vreta Regenerative Initiative – grafisk profil. Allt byggs på kalk; Sora för allt funktionellt. */
 @layer base {
   html { -webkit-tap-highlight-color: transparent; }
-  body { @apply bg-kalk font-sans text-[16px] leading-relaxed text-sot antialiased; }
-  h1, h2, h3 { @apply font-serif text-sot; }
-  :focus-visible { outline: 3px solid #B9852B; outline-offset: 2px; border-radius: 6px; }
-  a { @apply text-falu underline-offset-2 hover:underline; }
+  body { @apply bg-kalk font-sans text-[16px] leading-[1.6] text-sot antialiased; }
+  h1, h2, h3 { @apply font-sans text-forest; }
+  h1 { @apply font-bold leading-[1.1] tracking-[-0.02em]; }
+  h2, h3 { @apply font-semibold leading-tight tracking-[-0.01em]; }
+  :focus-visible { outline: 2px solid #1F4D2E; outline-offset: 2px; border-radius: 6px; }
+  a { @apply text-rust-pressed underline-offset-2 hover:underline; }
 }
 
 @layer components {
-  /* Kort: ljus pappersyta, tunn lerram, mjuk skugga */
-  .card { @apply rounded-xl border border-lera-light bg-papper shadow-papper; }
+  /* Kort: kalk med 1px dimgrå ram och mjuk grönaktig skugga, radie 8px */
+  .card { @apply rounded-lg border border-mist bg-papper shadow-papper; }
   .card-pad { @apply p-4; }
-  /* Knappar: primär falu, sekundär ram, mossa i linolja för "klart", spöke bara text */
-  .btn { @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg px-4 py-2 text-[15px] font-semibold no-underline transition disabled:cursor-not-allowed disabled:opacity-50; }
-  .btn-primary { @apply btn bg-falu text-kalk shadow-papper hover:bg-falu-dark hover:no-underline; }
-  .btn-secondary { @apply btn border border-sot-3/40 bg-papper text-sot hover:border-sot-2 hover:no-underline; }
-  .btn-done { @apply btn bg-linolja text-kalk hover:bg-linolja/90 hover:no-underline; }
-  .btn-ghost { @apply btn px-2 text-falu hover:bg-kalk-2 hover:no-underline; }
-  .btn-small { @apply min-h-[36px] px-3 py-1 text-sm; }
-  /* Stämplar: status och roller som små ramade etiketter, som på en fraktsedel */
+  /* Knappar: alltid pill. Primär rost (en per vy), sekundär skogsgrön ram, stark skogsgrön fyllning */
+  .btn { @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full px-5 py-2 text-[14px] font-semibold no-underline transition duration-150 ease-out disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn-primary { @apply btn bg-rust text-white hover:bg-rust-pressed hover:no-underline active:bg-rust-pressed; }
+  .btn-secondary { @apply btn border border-forest bg-transparent text-forest hover:bg-forest/5 hover:no-underline; }
+  .btn-done { @apply btn bg-forest text-cream hover:bg-forest-light hover:no-underline; }
+  .btn-ghost { @apply btn px-3 text-rust-pressed hover:bg-kalk-2 hover:no-underline; }
+  .btn-small { @apply min-h-[36px] px-4 py-1 text-[13px]; }
+  /* Stämplar: status och roller som små etiketter */
   .stamp { @apply inline-flex items-center gap-1 rounded border px-1.5 py-[1px] text-[11px] font-semibold uppercase tracking-wider; }
-  /* Chips: rundade filterknappar; vald chip fylls */
-  .chip { @apply inline-flex min-h-[36px] items-center gap-1 rounded-full border border-lera bg-papper px-3 text-sm text-sot-2 hover:border-sot-3; }
-  .chip-on { @apply border-sot bg-sot text-kalk; }
-  .kicker { @apply text-[11px] font-semibold uppercase tracking-[0.16em] text-sot-3; }
-  .divider { @apply border-t border-dashed border-lera; }
-  .input { @apply min-h-[44px] w-full rounded-lg border border-lera bg-papper px-3 py-2 text-[16px] text-sot placeholder:text-sot-3 focus:border-sot-2 focus:outline-none; }
-  .label { @apply mb-1 block text-sm font-semibold text-sot-2; }
-  /* AI-fält: förslag markeras med streckad kant och gnista tills någon bekräftat dem */
-  .ai-field { @apply rounded-lg border-2 border-dashed border-ockra/70 bg-ockra-light/10; }
+  /* Chips: dimgrå pill med skogsgrön text; vald chip fylls skogsgrön */
+  .chip { @apply inline-flex min-h-[36px] items-center gap-1 rounded-full border border-transparent bg-mist px-3 text-[13px] font-semibold text-forest hover:border-forest/40; }
+  .chip-on { @apply border-forest bg-forest text-cream; }
+  /* Eyebrow: versaler med vid spärrning */
+  .kicker { @apply text-[12px] font-semibold uppercase tracking-[0.16em] text-rust-pressed; }
+  .divider { @apply border-t border-mist; }
+  .input { @apply min-h-[44px] w-full rounded border border-forest/50 bg-papper px-3 py-2 text-[16px] text-sot placeholder:text-sot-3 focus:border-forest focus:outline-none; }
+  .label { @apply mb-1 block text-sm font-semibold text-forest; }
+  /* AI-fält: förslag markeras med streckad ockrakant tills någon bekräftat dem */
+  .ai-field { @apply rounded-lg border-2 border-dashed border-ockra/80 bg-ockra-light/10; }
   .ai-uncertain { @apply border-ockra bg-ockra-light/30; }
+  /* Citat i Fraunces kursiv, avslutning i Caveat */
+  .quote { @apply font-serif italic text-forest; }
+  .signoff { @apply font-script text-[28px] leading-tight text-forest; }
   /* Kartlägen */
-  .hatch { background-image: repeating-linear-gradient(45deg, rgba(185,133,43,0.35) 0 6px, transparent 6px 12px); }
+  .hatch { background-image: repeating-linear-gradient(45deg, rgba(217,157,54,0.35) 0 6px, transparent 6px 12px); }
 }
 
 .maplibregl-ctrl-attrib { font-size: 10px; }

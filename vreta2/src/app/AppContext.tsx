@@ -3,6 +3,7 @@ import { MODE } from "../config";
 import type { AnyCommandResult, Repo, Role, Session } from "../data/repo";
 import { reasonCode, reasonText } from "../data/pglite/engine";
 import { useToast } from "./toast";
+import { Lockup } from "../ui/brand";
 
 export type CodeValue = { code: string; label: string; parent?: string | null; sort: number; attributes: Record<string, any>; site: boolean; id: string };
 export type CatalogEntry = { type: string; version: number; label: string; context: string; offline_class: string; roles: Role[]; feature: string; requires_own_tap: boolean };
@@ -105,9 +106,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 export function Starting({ progress, error }: { progress: string; error?: string | null }) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-kalk p-8 text-center">
-      <div className="font-serif text-4xl text-falu">VRETA</div>
-      {error ? <p className="max-w-sm text-falu">{error}</p> : <p className="text-sot-3" aria-live="polite">{progress}</p>}
-      {!error && <div className="h-1 w-40 overflow-hidden rounded bg-kalk-3"><div className="h-full w-1/3 animate-pulse rounded bg-falu" /></div>}
+      <Lockup />
+      {error ? <p className="max-w-sm text-rust-pressed">{error}</p> : <p className="text-sot-3" aria-live="polite">{progress}</p>}
+      {!error && <div className="h-1 w-40 overflow-hidden rounded bg-kalk-3"><div className="h-full w-1/3 animate-pulse rounded bg-forest" /></div>}
     </div>
   );
 }

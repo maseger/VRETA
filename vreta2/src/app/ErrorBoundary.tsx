@@ -15,7 +15,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode; inline?: boo
     if (isStaleChunkError(this.state.error)) return (
       <div className={this.props.inline ? "py-8" : "flex min-h-screen items-center justify-center bg-kalk p-6"}>
         <div className="card card-pad mx-auto max-w-md text-center">
-          <h1 className="mb-2 text-2xl">VRETA har uppdaterats</h1>
+          <h1 className="mb-2 text-2xl">Vreta har uppdaterats</h1>
           <p className="mb-4 text-sot-2">Ladda om sidan för att använda den nya versionen. Det du sparat finns kvar.</p>
           <button type="button" className="btn-primary" onClick={() => location.reload()}>Ladda om</button>
         </div>

@@ -150,7 +150,7 @@ function Projects() {
           {shown.map((p) => (
             <Link key={p.id} to={`/projekt/${p.id}`} className="card block px-4 py-3 text-sot no-underline hover:no-underline">
               <div className="flex items-start justify-between gap-2">
-                <div><div className="font-serif text-xl">{p.name}</div><div className="text-sm text-sot-3">{p.place}</div></div>
+                <div><div className="text-lg font-semibold text-forest">{p.name}</div><div className="text-sm text-sot-3">{p.place}</div></div>
                 <Stamp tone={statusTone(null, p.status)}>{p.status_label}</Stamp>
               </div>
               {p.needs_total > 0 && <div className="mt-2"><Progress value={p.needs_met} max={p.needs_total} /><div className="mt-1 text-sm text-sot-3">{p.needs_met} av {p.needs_total} behov uppfyllda</div></div>}

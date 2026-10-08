@@ -122,8 +122,8 @@ export function browserAgentInstruction(pkg: ChannelPackage, channelLabel: strin
     `Rubrik: ${pkg.title}`,
     `Text:\n${pkg.body}`,
     pkg.category ? `Kategori: ${pkg.category}` : null,
-    "Använd bilderna jag sparade från VRETA (de saknar platsdata).",
+    "Använd bilderna jag sparade från Vreta (de saknar platsdata).",
     "Logga inte in åt mig, betala inget och tryck inte på publicera – stanna innan sista klicket och låt mig granska.",
-    "När annonsen är publicerad: kopiera annonsens adress så att jag kan klistra in den i VRETA.",
+    "När annonsen är publicerad: kopiera annonsens adress så att jag kan klistra in den i Vreta.",
   ].filter(Boolean).join("\n\n");
 }

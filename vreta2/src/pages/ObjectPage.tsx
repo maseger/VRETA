@@ -115,7 +115,7 @@ function ObjectView({ o }: { o: any }) {
         {(o.story_notes ?? []).length === 0 && !o.story_why ? <Empty>Ingen berättelse än. Varför sparade vi den?</Empty> : (
           <Card>
             {(o.story_notes ?? []).map((n: any) => (
-              <blockquote key={n.id} className="mb-2 border-l-4 border-ockra-light pl-3 font-serif text-lg">
+              <blockquote key={n.id} className="quote mb-2 border-l-4 border-ockra-light pl-3 text-lg">
                 {n.text}{n.person && <span className="block font-sans text-sm text-sot-3">– <RefLink r={{ title: n.person.display_name, route: `/person/${n.person.id}` }} />{n.kind === "quote" && !n.quote_consent && " (citatet får inte delas)"}</span>}
               </blockquote>
             ))}
@@ -220,7 +220,7 @@ function AllocChoice({ object, alloc, onChange, filter }: { object: any; alloc: 
   const options = (object.allocations ?? []).filter((a: Alloc) => !["sold", "donated", "exchanged", "discarded"].includes(a.status) && (!filter || filter(a)))
     .map((a: Alloc) => ({ value: a.id, label: `${num(a.quantity)} ${object.batch?.unit ?? "st"} · ${a.status_label.toLowerCase()}${a.place_path ? ` · ${a.place_path}` : ""}` }));
   if (!object.batch || options.length < 2) return null;
-  return <Select label="Vilken del av partiet?" value={alloc} onChange={onChange} options={options} empty="Låt VRETA välja" />;
+  return <Select label="Vilken del av partiet?" value={alloc} onChange={onChange} options={options} empty="Låt Vreta välja" />;
 }
 
 export function MoveSheet({ open, onClose, object, alloc }: { open: boolean; onClose: () => void; object: any; alloc: Alloc | null }) {
@@ -307,7 +307,7 @@ function StatusSheet({ open, onClose, object, alloc, onFlow }: { open: boolean; 
         })}
       </div>
       <div className="mt-3"><TextField label="Anteckning (valfritt)" value={note} onChange={setNote} /></div>
-      {ctx?.role === "owner" && <p className="text-sm text-sot-3">Saknas ett steg? Ägaren kan göra undantag – VRETA frågar efter skälet om det behövs.</p>}
+      {ctx?.role === "owner" && <p className="text-sm text-sot-3">Saknas ett steg? Ägaren kan göra undantag – Vreta frågar efter skälet om det behövs.</p>}
     </Sheet>
   );
 }

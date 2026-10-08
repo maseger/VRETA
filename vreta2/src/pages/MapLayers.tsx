@@ -169,7 +169,7 @@ type KartpaketLayer = { name: string; kind: "base" | "overlay"; taken_on?: strin
 
 export function parseKartpaket(text: string): KartpaketLayer[] {
   const pkg = JSON.parse(text);
-  if (pkg?.format !== "vreta-kartpaket" || !Array.isArray(pkg.layers)) throw new Error("Filen är inget kartpaket från VRETA");
+  if (pkg?.format !== "vreta-kartpaket" || !Array.isArray(pkg.layers)) throw new Error("Filen är inget kartpaket från Vreta");
   for (const l of pkg.layers) {
     if (!Array.isArray(l.corners) || l.corners.length !== 4 || !String(l.image ?? "").startsWith("data:image/")) throw new Error(`Lagret ${l.name ?? "?"} saknar bild eller hörn`);
   }

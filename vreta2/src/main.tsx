@@ -1,8 +1,9 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { HashRouter } from "react-router-dom";
-import "@fontsource-variable/fraunces";
-import "@fontsource-variable/source-sans-3";
+import "@fontsource-variable/sora";
+import "@fontsource-variable/fraunces/wght-italic.css";
+import "@fontsource-variable/caveat";
 import "./index.css";
 import { ToastProvider } from "./app/toast";
 import { AppProvider } from "./app/AppContext";

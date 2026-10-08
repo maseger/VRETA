@@ -55,7 +55,7 @@ export default function NewObject() {
 
   return (
     <div>
-      <PageHeader kicker="Saker" title="Ny sak" sub="Snabbare: ta en bild med Fånga så fyller VRETA i åt dig." />
+      <PageHeader kicker="Saker" title="Ny sak" sub="Snabbare: ta en bild med Fånga så fyller Vreta i åt dig." />
       <Card className="mb-4">
         <PhotoPicker files={files} onChange={setFiles} />
         <div className="divider my-4" />

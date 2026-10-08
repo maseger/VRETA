@@ -74,7 +74,7 @@ function Studio({ l }: { l: any }) {
         <Section title="Pris">
           <Card>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div><div className="text-2xl font-serif">{l.price ? kr(l.price) : "Inget pris satt"}</div>{l.price_rationale && <div className="text-sm text-sot-3">{l.price_rationale}</div>}</div>
+              <div><div className="text-2xl font-bold text-forest">{l.price ? kr(l.price) : "Inget pris satt"}</div>{l.price_rationale && <div className="text-sm text-sot-3">{l.price_rationale}</div>}</div>
               {price?.price && price.price !== Number(l.price) && can("UpdateFields") && (
                 <div className="ai-field px-3 py-2">
                   <div className="flex items-center gap-2"><span className="font-semibold">Förslag: {kr(price.price)}</span><AiBadge /></div>

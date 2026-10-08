@@ -2,7 +2,7 @@
 // och visar vad som togs bort; utkasten är förslag som en människa godkänner (R1.1 S9, 12.1).
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Copy, Search, ShieldCheck, Sparkles, X } from "lucide-react";
+import { Copy, Search, ShieldCheck, Sparkles, TriangleAlert, X } from "lucide-react";
 import { useApp, useCan, useCommand, useQuery } from "../app/AppContext";
 import { draftStory, type StoryDrafts } from "../services/ai";
 import { copyText } from "../services/share";
@@ -72,7 +72,7 @@ export default function StoryStudio() {
 
   return (
     <div>
-      <PageHeader kicker="Berätta" title="Vad vill du berätta?" sub="VRETA skriver ett utkast utan namn, adresser eller priser som inte får delas." />
+      <PageHeader kicker="Berätta" title="Vad vill du berätta?" sub="Vreta skriver ett utkast utan namn, adresser eller priser som inte får delas." />
 
       <Section title="Om vad">
         <Card>
@@ -183,7 +183,7 @@ export function GuardPanel({ r }: { r: { removed: { kind: string; text: string }
         <div className="kicker mb-1">Togs bort</div>
         <ul className="mb-3 text-sot-2">{dedupeRemoved(r.removed).map((x, i) => <li key={i}>– {KIND[x.kind] ?? x.kind}: {x.text}</li>)}</ul>
       </>)}
-      {r.warnings.map((w, i) => <div key={i} className="mb-1 text-ockra">⚠ {w}</div>)}
+      {r.warnings.map((w, i) => <div key={i} className="mb-1 flex items-start gap-1.5 font-semibold text-rust-pressed"><TriangleAlert size={16} className="mt-1 shrink-0" aria-hidden />{w}</div>)}
       {r.ask_messages.map((a) => (
         <div key={a.person_id} className="mt-2 rounded-lg border border-dashed border-ockra p-3">
           <div className="mb-1 font-semibold">Fråga {a.name}</div>

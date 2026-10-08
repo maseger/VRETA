@@ -58,7 +58,7 @@ function ProposalView({ p }: { p: any }) {
 
   async function approve() {
     const r = await run<any>("ApproveProposal", { proposal_id: p.id, cards: payloadCards(), story: { why: why.trim() || null, story_value: storyValue } },
-      { success: "Godkänt – sparat i VRETA" });
+      { success: "Godkänt – sparat i Vreta" });
     if (r && !r.queued) setResult(r);
     else if (r?.queued) nav("/");
   }
@@ -79,7 +79,7 @@ function ProposalView({ p }: { p: any }) {
 
       <Card className="mb-4">
         <div className="kicker mb-1">Det du fångade</div>
-        {cap?.text && <p className="mb-2 font-serif text-lg">"{cap.text}"</p>}
+        {cap?.text && <p className="quote mb-2 text-lg">”{cap.text}”</p>}
         {cap?.transcript && <p className="mb-2 italic text-sot-2">"{cap.transcript}"</p>}
         {cap?.url && <p className="mb-2"><a href={cap.url} target="_blank" rel="noreferrer">{cap.url}</a></p>}
         <Gallery media={cap?.media ?? []} />
@@ -208,7 +208,7 @@ function Result({ p, result }: { p: any; result: any }) {
   }
   return (
     <div>
-      <PageHeader kicker="Klart" title={p.summary} sub={p.status === "rejected" ? "Förslaget avvisades." : "Godkänt och sparat i VRETA."} />
+      <PageHeader kicker="Klart" title={p.summary} sub={p.status === "rejected" ? "Förslaget avvisades." : "Godkänt och sparat i Vreta."} />
       <div className="flex flex-col gap-2">
         {links.map((l) => <Link key={l.to} to={l.to} className="btn-secondary justify-start">{l.label}</Link>)}
         <Link to="/fanga" className="btn-primary">Fånga något mer</Link>

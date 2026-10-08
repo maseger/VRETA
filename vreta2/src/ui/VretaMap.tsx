@@ -33,7 +33,7 @@ const STYLE = (osm: boolean): StyleSpecification => ({
   version: 8,
   sources: osm ? { osm: { type: "raster", tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"], tileSize: 256, attribution: "© OpenStreetMap-bidragsgivare", maxzoom: 19 } } : {},
   layers: [
-    { id: "paper", type: "background", paint: { "background-color": "#F4EFE4" } },
+    { id: "paper", type: "background", paint: { "background-color": "#F8F2E6" } },
     ...(osm ? [{ id: "osm", type: "raster" as const, source: "osm", paint: { "raster-opacity": 0.55, "raster-saturation": -0.6 } }] : []),
   ],
 });
@@ -71,25 +71,25 @@ export function VretaMap({ features, layers, onSelect, height = 420, draw, onDra
       const line = ["==", ["geometry-type"], "LineString"] as any;
       const point = ["==", ["geometry-type"], "Point"] as any;
       m.addLayer({ id: "zones-fill", type: "fill", source: "vreta", filter: ["all", poly, ["==", ["get", "layer"], "zones"]],
-        paint: { "fill-color": ["case", ["==", ["get", "water"], 1], "#8FA9B3", ["==", ["get", "mode"], "vision"], "#E3C27E", "#A9B48A"], "fill-opacity": ["case", ["==", ["get", "mode"], "now"], 0.35, 0.18] } });
+        paint: { "fill-color": ["case", ["==", ["get", "water"], 1], "#6B8F9A", ["==", ["get", "mode"], "vision"], "#D99D36", "#6B7F46"], "fill-opacity": ["case", ["==", ["get", "mode"], "now"], 0.35, 0.18] } });
       m.addLayer({ id: "zones-line", type: "line", source: "vreta", filter: ["all", poly, ["==", ["get", "layer"], "zones"]],
-        paint: { "line-color": ["case", ["==", ["get", "mode"], "vision"], "#B9852B", "#4F5E3A"], "line-width": 1.5,
+        paint: { "line-color": ["case", ["==", ["get", "mode"], "vision"], "#B37A1E", "#1F4D2E"], "line-width": 1.5,
           "line-dasharray": ["case", ["==", ["get", "mode"], "now"], ["literal", [1, 0]], ["literal", [2, 2]]] } });
       m.addLayer({ id: "structures-fill", type: "fill", source: "vreta", filter: ["all", poly, ["==", ["get", "layer"], "structures"]],
-        paint: { "fill-color": ["case", ["==", ["get", "mode"], "now"], "#B49E7E", "#E3C27E"], "fill-opacity": ["case", ["==", ["get", "mode"], "now"], 0.75, 0.3] } });
+        paint: { "fill-color": ["case", ["==", ["get", "mode"], "now"], "#A2724D", "#EDCB86"], "fill-opacity": ["case", ["==", ["get", "mode"], "now"], 0.6, 0.3] } });
       m.addLayer({ id: "structures-line", type: "line", source: "vreta", filter: ["all", poly, ["==", ["get", "layer"], "structures"]],
-        paint: { "line-color": ["case", ["==", ["get", "mode"], "now"], "#4A463F", "#B9852B"], "line-width": 1.5,
+        paint: { "line-color": ["case", ["==", ["get", "mode"], "now"], "#5A4636", "#B37A1E"], "line-width": 1.5,
           "line-dasharray": ["case", ["==", ["get", "mode"], "now"], ["literal", [1, 0]], ["literal", [3, 2]]] } });
       m.addLayer({ id: "projects-line", type: "line", source: "vreta", filter: ["all", poly, ["==", ["get", "layer"], "projects"]],
-        paint: { "line-color": "#8C2F1D", "line-width": 2, "line-dasharray": [2, 1.5], "line-offset": -2 } });
-      m.addLayer({ id: "lines", type: "line", source: "vreta", filter: line, paint: { "line-color": "#6E685E", "line-width": 2.5, "line-dasharray": [1, 1] } });
+        paint: { "line-color": "#B5523C", "line-width": 2, "line-dasharray": [2, 1.5], "line-offset": -2 } });
+      m.addLayer({ id: "lines", type: "line", source: "vreta", filter: line, paint: { "line-color": "#75604F", "line-width": 2.5, "line-dasharray": [1, 1] } });
       m.addLayer({ id: "points", type: "circle", source: "vreta", filter: point,
-        paint: { "circle-radius": 7, "circle-stroke-width": 2, "circle-stroke-color": "#FBF8F1",
-          "circle-color": ["match", ["get", "layer"], "observations", "#7C8A5C", "reuse_in_use", "#B9852B", "storage", "#4A463F", "#8C2F1D"] } });
-      m.addLayer({ id: "highlight", type: "line", source: "vreta", filter: ["==", ["get", "id"], ""], paint: { "line-color": "#8C2F1D", "line-width": 4 } });
-      m.addLayer({ id: "draft-fill", type: "fill", source: "draft", filter: poly, paint: { "fill-color": "#8C2F1D", "fill-opacity": 0.15 } });
-      m.addLayer({ id: "draft-line", type: "line", source: "draft", filter: ["any", poly, line], paint: { "line-color": "#8C2F1D", "line-width": 2.5 } });
-      m.addLayer({ id: "draft-pts", type: "circle", source: "draft", filter: point, paint: { "circle-radius": 6, "circle-color": "#8C2F1D", "circle-stroke-color": "#FBF8F1", "circle-stroke-width": 2 } });
+        paint: { "circle-radius": 7, "circle-stroke-width": 2, "circle-stroke-color": "#FCF8F0",
+          "circle-color": ["match", ["get", "layer"], "observations", "#6B7F46", "reuse_in_use", "#D99D36", "storage", "#5A4636", "#B5523C"] } });
+      m.addLayer({ id: "highlight", type: "line", source: "vreta", filter: ["==", ["get", "id"], ""], paint: { "line-color": "#B5523C", "line-width": 4 } });
+      m.addLayer({ id: "draft-fill", type: "fill", source: "draft", filter: poly, paint: { "fill-color": "#B5523C", "fill-opacity": 0.15 } });
+      m.addLayer({ id: "draft-line", type: "line", source: "draft", filter: ["any", poly, line], paint: { "line-color": "#B5523C", "line-width": 2.5 } });
+      m.addLayer({ id: "draft-pts", type: "circle", source: "draft", filter: point, paint: { "circle-radius": 6, "circle-color": "#B5523C", "circle-stroke-color": "#FCF8F0", "circle-stroke-width": 2 } });
       for (const id of ["zones-fill", "structures-fill", "points", "projects-line", "lines"]) {
         m.on("click", id, (e) => {
           if (cb.current.draw) return;
@@ -120,8 +120,8 @@ export function VretaMap({ features, layers, onSelect, height = 420, draw, onDra
     markers.current.forEach((x) => x.remove());
     markers.current = shown.filter((f) => (f.layer === "zones" || f.layer === "structures") && f.label).map((f) => {
       const div = document.createElement("div");
-      div.className = `pointer-events-none select-none whitespace-nowrap rounded px-1 text-[11px] font-semibold ${f.reality_mode === "now" ? "text-sot-2" : "italic text-ockra"}`;
-      div.style.textShadow = "0 0 3px #F4EFE4, 0 0 3px #F4EFE4";
+      div.className = `pointer-events-none select-none whitespace-nowrap rounded px-1 text-[11px] font-semibold ${f.reality_mode === "now" ? "text-forest" : "italic text-sot-2"}`;
+      div.style.textShadow = "0 0 3px #F8F2E6, 0 0 3px #F8F2E6";
       div.textContent = f.label + (f.reality_mode === "vision" ? " (vision)" : f.reality_mode === "plan" ? " (plan)" : "");
       return new Marker({ element: div }).setLngLat(centroid(f.geometry)).addTo(m);
     });
@@ -205,7 +205,7 @@ export function VretaMap({ features, layers, onSelect, height = 420, draw, onDra
             <button type="button" className="pointer-events-auto rounded-md bg-papper/90 px-2 py-1 text-xs shadow-papper" onClick={() => { pts.current = pts.current.slice(0, -1); setDrawn((n) => n + 1); }}>Ångra punkt</button>
           )}
         </div>
-        {draw && <div className="rounded-md bg-sot/80 px-2 py-1 text-xs text-kalk">
+        {draw && <div className="rounded-md bg-forest/85 px-2 py-1 text-xs text-cream">
           {draw === "point" ? "Tryck där det är" : draw === "line" ? "Tryck längs linjen" : "Tryck runt ytan, hörn för hörn"}</div>}
       </div>
     </div>

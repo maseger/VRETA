@@ -91,7 +91,7 @@ function StorageLocation({ id }: { id: string }) {
         </div>
         <Card className="h-fit text-center print:shadow-none">
           <div className="mx-auto w-40" aria-label={`QR-kod för ${s.name}`} dangerouslySetInnerHTML={{ __html: svg }} />
-          <div className="mt-1 font-serif text-lg">{s.name}</div>
+          <div className="mt-1 text-lg font-semibold text-forest">{s.name}</div>
           <div className="font-mono text-sm text-sot-3">{s.qr_code}</div>
           <button type="button" className="btn-ghost btn-small mt-2" onClick={() => window.print()}><Printer size={15} /> Skriv ut etikett</button>
         </Card>
@@ -137,7 +137,7 @@ function ScanSheet({ open, onClose, tree }: { open: boolean; onClose: () => void
     scanOnce(video.current, ctrl.signal).then((raw) => {
       if (!raw) return;
       const m = raw.match(/lager\/([0-9a-f-]{36})/i);
-      if (m) { onClose(); nav(`/lager/${m[1]}`); } else setErr("Koden hör inte till VRETA:s lager.");
+      if (m) { onClose(); nav(`/lager/${m[1]}`); } else setErr("Koden hör inte till Vreta:s lager.");
     }).catch(() => setErr("Kameran gick inte att starta."));
     return () => ctrl.abort();
   }, [open, nav, onClose]);

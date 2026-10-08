@@ -192,7 +192,7 @@ function Tile({ icon: Icon, label, onClick, hot }: { icon: any; label: string; o
 }
 
 function Stat({ n, label }: { n?: number | null; label: string }) {
-  return <div><div className="font-serif text-2xl">{num(n ?? 0)}</div><div className="text-sm text-sot-3">{label}</div></div>;
+  return <div><div className="text-2xl font-bold text-forest">{num(n ?? 0)}</div><div className="text-sm text-sot-3">{label}</div></div>;
 }
 
 function ThanksSheet({ open, onClose, p }: { open: boolean; onClose: () => void; p: any }) {

@@ -62,6 +62,15 @@ För att köra appen mot projektet: lägg `VITE_SUPABASE_URL=https://xokxunmudyj
 - **Integritet.** *Privacy Guard* är deterministisk kod: den bygger den rensade kontext som Claude får, kontrollerar utkasten efteråt (namn utan samtycke, adresser, telefon, mejl, priser, lagerplatser, givares hemorter) och databasen gör en sista kontroll när en berättelse godkänns. Bilder som delas är omkodade utan platsdata.
 - **Feature flags per plats** styr när senare releasers gränssnitt slås på; schemat finns alltid.
 
+## Grafisk profil
+
+Appen följer Vretas grafiska profil (brand book, oktober 2026):
+- **Färger:** skogsgrön för rubriker och navigering, rost för primära knappar, bark för brödtext och kalk som grund. Solros, mossa, våtmarksblå, trä och ockra används bara som dekor. Färgerna finns i `tailwind.config.ts`; de äldre namnen (kalk, sot, falu …) pekar på profilens färger.
+- **Typsnitt:** Sora för allt funktionellt, Fraunces kursiv bara för citat (`.quote`) och Caveat bara för korta handskrivna avslutningar (`.signoff`).
+- **Former:** pill-formade knappar och chips, kort med 8 px radie, 1 px dimgrå ram och grönaktig skugga, samt en 2 px skogsgrön fokusram.
+- **Logotyp:** `src/ui/brand.tsx` ritar bladmärket som vektor, eftersom profilens logofiler är lågupplösta platshållare. Byt mot originalfilerna när de finns.
+- **Bilder:** inloggningssidan använder trädgårdsbilden och ängsblommorna ur profilen (`src/assets/brand/`).
+
 ## Kodstruktur
 
 ```
