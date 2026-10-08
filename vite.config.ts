@@ -24,7 +24,8 @@ export default defineConfig({
         scope: base,
         icons: [{ src: "icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any maskable" }],
       },
-      workbox: { globPatterns: ["**/*.{js,css,html,svg,woff2}"] },
+      // VRETA 2 ligger i v2/ på samma sida – prototypens service worker ska inte svara för den
+      workbox: { globPatterns: ["**/*.{js,css,html,svg,woff2}"], navigateFallbackDenylist: [/\/v2(\/|$)/] },
     }),
   ],
   worker: { format: "es" },

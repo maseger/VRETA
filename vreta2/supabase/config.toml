@@ -1,0 +1,49 @@
+# Supabase CLI för VRETA 2 – ett eget projekt, parallellt med prototypen.
+# Migreringarna (001–013) är desamma som demoläget kör i PGlite; shim/ används bara där.
+project_id = "vreta2"
+
+[api]
+# Appen pratar bara med Domain API (schemat api). Projektionerna i pub nås via api-funktionerna.
+schemas = ["api"]
+extra_search_path = ["extensions"]
+
+[db]
+major_version = 17
+
+[auth]
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["https://*.github.io"]
+# Gästlänkar ger en anonym inloggning (R1.1 M9)
+enable_anonymous_sign_ins = true
+
+[auth.email]
+enable_signup = true
+
+[storage]
+file_size_limit = "50MiB"
+
+# Agenterna kräver inloggning; de läser och skriver med användarens egen behörighet.
+[functions.capture-agent]
+verify_jwt = true
+import_map = "./functions/deno.json"
+
+[functions.story-agent]
+verify_jwt = true
+import_map = "./functions/deno.json"
+
+[functions.marketplace-agent]
+verify_jwt = true
+import_map = "./functions/deno.json"
+
+[functions.ask-vreta]
+verify_jwt = true
+import_map = "./functions/deno.json"
+
+[functions.mcp]
+verify_jwt = true
+import_map = "./functions/deno.json"
+
+# Vädret anropas av schemat med tjänstenyckeln och kontrollerar den själv.
+[functions.weather]
+verify_jwt = false
+import_map = "./functions/deno.json"

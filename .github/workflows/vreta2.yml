@@ -1,0 +1,190 @@
+# VRETA 2: typkontroll, alla tester (databas i PGlite, RLS, kommandon, acceptanskriterier, serverfunktioner)
+# och bygge vid varje ändring under vreta2/. Driftsättning till Supabase sker bara när hemligheterna finns:
+#   VRETA2_SUPABASE_ACCESS_TOKEN – personlig åtkomstnyckel (supabase.com/dashboard/account/tokens)
+#   VRETA2_PROJECT_REF           – projektets referens (VRETA 2 är ett eget projekt)
+#   VRETA2_DB_PASSWORD           – databaslösenordet (för supabase db push)
+#   VRETA2_ANON_KEY              – den publika nyckeln (för röktestet)
+# ANTHROPIC_API_KEY läggs in som hemlighet i Supabase-projektet (supabase secrets set), inte här.
+name: VRETA 2
+
+on:
+  push:
+    paths: ["vreta2/**", ".github/workflows/vreta2.yml"]
+  pull_request:
+    paths: ["vreta2/**", ".github/workflows/vreta2.yml"]
+  workflow_dispatch:
+    inputs:
+      driftsatt:
+        description: "Driftsätt databas och funktioner till Supabase"
+        type: boolean
+        default: false
+
+concurrency:
+  group: vreta2-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: vreta2
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: vreta2/package-lock.json
+      - run: npm ci
+      - name: Typkontroll (app, tester, serverfunktioner)
+        run: npx tsc -b
+      - name: Tester
+        run: npm test
+      - name: Bygge (demoläge)
+        run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vreta2-dist
+          path: vreta2/dist
+          retention-days: 7
+
+  # Samma databas- och funktionstester mot en riktig Postgres med PostGIS och pgvector (inte bara PGlite)
+  postgres:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: vreta2/package-lock.json
+      - name: Postgres 16 med PostGIS och pgvector
+        working-directory: .
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q postgresql-16-postgis-3 postgresql-16-pgvector
+          sudo systemctl start postgresql
+          sudo -u postgres psql -c "alter user postgres password 'vreta-test'"
+      - run: npm ci
+      - name: Databastester mot Postgres
+        env:
+          VRETA_PG_URL: postgres://postgres:vreta-test@127.0.0.1:5432/postgres
+        run: npx vitest run tests/db tests/functions
+
+  # AC-31: på main driftsätts databas och funktioner automatiskt när hemligheterna finns; annars hoppas det över.
+  driftsatt:
+    needs: [test, postgres]
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.driftsatt)
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.VRETA2_SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: ${{ secrets.VRETA2_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.VRETA2_DB_PASSWORD }}
+      ANON_KEY: ${{ secrets.VRETA2_ANON_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Finns hemligheterna?
+        id: koll
+        run: |
+          for v in SUPABASE_ACCESS_TOKEN PROJECT_REF SUPABASE_DB_PASSWORD; do
+            if [ -z "${!v}" ]; then
+              if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then echo "::error::Hemligheten för $v saknas – se kommentaren överst i arbetsflödet."; exit 1; fi
+              echo "::notice::VRETA 2 har inget Supabase-projekt kopplat än ($v saknas) – driftsättningen hoppas över."
+              echo "ok=false" >> "$GITHUB_OUTPUT"; exit 0
+            fi
+          done
+          echo "ok=true" >> "$GITHUB_OUTPUT"
+      - uses: supabase/setup-cli@v1
+        if: steps.koll.outputs.ok == 'true'
+        with:
+          version: latest
+      - name: Länka projektet
+        if: steps.koll.outputs.ok == 'true'
+        run: supabase link --project-ref "$PROJECT_REF" -p "$SUPABASE_DB_PASSWORD"
+      - name: Migreringar (001–013)
+        if: steps.koll.outputs.ok == 'true'
+        run: supabase db push -p "$SUPABASE_DB_PASSWORD"
+      - name: Inställningar (exponerat schema, anonym inloggning)
+        if: steps.koll.outputs.ok == 'true'
+        run: supabase config push --project-ref "$PROJECT_REF" || echo "::warning::config push misslyckades – sätt 'Exposed schemas' till api och slå på anonym inloggning i Supabase-panelen"
+      - name: Serverfunktioner
+        if: steps.koll.outputs.ok == 'true'
+        run: |
+          for f in capture-agent story-agent marketplace-agent ask-vreta mcp weather; do
+            supabase functions deploy "$f" --project-ref "$PROJECT_REF" --use-api
+          done
+      - name: Röktest
+        if: steps.koll.outputs.ok == 'true'
+        run: |
+          url="https://$PROJECT_REF.supabase.co"
+          # Funktionerna ska svara på CORS och neka anrop utan inloggning
+          for f in capture-agent story-agent marketplace-agent ask-vreta mcp; do
+            ok=""
+            for i in 1 2 3 4 5 6; do
+              code=$(curl -s -o /dev/null -w '%{http_code}' -X OPTIONS "$url/functions/v1/$f")
+              [ "$code" = "200" ] && ok=1 && break
+              sleep 10
+            done
+            echo "OPTIONS $f → $code"; [ -n "$ok" ] || exit 1
+            code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$url/functions/v1/$f" -H 'content-type: application/json' -d '{}')
+            echo "POST utan inloggning $f → $code"; [ "$code" = "401" ] || exit 1
+          done
+          # Domain API är exponerat och den anonyma rollen når bara de publika ingångarna
+          if [ -n "$ANON_KEY" ]; then
+            code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$url/rest/v1/rpc/q_context" -H "apikey: $ANON_KEY" -H "Content-Profile: api" -H 'content-type: application/json' -d '{"p":{}}')
+            echo "anon q_context → $code (ska nekas)"; [ "$code" != "200" ] || exit 1
+          fi
+
+  # Appen publiceras på GitHub Pages under /VRETA/v2/, bredvid prototypen, när main ändras.
+  # Bara mappen v2/ på grenen gh-pages byts ut; prototypens filer lämnas orörda.
+  publicera:
+    needs: [test, postgres]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      PROJECT_REF: ${{ secrets.VRETA2_PROJECT_REF }}
+      ANON_KEY: ${{ secrets.VRETA2_ANON_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Finns hemligheterna?
+        id: koll
+        run: |
+          if [ -z "$PROJECT_REF" ] || [ -z "$ANON_KEY" ]; then
+            echo "::notice::VRETA2_PROJECT_REF eller VRETA2_ANON_KEY saknas – appen publiceras inte."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.koll.outputs.ok == 'true'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: vreta2/package-lock.json
+      - if: steps.koll.outputs.ok == 'true'
+        run: npm ci
+      - name: Bygge för /VRETA/v2/
+        if: steps.koll.outputs.ok == 'true'
+        run: VITE_SUPABASE_URL="https://$PROJECT_REF.supabase.co" VITE_SUPABASE_ANON_KEY="$ANON_KEY" VITE_BASE=/VRETA/v2/ npm run build
+      - name: Lägg bygget i v2/ på gh-pages
+        if: steps.koll.outputs.ok == 'true'
+        working-directory: .
+        run: |
+          git fetch -q --depth 1 origin gh-pages
+          git worktree add -q "$RUNNER_TEMP/pages" FETCH_HEAD --detach
+          # Förra versionens filer ligger kvar, så att en flik som var öppen under publiceringen kan läsa klart
+          mkdir -p "$RUNNER_TEMP/pages/v2"
+          cp -r vreta2/dist/. "$RUNNER_TEMP/pages/v2/"
+          cd "$RUNNER_TEMP/pages"
+          git add -A v2
+          if git diff --cached --quiet; then echo "Inget nytt att publicera."; exit 0; fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "Publicera VRETA 2 ${GITHUB_SHA::7}"
+          git push -q origin HEAD:gh-pages
+          echo "Publicerad: https://${GITHUB_REPOSITORY_OWNER}.github.io/VRETA/v2/"

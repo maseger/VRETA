@@ -4,6 +4,10 @@ Digitalt operativsystem för återbruk, regenerativ platsutveckling och berätta
 
 VRETA följer resurser från fynd till nytt liv eller ny ägare, håller ihop människorna som bidrar (leverantörer, givare, medskapare, köpare) och gör varje händelse till en berättelse som kan delas.
 
+## VRETA 2
+
+[`vreta2/`](vreta2/README.md) är den nya versionen, byggd från noll enligt Designdokument 2.0 (release R2.0: ny plattform och prototypens kärnflöden). Den kan provas direkt i webbläsaren utan server (`cd vreta2 && npm ci && npm run dev`). Prototypen nedan används parallellt tills R2.0 är godkänd.
+
 ## Specifikation
 
 Gällande specifikation är [**VRETA – Specifikation R1.1**](docs/spec-r1.1.md), exporterad från Claude Docs. Den ersätter systemspecifikationerna V1 och V2.0.
