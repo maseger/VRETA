@@ -178,8 +178,9 @@ jobs:
         run: |
           git fetch -q --depth 1 origin gh-pages
           git worktree add -q "$RUNNER_TEMP/pages" FETCH_HEAD --detach
-          rm -rf "$RUNNER_TEMP/pages/v2"
-          cp -r vreta2/dist "$RUNNER_TEMP/pages/v2"
+          # Förra versionens filer ligger kvar, så att en flik som var öppen under publiceringen kan läsa klart
+          mkdir -p "$RUNNER_TEMP/pages/v2"
+          cp -r vreta2/dist/. "$RUNNER_TEMP/pages/v2/"
           cd "$RUNNER_TEMP/pages"
           git add -A v2
           if git diff --cached --quiet; then echo "Inget nytt att publicera."; exit 0; fi
