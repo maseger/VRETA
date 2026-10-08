@@ -189,22 +189,25 @@ export function VretaMap({ features, layers, onSelect, height = 420, draw, onDra
   return (
     <div className="relative overflow-hidden rounded-xl border border-lera-light shadow-papper" style={{ height }}>
       <div ref={el} className="h-full w-full" aria-label="Karta över Vreta" role="region" />
-      <div className="absolute bottom-2 left-2 flex gap-1">
-        <button type="button" className="rounded-md bg-papper/90 px-2 py-1 text-xs shadow-papper" onClick={() => { const v = !osm; setOsm(v); localStorage.setItem("vreta2-osm", v ? "1" : "0"); }}>
-          {osm ? "Bara Vretakartan" : "Visa bakgrundskarta"}
-        </button>
-        {onSaveCenter && !draw && (
-          <button type="button" className="rounded-md bg-papper/90 px-2 py-1 text-xs shadow-papper" onClick={() => {
-            const m = map.current;
-            if (m) { const c = m.getCenter(); void onSaveCenter([Math.round(c.lng * 1e6) / 1e6, Math.round(c.lat * 1e6) / 1e6]); }
-          }}>Gör detta till kartans mitt</button>
-        )}
-        {draw && draw !== "point" && pts.current.length > 0 && (
-          <button type="button" className="rounded-md bg-papper/90 px-2 py-1 text-xs shadow-papper" onClick={() => { pts.current = pts.current.slice(0, -1); setDrawn((n) => n + 1); }}>Ångra punkt</button>
-        )}
+      {/* Knapparna ligger överst så att de syns även när kartans nederkant hamnar under menyraden på mobilen */}
+      <div className="pointer-events-none absolute left-2 right-14 top-2 flex flex-col items-start gap-1">
+        <div className="flex flex-wrap gap-1">
+          <button type="button" className="pointer-events-auto rounded-md bg-papper/90 px-2 py-1 text-xs shadow-papper" onClick={() => { const v = !osm; setOsm(v); localStorage.setItem("vreta2-osm", v ? "1" : "0"); }}>
+            {osm ? "Bara Vretakartan" : "Visa bakgrundskarta"}
+          </button>
+          {onSaveCenter && !draw && (
+            <button type="button" className="pointer-events-auto rounded-md bg-papper/90 px-2 py-1 text-xs shadow-papper" onClick={() => {
+              const m = map.current;
+              if (m) { const c = m.getCenter(); void onSaveCenter([Math.round(c.lng * 1e6) / 1e6, Math.round(c.lat * 1e6) / 1e6]); }
+            }}>Gör detta till kartans mitt</button>
+          )}
+          {draw && draw !== "point" && pts.current.length > 0 && (
+            <button type="button" className="pointer-events-auto rounded-md bg-papper/90 px-2 py-1 text-xs shadow-papper" onClick={() => { pts.current = pts.current.slice(0, -1); setDrawn((n) => n + 1); }}>Ångra punkt</button>
+          )}
+        </div>
+        {draw && <div className="rounded-md bg-sot/80 px-2 py-1 text-xs text-kalk">
+          {draw === "point" ? "Tryck där det är" : draw === "line" ? "Tryck längs linjen" : "Tryck runt ytan, hörn för hörn"}</div>}
       </div>
-      {draw && <div className="pointer-events-none absolute left-2 top-2 rounded-md bg-sot/80 px-2 py-1 text-xs text-kalk">
-        {draw === "point" ? "Tryck där det är" : draw === "line" ? "Tryck längs linjen" : "Tryck runt ytan, hörn för hörn"}</div>}
     </div>
   );
 }
