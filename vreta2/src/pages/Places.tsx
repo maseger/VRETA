@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Plus } from "lucide-react";
-import { useCan, useLabels, useQuery } from "../app/AppContext";
+import { useApp, useCan, useCommand, useLabels, useQuery } from "../app/AppContext";
 import { Chip, Empty, ErrorNote, List, PageHeader, Progress, Row, Spinner, Stamp, Tabs, statusTone } from "../ui/base";
 import { Thumb } from "../ui/media";
 import { VretaMap, type MapFeature } from "../ui/VretaMap";
@@ -38,6 +38,8 @@ export default function Places() {
 function MapTab() {
   const nav = useNavigate();
   const can = useCan();
+  const run = useCommand();
+  const { refreshContext } = useApp();
   const { route } = useLabels();
   const { data, error, loading } = useQuery<{ features: MapFeature[]; basemaps: MapLayerRow[]; overlays: MapLayerRow[] }>("q_map");
   const [layers, setLayers] = useState(["zones", "structures", "projects", "reuse_in_use", "observations"]);
@@ -60,6 +62,9 @@ function MapTab() {
         <Chip on={mode === "all"} onClick={() => setMode("all")}>Med planer och visioner</Chip>
       </div>
       <VretaMap features={features} layers={layers} height="62vh" images={images}
+        onSaveCenter={can("SetSiteSetting") ? async (c) => {
+          if (await run("SetSiteSetting", { key: "map_center", value: c }, { success: "Kartan öppnas här från och med nu" })) await refreshContext();
+        } : undefined}
         onSelect={(f) => { const r = f.entity_type === "storage_location" ? `/lager/${f.entity_id}` : route(f.entity_type, f.entity_id); if (r) nav(r); }} />
       <p className="mt-2 text-sm text-sot-3">Heldraget = som det är nu · streckat = plan · ockra = vision. Tryck på något för att öppna det.
         {can("AddMapLayer") && <> · <Link to="/platser/kartlager">Kartunderlag</Link></>}</p>

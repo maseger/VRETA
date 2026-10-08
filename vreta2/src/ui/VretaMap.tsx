@@ -38,10 +38,11 @@ const STYLE = (osm: boolean): StyleSpecification => ({
   ],
 });
 
-export function VretaMap({ features, layers, onSelect, height = 420, draw, onDraw, center, images = [], highlight, fitTo, seed }: {
+export function VretaMap({ features, layers, onSelect, height = 420, draw, onDraw, center, images = [], highlight, fitTo, seed, onSaveCenter }: {
   features: MapFeature[]; layers?: string[]; onSelect?: (f: { entity_id: string | null; entity_type: string | null; label: string }) => void; height?: number | string;
   draw?: "point" | "line" | "polygon" | null; onDraw?: (g: GeoJSON.Geometry | null) => void; center?: [number, number]; images?: MapImageLayer[];
   highlight?: string | null; fitTo?: GeoJSON.Geometry | null; seed?: [number, number] | null;
+  onSaveCenter?: (c: [number, number]) => Promise<unknown> | void;
 }) {
   const { ctx } = useApp();
   const el = useRef<HTMLDivElement>(null);
@@ -57,7 +58,10 @@ export function VretaMap({ features, layers, onSelect, height = 420, draw, onDra
   // Kartan skapas en gång (och om bakgrunden byts)
   useEffect(() => {
     if (!el.current) return;
-    const c: [number, number] = center ?? [ctx?.site?.approx_lon ?? 17.585, ctx?.site?.approx_lat ?? 59.842];
+    // Kartans mitt: inställningen map_center (exakt, sätts av ägaren) före platsens ungefärliga läge
+    const mc = ctx?.settings?.map_center;
+    const saved: [number, number] | null = Array.isArray(mc) && mc.length === 2 && mc.every((x: unknown) => Number.isFinite(Number(x))) ? [Number(mc[0]), Number(mc[1])] : null;
+    const c: [number, number] = center ?? saved ?? [ctx?.site?.approx_lon ?? 17.585, ctx?.site?.approx_lat ?? 59.842];
     const m = new MLMap({ container: el.current, style: STYLE(osm), center: c, zoom: 17, attributionControl: osm ? {} : false, maxZoom: 21 });
     m.addControl(new NavigationControl({ showCompass: true }), "top-right");
     m.on("load", () => {
@@ -189,6 +193,12 @@ export function VretaMap({ features, layers, onSelect, height = 420, draw, onDra
         <button type="button" className="rounded-md bg-papper/90 px-2 py-1 text-xs shadow-papper" onClick={() => { const v = !osm; setOsm(v); localStorage.setItem("vreta2-osm", v ? "1" : "0"); }}>
           {osm ? "Bara Vretakartan" : "Visa bakgrundskarta"}
         </button>
+        {onSaveCenter && !draw && (
+          <button type="button" className="rounded-md bg-papper/90 px-2 py-1 text-xs shadow-papper" onClick={() => {
+            const m = map.current;
+            if (m) { const c = m.getCenter(); void onSaveCenter([Math.round(c.lng * 1e6) / 1e6, Math.round(c.lat * 1e6) / 1e6]); }
+          }}>Gör detta till kartans mitt</button>
+        )}
         {draw && draw !== "point" && pts.current.length > 0 && (
           <button type="button" className="rounded-md bg-papper/90 px-2 py-1 text-xs shadow-papper" onClick={() => { pts.current = pts.current.slice(0, -1); setDrawn((n) => n + 1); }}>Ångra punkt</button>
         )}
