@@ -138,3 +138,52 @@ jobs:
             code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$url/rest/v1/rpc/q_context" -H "apikey: $ANON_KEY" -H "Content-Profile: api" -H 'content-type: application/json' -d '{"p":{}}')
             echo "anon q_context → $code (ska nekas)"; [ "$code" != "200" ] || exit 1
           fi
+
+  # Appen publiceras på GitHub Pages under /VRETA/v2/, bredvid prototypen, när main ändras.
+  # Bara mappen v2/ på grenen gh-pages byts ut; prototypens filer lämnas orörda.
+  publicera:
+    needs: [test, postgres]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      PROJECT_REF: ${{ secrets.VRETA2_PROJECT_REF }}
+      ANON_KEY: ${{ secrets.VRETA2_ANON_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Finns hemligheterna?
+        id: koll
+        run: |
+          if [ -z "$PROJECT_REF" ] || [ -z "$ANON_KEY" ]; then
+            echo "::notice::VRETA2_PROJECT_REF eller VRETA2_ANON_KEY saknas – appen publiceras inte."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.koll.outputs.ok == 'true'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: vreta2/package-lock.json
+      - if: steps.koll.outputs.ok == 'true'
+        run: npm ci
+      - name: Bygge för /VRETA/v2/
+        if: steps.koll.outputs.ok == 'true'
+        run: VITE_SUPABASE_URL="https://$PROJECT_REF.supabase.co" VITE_SUPABASE_ANON_KEY="$ANON_KEY" VITE_BASE=/VRETA/v2/ npm run build
+      - name: Lägg bygget i v2/ på gh-pages
+        if: steps.koll.outputs.ok == 'true'
+        working-directory: .
+        run: |
+          git fetch -q --depth 1 origin gh-pages
+          git worktree add -q "$RUNNER_TEMP/pages" FETCH_HEAD --detach
+          rm -rf "$RUNNER_TEMP/pages/v2"
+          cp -r vreta2/dist "$RUNNER_TEMP/pages/v2"
+          cd "$RUNNER_TEMP/pages"
+          git add -A v2
+          if git diff --cached --quiet; then echo "Inget nytt att publicera."; exit 0; fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "Publicera VRETA 2 ${GITHUB_SHA::7}"
+          git push -q origin HEAD:gh-pages
+          echo "Publicerad: https://${GITHUB_REPOSITORY_OWNER}.github.io/VRETA/v2/"

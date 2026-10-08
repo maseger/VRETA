@@ -12,6 +12,10 @@ touch dist/.nojekyll
 
 OUT=$(mktemp -d)
 cp -r dist/. "$OUT"
+# VRETA 2 ligger i v2/ på samma sida och publiceras separat – behåll den
+if git fetch -q origin gh-pages 2>/dev/null && git cat-file -e FETCH_HEAD:v2 2>/dev/null; then
+  git archive FETCH_HEAD v2 | tar -x -C "$OUT"
+fi
 cd "$OUT"
 git init -q -b gh-pages
 git add -A

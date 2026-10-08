@@ -19,8 +19,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["icon.svg"],
       manifest: {
-        name: "VRETA",
-        short_name: "VRETA",
+        name: "VRETA 2",
+        short_name: "VRETA 2",
         description: "Platsens digitala minne, nervsystem och berättarröst",
         lang: "sv",
         theme_color: "#8C2F1D",

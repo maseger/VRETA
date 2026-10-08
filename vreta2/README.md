@@ -35,7 +35,7 @@ För att köra appen mot projektet: lägg `VITE_SUPABASE_URL=https://xokxunmudyj
 3. **Databasen**: `supabase link --project-ref <ref>` och `supabase db push` (kör 001–013; storage-bucketen `media`, policyer och pg_cron-jobb skapas av migreringarna).
 4. **AI-nyckeln**: `supabase secrets set ANTHROPIC_API_KEY=...` – nyckeln finns bara på servern.
 5. **Serverfunktionerna**: `supabase functions deploy capture-agent story-agent marketplace-agent ask-vreta mcp weather`.
-6. **Appen**: bygg med `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (den publika nyckeln) och vid behov `VITE_BASE` (t.ex. `/VRETA/v2/`), och lägg `dist/` på valfri statisk värd.
+6. **Appen**: bygg med `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (den publika nyckeln) och vid behov `VITE_BASE` (t.ex. `/VRETA/v2/`), och lägg `dist/` på valfri statisk värd. VRETA 2 publiceras på **https://maseger.github.io/VRETA/v2/**: jobbet `publicera` i arbetsflödet byter ut mappen `v2/` på grenen `gh-pages` när `main` ändras. Prototypens `scripts/deploy-pages.sh` behåller `v2/`, och prototypens service worker svarar inte för den adressen.
 
 **Automatiskt (AC-31):** arbetsflödet `.github/workflows/vreta2.yml` testar varje ändring och driftsätter databas och funktioner på `main` när hemligheterna `VRETA2_SUPABASE_ACCESS_TOKEN`, `VRETA2_PROJECT_REF`, `VRETA2_DB_PASSWORD` (och för röktestet `VRETA2_ANON_KEY`) finns. Utan hemligheter hoppas driftsättningen över.
 
@@ -129,7 +129,7 @@ Klartkriteriet för R2.0 – att kriterierna går igenom på en riktig telefon u
 ## Öppna frågor
 
 1. ~~Vilket Supabase-projekt?~~ **vreta2** är skapat. Hemligheterna ovan behövs i GitHub för automatisk driftsättning.
-2. Var ska appen publiceras – t.ex. GitHub Pages under `/VRETA/v2/` bredvid prototypen?
+2. ~~Var ska appen publiceras?~~ GitHub Pages under `/VRETA/v2/`, bredvid prototypen.
 3. Finns Specifikation R2? Den bör stämmas av mot det som byggts.
 4. Taltjänst för svenska med VRETA:s ordlista (ADR-003) – webbläsarens räcker för fälttestet?
 5. Kartunderlagen: originalfilerna behöver köras genom kartverktygen och läsas in som kartpaket i VRETA 2.
