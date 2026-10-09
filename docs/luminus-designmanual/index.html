@@ -484,6 +484,33 @@ pre.code{margin:0;padding:18px 20px;background:#14121F;color:#E8E6F6;border-radi
   .kp-swall{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media (max-width:520px){.kp-rk{columns:1}.kp-swall{grid-template-columns:1fr}}
+
+.sm{margin:22px 0 14px;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,.95fr) auto minmax(0,1fr);gap:12px;align-items:stretch}
+.sm-col{display:grid;gap:9px;align-content:start;min-width:0}
+.sm-h{font:700 .68rem var(--f-text,system-ui);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2)}
+.sm-c{background:var(--card,var(--paper));border:1px solid var(--line);border-radius:8px;padding:11px 14px;display:grid;gap:3px;align-content:start}
+.sm-c b{font-size:.94rem;color:var(--ink)}
+.sm-c p{margin:0;font-size:.83rem;line-height:1.45;color:var(--ink-2)}
+.sm-mb{border-style:dashed}
+.sm-mid{align-content:center}
+.sm-style{background:var(--ink);border-color:var(--ink);border-top:4px solid var(--acc,#6A2BC9);padding:18px 16px;gap:6px}
+.sm-style b{color:var(--paper);font-family:var(--f-display,Georgia,serif);font-size:1.7rem;line-height:1}
+.sm-style p{color:var(--paper);opacity:.85;font-size:.86rem}
+.sm-arrow{align-self:center;font-size:1.5rem;line-height:1;color:var(--ink-2)}
+.sm figcaption{grid-column:1/-1;font-size:.9rem;color:var(--ink-2);max-width:78ch;padding-top:4px}
+.mbl{margin-top:16px;border:1px solid var(--line);border-radius:8px;padding:14px 16px;background:var(--card,var(--paper))}
+.mbl-h{font:700 .68rem var(--f-text,system-ui);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2)}
+.mbl ul{list-style:none;margin:8px 0 0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 24px}
+.mbl li{display:grid;gap:1px;padding:8px 0;border-top:1px solid var(--line);font-size:.86rem;min-width:0}
+.mbl li b{color:var(--ink)}
+.mbl li span{color:var(--ink-2)}
+.sk .mb{margin:8px 0 0;font-size:.85rem;color:var(--ink-2)}
+.sk .mb b{display:block;font:700 .66rem var(--f-text,system-ui);letter-spacing:.14em;text-transform:uppercase;color:var(--ink);margin-bottom:2px}
+@media(max-width:900px){
+  .sm{grid-template-columns:1fr}
+  .sm-arrow{justify-self:center;transform:rotate(90deg)}
+  .mbl ul{grid-template-columns:1fr}
+}
 @media (max-width:520px){.x-demo{padding:18px}.x-demo .lockup{font-size:2.1rem!important}.stage{padding:20px}}</style>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -849,7 +876,7 @@ pre.code{margin:0;padding:18px 20px;background:#14121F;color:#E8E6F6;border-radi
   </div>
   <div class="specbox two">
     <div><h3>Färg, bild och språk per nivå</h3><dl class="dl"><dt>Elementnivå</dt><dd>Fyra färger. Kompass med fyra kvadranter. Korta meningar, vardagsord, inga fackord.</dd><dt>Arketypnivå</dt><dd>Åtta kronbladsfärger. Kompass med åtta oktanter. Roller, fällor, allergier och råd i medellånga stycken.</dd><dt>Karaktärsnivå</dt><dd>Tjugo karaktärsfärger. Kompass med tjugo bitar och bräde. Berättande och målande, med calling, gåva, fälla, utmaning, allergi och rädsla.</dd><dt>Hänvisningar</dt><dd>Bara den egna nivåns delar. Elementnivån nämner inga arketyper och arketypnivån inga karaktärer.</dd></dl></div>
-    <div><h3>Så skrivs återkopplingen</h3><dl class="dl"><dt>Har, inte är</dt><dd>"Du har en Visionary", "din Producer", "Vatten ligger närmast dig". Aldrig "du är en …".</dd><dt>Motpoler</dt><dd>Två staplar mot varandra. Fyra läsningar: båda starka, båda svaga, ena dominerar, mellanläge. Ingen är rätt eller fel.</dd><dt>Du-form</dt><dd>Direkt och konkret. Inga omskrivningar för att vara snäll.</dd><dt>Handling</dt><dd>Tre steg, övningar eller experiment med verb först.</dd><dt>Ton</dt><dd>Respekt för gåvan. Fällan beskrivs som gåvan i överkant, aldrig som ett fel.</dd></dl></div>
+    <div><h3>Så skrivs återkopplingen</h3><dl class="dl"><dt>Har, inte är</dt><dd>"Du har en Visionary", "din Producer", "Vatten ligger närmast dig". Aldrig "du är en …".</dd><dt>Motpoler</dt><dd>Två staplar mot varandra. Fyra läsningar: båda starka, båda svaga, ena dominerar, mellanläge. Ingen är rätt eller fel.</dd><dt>Stilar</dt><dd>Förklara först vad stilen bygger på: antaganden, personlighet och drivkrafter. Beskriv sedan hur den syns i personlig gestaltning och beteenden, ibland i mikrobeteenden.</dd><dt>Du-form</dt><dd>Direkt och konkret. Inga omskrivningar för att vara snäll.</dd><dt>Handling</dt><dd>Tre steg, övningar eller experiment med verb först.</dd><dt>Ton</dt><dd>Respekt för gåvan. Fällan beskrivs som gåvan i överkant, aldrig som ett fel.</dd></dl></div>
   </div>
 </section>
 <section id="webb">
@@ -939,6 +966,27 @@ pre.code{margin:0;padding:18px 20px;background:#14121F;color:#E8E6F6;border-radi
   <p class="note" style="margin-top:14px">Tre sätt att förhålla sig, inte tre betyg. Vi rör oss mellan dem beroende på läge och tryck. Profilens språk utgår från mitten: att ha.</p>
   <div class="say-t say3" style="margin-top:18px"><div class="h ok">Säg så</div><div class="h no2">Inte så</div><div class="h lv">Elementnivå</div><div class="h lv"></div><div class="ok">Vatten ligger närmast mig just nu</div><div class="no">Jag är en Vattenmänniska</div><div class="ok">Jag har lite Luft just nu</div><div class="no">Jag är ingen idémänniska</div><div class="ok">Mitt Eld tar över när det är bråttom</div><div class="no">Jag är otålig</div><div class="h lv">Arketypnivå</div><div class="h lv"></div><div class="ok">Jag har en Producer närmast</div><div class="no">Jag är en Producer</div><div class="ok">Min Connector håller ihop gruppen</div><div class="no">Jag är en harmonisökare</div><div class="ok">Min Reflector ligger långt bort och behöver plats</div><div class="no">Jag är en handlingsmänniska</div><div class="h lv">Karaktärsnivå</div><div class="h lv"></div><div class="ok">Jag har en Visionary som ordförande</div><div class="no">Jag är en Visionary</div><div class="ok">Min Commander tog över i mötet</div><div class="no">Jag är dominant</div><div class="ok">Min Analyst ligger långt bort och behöver plats</div><div class="no">Jag är dålig på fakta</div></div>
   <p class="note" style="margin-top:14px">Idén känns igen från konstruktivistisk vuxenutvecklingsteori, bland annat Robert Kegans skillnad mellan det man är fast i och det man kan betrakta och förhålla sig till. Luminus beskriver redan karaktärerna som dynamiska verktyg för självkännedom, och det här är samma tanke uttryckt i språket.</p>
+  <div class="sec-head" style="margin-top:48px"><span class="tag">Stilar</span><h3>Stilar bygger på antaganden, personlighet och drivkrafter</h3>
+  <p class="lede" style="font-size:.95rem">Stilarna är inte det djupaste lagret. De bygger på våra antaganden, vår personlighet och våra drivkrafter, och kommer i sin tur till uttryck i personlig gestaltning och i beteenden, ibland i så kallade mikrobeteenden. Alla texter, bilder och mallar om stilar ska göra den kopplingen tydlig.</p></div>
+  <figure class="sm " aria-label="Hur en stil blir till">
+  <div class="sm-col"><span class="sm-h">Stilen bygger på</span>
+    <div class="sm-c"><b>Antaganden</b><p>Det du tar för givet om världen, om andra och om dig själv. Oftast osagt, och ofta omedvetet.</p></div>
+    <div class="sm-c"><b>Personlighet</b><p>Hur du är lagd, och vad du har lätt för och svårt för.</p></div>
+    <div class="sm-c"><b>Drivkrafter</b><p>Det som får dig att vilja något och lockar dig åt ett håll.</p></div></div>
+  <div class="sm-arrow" aria-hidden="true">→</div>
+  <div class="sm-col sm-mid"><span class="sm-h">Det blir en</span>
+    <div class="sm-c sm-style"><b>Stil</b><p>Ett mönster du återkommer till: hur du kommunicerar, hanterar konflikter, beslutar, samarbetar, löser problem och genomför.</p></div></div>
+  <div class="sm-arrow" aria-hidden="true">→</div>
+  <div class="sm-col"><span class="sm-h">Och syns som</span>
+    <div class="sm-c"><b>Personlig gestaltning</b><p>Hur du tar plats: hållning, röst, tempo och sättet du möter andra på.</p></div>
+    <div class="sm-c"><b>Beteenden</b><p>Det du gör och säger, val för val.</p></div>
+    <div class="sm-c sm-mb"><b>Mikrobeteenden</b><p>De små signalerna: en paus före svaret, en blick, ett nickande, hur snabbt du svarar.</p></div></div>
+  <figcaption>Samma modell gäller på alla tre nivåer. Det som skiljer är vilka delar som beskriver personlighet och drivkrafter. En stil beskriver inte vem du är. Den är mönstret som dina antaganden, din personlighet och dina drivkrafter ger just nu, och den kan du se, välja och förändra.</figcaption>
+</figure>
+  <div class="two" style="margin-top:22px">
+    <div class="specbox" style="margin-top:0"><h3>Så skriver du om en stil</h3><dl class="dl"><dt>Börja med bygget</dt><dd>Säg vad stilen bygger på, antaganden, personlighet och drivkrafter, innan du beskriver hur den syns.</dd><dt>Beskriv det som syns</dt><dd>Skriv vad man kan se och höra, till exempel en paus före svaret, och inte vem personen är.</dd><dt>Mikrobeteenden</dt><dd>Använd dem som exempel att lägga märke till. De är illustrationer och ingen mätning.</dd><dt>Har, inte är</dt><dd>"Din kommunikationsstil", inte "du är en snabbpratare".</dd></dl></div>
+    <div class="specbox" style="margin-top:0"><h3>Modellen som komponent</h3><dl class="dl"><dt>Uppbyggnad</dt><dd>Tre kolumner med pilar: stilen bygger på, det blir en stil, och syns som. Tre små kort på var sida.</dd><dt>Mitten</dt><dd>Ett helt mörkt kort i Bläck med en accentkant överst. Det är stilen.</dd><dt>Mikrobeteenden</dt><dd>Kortet har streckad ram, eftersom det är det minsta och lättast att missa.</dd><dt>Smalt</dt><dd>Under 900 px staplas kolumnerna med pilarna nedåt.</dd><dt>Plats</dt><dd>I början av varje stilkapitel, på alla tre nivåer, med nivåns egen mening under.</dd></dl></div>
+  </div>
   <div class="boards" style="margin-top:22px">
     <div class="board s6"><span class="tag">I presentationer och böcker</span><p class="note">Rubriker och brödtext säger "din Visionary" och "Luft ligger närmast dig". Titlar som "Leda med alla dina karaktärer" i stället för "Leda med karaktär".</p></div>
     <div class="board s6"><span class="tag">I profilrapporter och på webben</span><p class="note">Om andra: "en kollega med stark Reflector", inte "en Reflector-person". Varje kapitel slutar i något att pröva.</p></div>

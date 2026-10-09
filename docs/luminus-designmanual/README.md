@@ -25,3 +25,7 @@ Underlaget är avmätt ur Luminus egna diagram ("Characters in the Luminus Syste
 ## Exempelåterkoppling
 
 `aterkoppling.html` samlar exempelåterkopplingar för tre påhittade personer på tre nivåer: Jonas Ek (element), Maja Lind (arketyper) och Elin Ahlström (karaktärer). Varje nivå är självständig och hänvisar bara till sina egna delar. Alla tre börjar med kompassen på sin nivå, och karaktärsnivån följer profilens utfallsform: rangordning 1–20 med ordförande, fyra rådgivare och två skuggor, tio polaritetspar visade som staplar mot varandra, och ett stilbibliotek med tolv stilar (kommunikation, konflikt, beslut, samarbete, problemlösning, genomförande, förändring, stress, drivkraft, lärande samt de nya riskstil och återkopplingsstil).
+
+### Stilarna och vad de bygger på
+
+Varje stilkapitel, på alla tre nivåer, öppnar med stilmodellen: stilarna bygger på våra antaganden, vår personlighet och våra drivkrafter, och kommer i sin tur till uttryck i personlig gestaltning och beteenden, ibland i så kallade mikrobeteenden. Kapitlen listar också mikrobeteenden att lägga märke till per stil. De är illustrationer och ingen mätning. Designboarden beskriver modellen som komponent och som skrivregel i sektionen Språk.
