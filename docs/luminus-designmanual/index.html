@@ -8,7 +8,7 @@
   --paper:#FBFAFF; --paper-2:#F0EFF8; --ink:#14121F; --ink-2:#514E63; --line:#DAD8E8;
   /* element */
   --luft:#2B8CFF; --luft-deep:#16457F; --luft-tint:#DCEBFF;
-  --eld:#E23D2E; --eld-deep:#A8231A; --eld-tint:#FFE0DB;
+  --eld:#D93321; --eld-deep:#A8231A; --eld-tint:#FFE0DB;
   --vatten:#2E9E6B; --vatten-deep:#145C3C; --vatten-tint:#D8F1E4;
   --jord:#F6B900; --jord-deep:#8A6500; --jord-tint:#FFF0BF;
   /* kronblad */
@@ -192,6 +192,144 @@ footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);display
   .flags,.map{grid-template-columns:1fr}
 }
 @media(max-width:520px){.quad{grid-template-columns:1fr}.q{min-height:220px}.ig{grid-template-columns:1fr}.ig-item{max-width:360px}}
+/* tillägg: arketyper och tillämpningar */
+.nav2{display:flex;flex-wrap:wrap;gap:6px 18px;padding-block:12px;border-bottom:1px solid var(--line)}
+.nav2 b{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);margin-right:2px}
+.nav2 a{font-size:.76rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;text-decoration:none;color:var(--ink-2)}
+.nav2 a:hover{color:var(--ink);text-decoration:underline;text-underline-offset:4px}
+.part{padding-block:72px 0;border-top:1px solid var(--line);margin-top:72px}
+.part .tag{color:var(--p1)}
+.part h2.big{font-size:clamp(2.2rem,5.6vw,4rem);margin-top:10px}
+.arch{display:grid;grid-template-columns:minmax(0,520px) 1fr;gap:36px;align-items:start}
+.arch svg{width:100%;height:auto;display:block}
+.arch-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ac{padding:16px 16px 14px;border:1px solid var(--line);border-radius:6px;display:grid;gap:6px;align-content:start;min-width:0}
+.ac .hd{display:flex;align-items:center;gap:10px}
+.ac .dot{width:22px;height:22px;border-radius:50% 50% 50% 10%;flex:none}
+.ac h3{font-size:1.05rem}
+.ac .sv{font-size:.76rem;color:var(--ink-2);font-weight:600;letter-spacing:.02em}
+.ac p{font-size:.84rem;line-height:1.45;color:var(--ink-2)}
+.ac p b{color:var(--ink)}
+.pairs{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:20px}
+.pair{padding:14px 16px;background:var(--paper-2);border-radius:6px;display:grid;gap:8px;font-size:.84rem}
+.pair .pp{display:flex;align-items:center;gap:8px;font-weight:700}
+.pair i{width:18px;height:18px;border-radius:50% 50% 50% 10%;display:inline-block}
+.pair span.arrow{color:var(--ink-2);font-weight:400}
+
+.deck{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.cell{display:grid;gap:8px;min-width:0;align-content:start}
+.cell figcaption{font-size:.84rem;color:var(--ink-2)}
+.cell figcaption b{color:var(--ink);display:block}
+.sl{aspect-ratio:16/9;position:relative;overflow:hidden;border-radius:4px;container-type:inline-size;box-shadow:0 1px 0 rgba(0,0,0,.08),0 10px 24px -14px rgba(0,0,0,.5);background:#fff;color:#14121F}
+.sl .in{position:absolute;inset:0;padding:6cqw 6.5cqw;display:grid}
+.sl .k{font-size:1.5cqw;font-weight:700;letter-spacing:.16em;text-transform:uppercase;opacity:.85}
+.sl h5{margin:0;font-family:var(--f-display);font-weight:700;letter-spacing:-.025em;line-height:1;font-variation-settings:"SOFT" 60}
+.sl .lockup{font-size:2.6cqw}
+.sl.night{background:linear-gradient(150deg,#0D0526,#2A1470 65%,#5B2BC0);color:#fff}
+.sl.brasa{background:var(--eld);color:#fff}
+.sl.perg{background:var(--cream)}
+.sl .bg-flower{position:absolute;width:48cqw;height:48cqw;right:-9cqw;bottom:-14cqw;--dot:#fff}
+.ring2{aspect-ratio:1;border-radius:50%;background:conic-gradient(from 0deg,var(--eld) 0 25%,var(--jord) 0 50%,var(--vatten) 0 75%,var(--luft) 0 100%);-webkit-mask:radial-gradient(circle,transparent 54%,#000 55%);mask:radial-gradient(circle,transparent 54%,#000 55%)}
+.dl{display:grid;grid-template-columns:200px 1fr;gap:0;margin:0}
+.dl dt,.dl dd{padding:11px 0;border-top:1px solid var(--line);margin:0;font-size:.92rem}
+.dl dt{font-weight:700;color:var(--ink)}
+.dl dd{color:var(--ink-2)}
+.specbox{margin-top:28px}
+.specbox h3{margin-bottom:8px}
+
+.covers{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;align-items:end}
+.cv{aspect-ratio:2/3;position:relative;overflow:hidden;container-type:inline-size;border-radius:2px 5px 5px 2px;box-shadow:inset 3px 0 0 rgba(0,0,0,.18),0 12px 26px -14px rgba(0,0,0,.6)}
+.cv .in{position:absolute;inset:0;padding:9cqw;display:grid;align-content:space-between}
+.cv h5{margin:0;font-family:var(--f-display);font-weight:700;letter-spacing:-.025em;line-height:1;font-variation-settings:"SOFT" 60}
+.cv .k{font-size:3.4cqw;font-weight:700;letter-spacing:.16em;text-transform:uppercase}
+.cv .lockup{font-size:6cqw}
+.cv.night{background:linear-gradient(170deg,#0D0526,#2A1470 70%,#5B2BC0);color:#fff}
+.cv.paper{background:#FBFAFF;color:#14121F}
+.cv .art{background:var(--cover) center/cover;border-radius:2px;min-height:0}
+.cv.man{color:#fff}
+.spread{aspect-ratio:420/297;display:grid;grid-template-columns:1fr 1fr;box-shadow:0 12px 28px -16px rgba(0,0,0,.55);border-radius:3px;overflow:hidden;container-type:inline-size;background:#fff;color:#14121F}
+.spread .pg{position:relative;min-width:0;padding:6cqw 5.5cqw;display:grid;align-content:space-between}
+.spread .pg.l{border-right:1px solid rgba(0,0,0,.1)}
+.spread h5{margin:0;font-family:var(--f-display);font-weight:700;letter-spacing:-.03em;line-height:.95;font-variation-settings:"SOFT" 60}
+.spread .t{font-size:1.45cqw;line-height:1.5;color:#3A3750}
+.spread .k{font-size:1.1cqw;font-weight:700;letter-spacing:.16em;text-transform:uppercase}
+.spread .tb{display:grid;grid-template-columns:auto 1fr;gap:0 2cqw;font-size:1.4cqw;line-height:1.45}
+.spread .tb b{padding-block:.9cqw;border-top:1px solid rgba(0,0,0,.14);font-size:1.05cqw;letter-spacing:.12em;text-transform:uppercase;color:#514E63;white-space:nowrap}
+.spread .tb span{padding-block:.9cqw;border-top:1px solid rgba(0,0,0,.14)}
+.spread .run{display:flex;justify-content:space-between;font-size:1.05cqw;color:#514E63}
+
+.reports{display:grid;grid-template-columns:repeat(2,1fr);gap:22px}
+.rp{aspect-ratio:210/297;background:#fff;color:#14121F;box-shadow:0 1px 0 rgba(0,0,0,.08),0 14px 30px -16px rgba(0,0,0,.5);border-radius:2px;container-type:inline-size;position:relative;overflow:hidden}
+.rp .in{position:absolute;inset:0;padding:7cqw 8cqw 6cqw;display:grid;align-content:start;gap:3.4cqw;grid-template-rows:auto 1fr auto}
+.rp .body{display:grid;gap:4.2cqw;align-content:start;min-height:0}
+.rp h5{margin:0;font-family:var(--f-display);font-weight:700;letter-spacing:-.03em;line-height:1;font-variation-settings:"SOFT" 60}
+.rp .kk{font-size:max(8px,1.9cqw);font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#6A2BC9}
+.rp .tx{font-size:max(10px,2.95cqw);line-height:1.5;color:#3A3750}
+.rp .tx b{color:#14121F}
+.rp .ft{display:flex;justify-content:space-between;align-items:center;font-size:max(8px,1.8cqw);color:#514E63}
+.rp .ft .lockup{font-size:max(11px,3.4cqw)}
+.rp.night{background:linear-gradient(165deg,#0D0526,#2A1470 70%,#5B2BC0);color:#fff}
+.rp.night .kk{color:var(--glow)}.rp.night .tx{color:#D9D4F2}.rp.night .ft{color:#B9B2DD}
+.badge{display:inline-block;font-size:max(8px,1.8cqw);font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:.5cqw 1.6cqw;border:1px solid currentColor;border-radius:2px}
+.bars{display:grid;gap:1.6cqw}
+.bar{display:grid;grid-template-columns:23cqw 1fr 7cqw;gap:2cqw;align-items:center;font-size:max(9px,2.7cqw)}
+.bar .tr{height:2.4cqw;background:#ECEAF5;border-radius:99px;position:relative}
+.bar .fl{position:absolute;inset:0 auto 0 0;border-radius:99px}
+.bar b{font-variant-numeric:tabular-nums;text-align:right}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:3.5cqw}
+.cmp>div{display:grid;gap:1.6cqw;align-content:start}
+.cmp h6{margin:0;font-family:var(--f-display);font-size:max(13px,4.2cqw);letter-spacing:-.02em}
+.cmp .row{border-top:1px solid #DAD8E8;padding-top:1.5cqw;font-size:max(9px,2.4cqw);line-height:1.4}
+.cmp .row small{display:block;font-size:max(7px,1.8cqw);font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#514E63}
+.callout{padding:3cqw 3.4cqw;background:#FFF0BF;border-radius:3px;font-size:max(10px,2.75cqw);line-height:1.45;color:#2A1E00}
+.sharp{display:grid;gap:3.4cqw}
+.sharp .it{display:grid;grid-template-columns:5.4cqw 1fr;gap:2.4cqw;align-items:start}
+.sharp .it i{width:5.4cqw;height:5.4cqw;border-radius:50% 50% 50% 10%;display:block;margin-top:.4cqw}
+.sharp .it p{font-size:max(10px,2.85cqw);line-height:1.42;margin:0;color:#3A3750}
+.sharp .it p b{display:block;color:#14121F;font-size:max(11px,3.2cqw)}
+.big-sent{font-family:var(--f-display);font-weight:650;font-size:max(20px,7.2cqw);line-height:1.05;letter-spacing:-.025em}
+.big-sent em{font-style:italic;font-weight:500;color:#C2201A}
+
+.web-prev{border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#FBFAFF;color:#14121F;--dot:#14121F}
+.wp-nav{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 22px;border-bottom:1px solid #DAD8E8;flex-wrap:wrap}
+.wp-nav nav{display:flex;gap:18px;font-size:.88rem;font-weight:600;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 20px;border-radius:6px;font:700 .95rem var(--f-text);text-decoration:none;border:2px solid transparent;cursor:pointer}
+.btn.p{background:#14121F;color:#fff}.btn.s{border-color:#14121F;color:#14121F;background:transparent}.btn.g{background:var(--glow);color:#14121F}
+.wp-hero{display:grid;grid-template-columns:1.1fr .9fr;gap:0;background:linear-gradient(150deg,#0D0526,#2A1470 65%,#5B2BC0);color:#fff;--dot:#fff}
+.wp-hero>div{padding:44px 26px}
+.wp-hero h4{font-size:clamp(1.8rem,4vw,2.9rem);line-height:1;letter-spacing:-.03em;font-weight:700}
+.wp-hero h4 em{font-style:italic;font-weight:500;color:var(--glow)}
+.wp-hero p{margin-block:14px 22px;color:#D9D4F2;max-width:44ch}
+.wp-hero .cta{display:flex;gap:10px;flex-wrap:wrap}
+.wp-hero .art{background:var(--cover) center/cover;min-height:220px}
+.wp-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:26px 22px}
+.cc{border:1px solid #DAD8E8;border-radius:6px;overflow:hidden;background:#fff;display:grid}
+.cc .top{padding:18px;display:grid;gap:6px}
+.cc h6{margin:0;font-family:var(--f-display);font-size:1.4rem;letter-spacing:-.02em}
+.cc .meta{font-size:.78rem;opacity:.9}
+.cc .bd{padding:14px 18px 18px;font-size:.88rem;color:#514E63;display:grid;gap:10px}
+pre.code{margin:0;padding:18px 20px;background:#14121F;color:#E8E6F6;border-radius:6px;overflow-x:auto;font:.8rem/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.tbl{overflow-x:auto}
+.tbl table{border-collapse:collapse;width:100%;min-width:560px;font-size:.88rem}
+.tbl th,.tbl td{text-align:left;padding:10px 12px;border-top:1px solid var(--line);vertical-align:top}
+.tbl th{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.sw3{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:6px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.2)}
+.ok{font-weight:700;color:var(--vatten-deep)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .ok{color:#7BD9A6}}
+:root[data-theme="dark"] .ok{color:#7BD9A6}
+@media(max-width:900px){
+  .arch{grid-template-columns:1fr}.arch-cards{grid-template-columns:1fr}.pairs{grid-template-columns:1fr 1fr}
+  .deck,.reports,.two{grid-template-columns:1fr}.covers{grid-template-columns:1fr 1fr}
+  .wp-hero,.wp-cards{grid-template-columns:1fr}.dl{grid-template-columns:1fr}.dl dt{border-bottom:0;padding-bottom:0}.dl dd{border-top:0;padding-top:2px}
+}
+@media(max-width:520px){.pairs{grid-template-columns:1fr}.covers{grid-template-columns:1fr;max-width:320px}.spread{aspect-ratio:auto;grid-template-columns:1fr}}
+
+.mp{display:grid;gap:1.2cqw}
+.mp .mph{font-size:max(7px,1.8cqw);font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#514E63}
+.mp .row{display:flex;justify-content:space-between;gap:3cqw;border-top:1px solid #DAD8E8;padding-top:1.3cqw;font-size:max(9px,2.5cqw);line-height:1.35}
+.mp .row span:last-child{white-space:nowrap;font-variant-numeric:tabular-nums;color:#514E63}
+.mp .row.dim{color:#6A6680}
 </style>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -218,16 +356,17 @@ footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);display
 <header class="top">
   <span class="lockup" style="font-size:1.6rem"><svg role="img" aria-label="Luminus-blomman"><use href="#mark"/></svg><span class="wm">Luminus</span></span>
   <nav aria-label="Sektioner">
-    <a href="#utgang">Utgångsläge</a><a href="#logotyp">Logotyp</a><a href="#farg">Färg</a><a href="#typografi">Typografi</a><a href="#cirkeln">Cirkeln</a><a href="#bildsprak">Bildspråk</a><a href="#instagram">Instagram</a><a href="#dokument">Dokument</a><a href="#regler">Regler</a>
+    <a href="#utgang">Utgångsläge</a><a href="#logotyp">Logotyp</a><a href="#arketyper">Arketyper</a><a href="#farg">Färg</a><a href="#typografi">Typografi</a><a href="#cirkeln">Cirkeln</a><a href="#bildsprak">Bildspråk</a>
   </nav>
 </header>
+<div class="nav2"><b>Tillämpningar</b><a href="#instagram">Instagram</a><a href="#dokument">Dokument</a><a href="#presentation">Presentation</a><a href="#bocker">Böcker</a><a href="#profil">Profilrapport</a><a href="#webb">Webbplats</a><a href="#regler">Regler</a></div>
 
 <div class="hero">
   <div>
-    <span class="tag">Designboard · Luminusprofilen · version 2</span>
+    <span class="tag">Designboard · Luminusprofilen · version 3</span>
     <h1>Samma blomma, <em style="font-style:italic;font-weight:500">nytt ljus</em></h1>
     <p class="lede">Luminus visuella uttryck uppdaterat för skärm, sociala medier och tryck. Blomman, de fyra elementens färger och karaktärsflaggorna finns kvar. Typsnitten byts mot fria Google Fonts, färgerna får djup och kontrast, och layouten får mer luft.</p>
-    <div class="facts"><span class="chip">20 karaktärer</span><span class="chip">4 element</span><span class="chip">8 kronblad</span><span class="chip">2 typsnitt, båda från Google Fonts</span></div>
+    <div class="facts"><span class="chip">20 karaktärer</span><span class="chip">4 element</span><span class="chip">8 kronblad med egna namn</span><span class="chip">8 arketyper i blomman</span></div>
   </div>
   <div class="hero-art" role="img" aria-label="Luminus-logotypen på mörk violett bakgrund"><span class="lockup on-dark"><svg><use href="#mark"/></svg><span class="wm">Luminus</span></span></div>
 </div>
@@ -264,16 +403,16 @@ footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);display
   <div class="boards">
     <div class="board s7"><span class="tag">Primär, på ljust</span><div class="stage st-light"><span class="lockup on-light" style="font-size:clamp(3rem,9vw,5.6rem)"><svg role="img" aria-label="Luminus"><use href="#mark"/></svg><span class="wm">Luminus</span></span></div></div>
     <div class="board s5"><span class="tag">På mörkt</span><div class="stage st-night" style="min-height:100%"><span class="lockup on-dark" style="font-size:clamp(2.6rem,6vw,3.8rem)"><svg role="img" aria-label="Luminus"><use href="#mark"/></svg><span class="wm">Luminus</span></span></div></div>
-    <div class="board s12"><span class="tag">Kronbladen, medurs från toppen</span>
+    <div class="board s12"><span class="tag">Kronbladen, medurs från toppen · en färg per arketyp</span>
       <div class="petal-row">
-        <div class="petal"><i style="background:var(--p1)"></i><b>Violett</b><span class="mono">#A970FF</span></div>
-        <div class="petal"><i style="background:var(--p2)"></i><b>Röd</b><span class="mono">#D7263D</span></div>
-        <div class="petal"><i style="background:var(--p3)"></i><b>Vinröd</b><span class="mono">#8A1C2B</span></div>
-        <div class="petal"><i style="background:var(--p4)"></i><b>Oliv</b><span class="mono">#A07F0C</span></div>
-        <div class="petal"><i style="background:var(--p5)"></i><b>Gran</b><span class="mono">#0B6B3A</span></div>
-        <div class="petal"><i style="background:var(--p6)"></i><b>Mynta</b><span class="mono">#52C28A</span></div>
-        <div class="petal"><i style="background:var(--p7)"></i><b>Petrol</b><span class="mono">#0E8A9B</span></div>
-        <div class="petal"><i style="background:var(--p8)"></i><b>Cyan</b><span class="mono">#5CE1F2</span></div>
+        <div class="petal"><i style="background:var(--p1)"></i><b>Ametist</b><span class="mono">#A970FF</span></div>
+        <div class="petal"><i style="background:var(--p2)"></i><b>Rönn</b><span class="mono">#D7263D</span></div>
+        <div class="petal"><i style="background:var(--p3)"></i><b>Granat</b><span class="mono">#8A1C2B</span></div>
+        <div class="petal"><i style="background:var(--p4)"></i><b>Mässing</b><span class="mono">#A07F0C</span></div>
+        <div class="petal"><i style="background:var(--p5)"></i><b>Barr</b><span class="mono">#0B6B3A</span></div>
+        <div class="petal"><i style="background:var(--p6)"></i><b>Salvia</b><span class="mono">#52C28A</span></div>
+        <div class="petal"><i style="background:var(--p7)"></i><b>Tjärn</b><span class="mono">#0E8A9B</span></div>
+        <div class="petal"><i style="background:var(--p8)"></i><b>Dagg</b><span class="mono">#5CE1F2</span></div>
       </div></div>
     <div class="board s6"><span class="tag">Fritt utrymme</span>
       <div class="stage st-light"><div class="x-demo"><span class="lockup on-light" style="font-size:3rem"><svg><use href="#mark"/></svg><span class="wm">Luminus</span></span></div></div>
@@ -296,35 +435,48 @@ footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);display
   </div>
 </section>
 
+
+<section id="arketyper">
+  <div class="sec-head"><span class="tag">Arketyperna</span><h2>Åtta kronblad, åtta arketyper</h2>
+  <p class="lede" style="font-size:1rem">Blomman är profilens åtta arketyper. Varje kronblad har en egen färg och ett eget namn. Kronbladen ligger så att varje arketyp har sin motpol rakt mitt emot, precis som i systemets komplementpar.</p></div>
+  <div class="arch">
+    <div><svg viewBox="-235 -165 470 335" role="img" aria-label="Luminusblomman med åtta kronblad, ett per arketyp"><use href="#np" fill="#A970FF" transform="rotate(0) scale(1.5)"/><use href="#np" fill="#D7263D" transform="rotate(45) scale(1.5)"/><use href="#np" fill="#8A1C2B" transform="rotate(90) scale(1.5)"/><use href="#np" fill="#A07F0C" transform="rotate(135) scale(1.5)"/><use href="#np" fill="#0B6B3A" transform="rotate(180) scale(1.5)"/><use href="#np" fill="#52C28A" transform="rotate(225) scale(1.5)"/><use href="#np" fill="#0E8A9B" transform="rotate(270) scale(1.5)"/><use href="#np" fill="#5CE1F2" transform="rotate(315) scale(1.5)"/><circle r="9" fill="var(--ink)"/><text x="0.0" y="-132.0" text-anchor="middle" font-family="DM Sans,Arial,sans-serif" font-size="11.5" font-weight="700" fill="var(--ink)">Visionizer</text><text x="0.0" y="-120.0" text-anchor="middle" font-family="DM Sans,Arial,sans-serif" font-size="9.5" fill="var(--ink-2)">Ametist · #A970FF</text><text x="90.5" y="-94.5" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="11.5" font-weight="700" fill="var(--ink)">Explorer</text><text x="90.5" y="-82.5" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="9.5" fill="var(--ink-2)">Rönn · #D7263D</text><text x="128.0" y="3.0" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="11.5" font-weight="700" fill="var(--ink)">Challenger</text><text x="128.0" y="15.0" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="9.5" fill="var(--ink-2)">Granat · #8A1C2B</text><text x="90.5" y="102.5" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="11.5" font-weight="700" fill="var(--ink)">Producer</text><text x="90.5" y="114.5" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="9.5" fill="var(--ink-2)">Mässing · #A07F0C</text><text x="0.0" y="140.0" text-anchor="middle" font-family="DM Sans,Arial,sans-serif" font-size="11.5" font-weight="700" fill="var(--ink)">Investor</text><text x="0.0" y="152.0" text-anchor="middle" font-family="DM Sans,Arial,sans-serif" font-size="9.5" fill="var(--ink-2)">Barr · #0B6B3A</text><text x="-90.5" y="102.5" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="11.5" font-weight="700" fill="var(--ink)">Protector</text><text x="-90.5" y="114.5" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="9.5" fill="var(--ink-2)">Salvia · #52C28A</text><text x="-128.0" y="3.0" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="11.5" font-weight="700" fill="var(--ink)">Connector</text><text x="-128.0" y="15.0" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="9.5" fill="var(--ink-2)">Tjärn · #0E8A9B</text><text x="-90.5" y="-94.5" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="11.5" font-weight="700" fill="var(--ink)">Reflector</text><text x="-90.5" y="-82.5" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="9.5" fill="var(--ink-2)">Dagg · #5CE1F2</text></svg></div>
+    <div class="arch-cards"><div class="ac"><div class="hd"><span class="dot" style="background:#A970FF"></span><div><h3>Visionizer</h3><span class="sv">Visionär · Ametist <span class="mono">#A970FF</span></span></div></div><p>Ser framåt och ger organisationen riktning.</p><p><b>Fälla:</b> fastnar i visioner utan genomförandeplan.</p><p><b>Allergi mot:</b> Investorns försiktighet.</p></div><div class="ac"><div class="hd"><span class="dot" style="background:#D7263D"></span><div><h3>Explorer</h3><span class="sv">Upptäckare · Rönn <span class="mono">#D7263D</span></span></div></div><p>Söker det nya och tar med insikterna hem.</p><p><b>Fälla:</b> blir riktningslös och missnöjd med nuet.</p><p><b>Allergi mot:</b> Protectorns överskydd.</p></div><div class="ac"><div class="hd"><span class="dot" style="background:#8A1C2B"></span><div><h3>Challenger</h3><span class="sv">Utmanare · Granat <span class="mono">#8A1C2B</span></span></div></div><p>Flyttar organisationen ur komfortzonen.</p><p><b>Fälla:</b> blir konfrontativ och skapar onödig konflikt.</p><p><b>Allergi mot:</b> Connectorns konfliktundvikande.</p></div><div class="ac"><div class="hd"><span class="dot" style="background:#A07F0C"></span><div><h3>Producer</h3><span class="sv">Producent · Mässing <span class="mono">#A07F0C</span></span></div></div><p>Levererar resultat och gör idéer till utfall.</p><p><b>Fälla:</b> tunnelseende på output och effektivitet.</p><p><b>Allergi mot:</b> Reflectorns eftertanke.</p></div><div class="ac"><div class="hd"><span class="dot" style="background:#0B6B3A"></span><div><h3>Investor</h3><span class="sv">Investerare · Barr <span class="mono">#0B6B3A</span></span></div></div><p>Förvaltar resurserna för långsiktig tillväxt.</p><p><b>Fälla:</b> blir för försiktig och missar möjligheter.</p><p><b>Allergi mot:</b> Visionizerns orealistiska visioner.</p></div><div class="ac"><div class="hd"><span class="dot" style="background:#52C28A"></span><div><h3>Protector</h3><span class="sv">Beskyddare · Salvia <span class="mono">#52C28A</span></span></div></div><p>Värnar värderingar och människor.</p><p><b>Fälla:</b> blir överskyddande och hämmar förnyelse.</p><p><b>Allergi mot:</b> Explorerns rastlöshet.</p></div><div class="ac"><div class="hd"><span class="dot" style="background:#0E8A9B"></span><div><h3>Connector</h3><span class="sv">Förbindare · Tjärn <span class="mono">#0E8A9B</span></span></div></div><p>Bygger relationer och samarbete.</p><p><b>Fälla:</b> dras in i relationer och undviker konflikt.</p><p><b>Allergi mot:</b> Challengerns konfrontation.</p></div><div class="ac"><div class="hd"><span class="dot" style="background:#5CE1F2"></span><div><h3>Reflector</h3><span class="sv">Reflektor · Dagg <span class="mono">#5CE1F2</span></span></div></div><p>Ger insikt och lärande genom eftertanke.</p><p><b>Fälla:</b> fastnar i analys och blir passiv.</p><p><b>Allergi mot:</b> Producerns ensidiga produktivitet.</p></div></div>
+  </div>
+  <div class="sec-head" style="margin-top:36px"><h3>Fyra axlar genom blomman</h3>
+  <p class="lede" style="font-size:.95rem">Motpolerna är varandras utmaning och allergi. Färgparen är valda för att hålla ihop när de står bredvid varandra.</p></div>
+  <div class="pairs"><div class="pair"><div class="pp"><i style="background:#A970FF"></i>Visionizer<span class="arrow">↔</span><i style="background:#0B6B3A"></i>Investor</div><span>Ametist mot Barr</span></div><div class="pair"><div class="pp"><i style="background:#D7263D"></i>Explorer<span class="arrow">↔</span><i style="background:#52C28A"></i>Protector</div><span>Rönn mot Salvia</span></div><div class="pair"><div class="pp"><i style="background:#8A1C2B"></i>Challenger<span class="arrow">↔</span><i style="background:#0E8A9B"></i>Connector</div><span>Granat mot Tjärn</span></div><div class="pair"><div class="pp"><i style="background:#A07F0C"></i>Producer<span class="arrow">↔</span><i style="background:#5CE1F2"></i>Reflector</div><span>Mässing mot Dagg</span></div></div>
+  <p class="note" style="margin-top:18px">Arketypernas texter, fällor och allergier kommer från materialet "Organizational Landscapes and Archetypes in Business Agility" (2023). Vilken färg som hör till vilken arketyp är ett förslag. Placeringen följer motpolerna: byt om den om Luminus har en annan tilldelning.</p>
+</section>
 <section id="farg">
-  <div class="sec-head"><span class="tag">Färg</span><h2>Fyra element, tre toner var</h2>
-  <p class="lede" style="font-size:1rem">Varje element har en huvudfärg, en mörk ton för text och ytor på ljust, och en ljus ton för bakgrunder. Huvudfärgerna är lite varmare och mer jämnstarka än förut.</p></div>
+  <div class="sec-head"><span class="tag">Färg</span><h2>Fyra element, åtta kronblad</h2>
+  <p class="lede" style="font-size:1rem">Elementen har varsin huvudfärg med en mörk och en ljus ton. De åtta kronbladen är arketypernas färger och har egna namn, hämtade ur svensk natur. Alla namn används i text, filnamn och kod.</p></div>
   <div class="quad" role="group" aria-label="Elementfärger">
-    <div class="q luft"><div><h3>Luft</h3><p class="names">Jester · Prince · Visionary · Wise · Magician</p></div>
+    <div class="q luft"><div><h3>Himmel</h3><p class="names">Jester · Prince · Visionary · Wise · Magician</p></div>
       <div><p class="mono" style="font-weight:700;margin-bottom:8px">#2B8CFF</p><div class="tints mono"><div><b>Djup</b>#16457F</div><div><b>Ljus</b>#DCEBFF</div></div></div></div>
-    <div class="q eld"><div><h3>Eld</h3><p class="names">Adventurer · Warrior · Commander · Rebel · Artisan</p></div>
-      <div><p class="mono" style="font-weight:700;margin-bottom:8px">#E23D2E</p><div class="tints mono"><div><b>Djup</b>#A8231A</div><div><b>Ljus</b>#FFE0DB</div></div></div></div>
-    <div class="q vatten"><div><h3>Vatten</h3><p class="names">Princess · Empress · Uniter · Healer · Mother</p></div>
+    <div class="q eld"><div><h3>Brasa</h3><p class="names">Adventurer · Warrior · Commander · Rebel · Artisan</p></div>
+      <div><p class="mono" style="font-weight:700;margin-bottom:8px">#D93321</p><div class="tints mono"><div><b>Djup</b>#A8231A</div><div><b>Ljus</b>#FFE0DB</div></div></div></div>
+    <div class="q vatten"><div><h3>Löv</h3><p class="names">Princess · Empress · Uniter · Healer · Mother</p></div>
       <div><p class="mono" style="font-weight:700;margin-bottom:8px">#2E9E6B</p><div class="tints mono"><div><b>Djup</b>#145C3C</div><div><b>Ljus</b>#D8F1E4</div></div></div></div>
-    <div class="q jord"><div><h3>Jord</h3><p class="names">Scientist · Strategist · Analyst · Trustee · Emperor</p></div>
+    <div class="q jord"><div><h3>Skörd</h3><p class="names">Scientist · Strategist · Analyst · Trustee · Emperor</p></div>
       <div><p class="mono" style="font-weight:700;margin-bottom:8px">#F6B900</p><div class="tints mono"><div><b>Djup</b>#8A6500</div><div><b>Ljus</b>#FFF0BF</div></div></div></div>
   </div>
   <div class="contrast" aria-label="Textkombinationer som klarar kontrastkravet">
-    <span style="background:#2B8CFF;color:#06182E">Mörk text på Luft</span>
-    <span style="background:#E23D2E;color:#fff">Vit text på Eld</span>
-    <span style="background:#2E9E6B;color:#04180F">Mörk text på Vatten</span>
-    <span style="background:#F6B900;color:#2A1E00">Mörk text på Jord</span>
+    <span style="background:#2B8CFF;color:#06182E">Mörk text på Himmel</span>
+    <span style="background:#D93321;color:#fff">Vit text på Brasa</span>
+    <span style="background:#2E9E6B;color:#04180F">Mörk text på Löv</span>
+    <span style="background:#F6B900;color:#2A1E00">Mörk text på Skörd</span>
   </div>
 
   <div class="sec-head" style="margin-top:48px"><h3>Natt och Journeys</h3>
   <p class="lede" style="font-size:1rem">Den mörka världen för Journeys, videoomslag och sociala medier. Glöd och magenta används som små accenter, aldrig som bakgrund.</p></div>
   <div class="ramp">
     <div class="c d" style="background:#150B3A"><b>Natt</b><span class="mono">#150B3A</span></div>
-    <div class="c d" style="background:#2A1470"><b>Natt ljus</b><span class="mono">#2A1470</span></div>
+    <div class="c d" style="background:#2A1470"><b>Midnatt</b><span class="mono">#2A1470</span></div>
     <div class="c d" style="background:#243B38"><b>Skog</b><span class="mono">#243B38</span></div>
     <div class="c l" style="background:#FFF4DC"><b>Pergament</b><span class="mono">#FFF4DC</span></div>
     <div class="c l" style="background:#DFFB4E"><b>Glöd</b><span class="mono">#DFFB4E</span></div>
-    <div class="c l" style="background:#FF3DCB"><b>Magenta</b><span class="mono">#FF3DCB</span></div>
+    <div class="c l" style="background:#FF3DCB"><b>Cerise</b><span class="mono">#FF3DCB</span></div>
   </div>
   <div class="sec-head" style="margin-top:48px"><h3>Neutrala</h3>
   <p class="lede" style="font-size:1rem">Ett svagt violettstick i svart och grått gör att neutralerna hör ihop med kronbladens violett.</p></div>
@@ -365,7 +517,7 @@ footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);display
   <div class="circle-wrap">
     <svg viewBox="-110 -110 220 220" role="img" aria-label="Cirkel med fyra färgfält: luft uppe till vänster, eld uppe till höger, vatten nere till vänster och jord nere till höger">
       <g stroke="var(--paper)" stroke-width="2.4">
-        <path d="M0 0 L0 -100 A100 100 0 0 0 -100 0 Z" fill="#2B8CFF"/><path d="M0 0 L100 0 A100 100 0 0 0 0 -100 Z" fill="#E23D2E"/>
+        <path d="M0 0 L0 -100 A100 100 0 0 0 -100 0 Z" fill="#2B8CFF"/><path d="M0 0 L100 0 A100 100 0 0 0 0 -100 Z" fill="#D93321"/>
         <path d="M0 0 L-100 0 A100 100 0 0 0 0 100 Z" fill="#2E9E6B"/><path d="M0 0 L0 100 A100 100 0 0 0 100 0 Z" fill="#F6B900"/>
       </g>
       <circle r="78" fill="var(--paper)"/>
@@ -386,7 +538,7 @@ footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);display
       <p class="note" style="grid-column:1/-1">Flaggan är en tagg i elementets huvudfärg med DM Sans 700 och en liten spets mot cirkelns mitt. Texten är mörk på blått, grönt och gult, vit på rött.</p>
     </div>
   </div>
-  <p class="note" style="margin-top:18px">Elementnamnen Luft, Eld, Vatten och Jord är läsningar av bilderna i den ursprungliga cirkeln och inte officiella benämningar. Byt gärna mot Luminus egna ord.</p>
+  <p class="note" style="margin-top:18px">Elementen Luft, Eld, Vatten och Jord är läsningar av bilderna i den ursprungliga cirkeln. Deras färger heter Himmel, Brasa, Löv och Skörd.</p>
 </section>
 
 <section id="bildsprak">
@@ -430,6 +582,142 @@ footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);display
   </div>
 </section>
 
+
+<section id="presentation">
+  <div class="sec-head"><span class="tag">Tillämpning 1</span><h2>Presentationsmaterial</h2>
+  <p class="lede" style="font-size:1rem">Sex bildtyper i 16:9 för Keynote, PowerPoint och Google Slides. Mörka bilder öppnar och stänger, ljusa bilder bär innehållet och en elementfärg markerar varje nytt avsnitt.</p></div>
+  <div class="deck">
+    <figure class="cell" style="margin:0"><div class="sl night"><svg class="bg-flower" viewBox="0 0 140 140" aria-hidden="true"><use href="#mark"/></svg><div class="in" style="align-content:space-between"><span class="k" style="color:var(--glow)">Luminusprofilen</span><div><h5 style="font-size:6.6cqw;max-width:11ch">Leda med hela din karaktär</h5><p style="font-size:1.9cqw;margin:2cqw 0 0;color:#D9D4F2;max-width:34ch">Tjugo karaktärer, åtta arketyper och ett gemensamt språk.</p></div><span class="lockup on-dark"><svg><use href="#mark"/></svg><span class="wm">Luminus</span></span></div></div><figcaption><b>Titelbild</b>Natt-bakgrund, blomman beskuren i hörnet, ett accentord i Glöd.</figcaption></figure>
+    <figure class="cell" style="margin:0"><div class="sl brasa"><div class="in" style="align-content:space-between"><span class="k">Avsnitt · Brasa</span><div><h5 style="font-size:17cqw">Eld</h5><p style="font-size:1.8cqw;margin:1.4cqw 0 0;max-width:40ch">Adventurer · Warrior · Commander · Rebel · Artisan</p></div><span class="lockup on-dark"><svg><use href="#mark"/></svg><span class="wm">Luminus</span></span></div></div><figcaption><b>Avsnittsbild</b>Elementets färg fyller hela bilden. Ett ord, stort.</figcaption></figure>
+    <figure class="cell" style="margin:0"><div class="sl"><div class="in" style="grid-template-rows:auto 1fr auto;gap:3cqw"><h5 style="font-size:4.4cqw">Tre sätt att använda profilen</h5><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:3cqw;align-content:start;padding-top:1cqw"><div><i style="display:block;width:3cqw;height:3cqw;border-radius:50% 50% 50% 10%;background:var(--p1);margin-bottom:1.4cqw"></i><b style="font-size:2.3cqw">Självkännedom</b><p style="font-size:1.75cqw;margin:.6cqw 0 0;color:#514E63;line-height:1.45">Förstå dina gåvor och fällor.</p></div><div><i style="display:block;width:3cqw;height:3cqw;border-radius:50% 50% 50% 10%;background:var(--p7);margin-bottom:1.4cqw"></i><b style="font-size:2.3cqw">Teamutveckling</b><p style="font-size:1.75cqw;margin:.6cqw 0 0;color:#514E63;line-height:1.45">Se vad gruppen saknar.</p></div><div><i style="display:block;width:3cqw;height:3cqw;border-radius:50% 50% 50% 10%;background:var(--p4);margin-bottom:1.4cqw"></i><b style="font-size:2.3cqw">Ledarskap</b><p style="font-size:1.75cqw;margin:.6cqw 0 0;color:#514E63;line-height:1.45">Välj stil efter läget.</p></div></div><div style="display:flex;justify-content:space-between;align-items:center;font-size:1.3cqw;color:#514E63"><span class="lockup on-light"><svg><use href="#mark"/></svg><span class="wm">Luminus</span></span><span>3</span></div></div></div><figcaption><b>Innehållsbild</b>Vit yta, rubrik med tyngd, kronbladsfärgade markörer. Högst tre kolumner.</figcaption></figure>
+    <figure class="cell" style="margin:0"><div class="sl"><div style="position:absolute;inset:0 62% 0 0;background:var(--eld);color:#fff;padding:5.5cqw 4.5cqw;display:grid;align-content:space-between"><span class="k">Karaktär · Eld</span><div><h5 style="font-size:5.4cqw">Commander</h5><p style="font-size:1.5cqw;margin:1.4cqw 0 0;line-height:1.4">Calling: att expandera</p></div></div><div style="position:absolute;inset:0 0 0 38%;padding:5.5cqw 5cqw;display:grid;align-content:center;gap:1.8cqw;font-size:1.85cqw;line-height:1.35">
+      <div><span class="k" style="color:#514E63">Gåva</span><br>Målmedveten, drivande, resultatorienterad</div><div><span class="k" style="color:#514E63">Fälla</span><br>Dominans och diktat</div><div><span class="k" style="color:#514E63">Utmaning</span><br>Inkludering, samarbete, tillit</div><div><span class="k" style="color:#514E63">Allergi</span><br>Tvekan, tvivel, motstånd</div></div></div><figcaption><b>Karaktärsbild</b>Elementets färg till vänster, fem fasta fält till höger.</figcaption></figure>
+    <figure class="cell" style="margin:0"><div class="sl perg"><div class="in" style="align-content:center;gap:2cqw"><span style="font-family:var(--f-display);font-size:11cqw;line-height:.6;color:var(--eld);font-weight:700">“</span><p style="font-family:var(--f-display);font-style:italic;font-weight:500;font-size:3.9cqw;line-height:1.18;letter-spacing:-.01em;max-width:24ch;margin:0">Gåvan blir en fälla när den får lösa allt.</p><span class="k" style="color:#514E63">Luminusprofilen</span></div></div><figcaption><b>Citatbild</b>Pergament, Fraunces kursiv. Ett citat, en rad som källa.</figcaption></figure>
+    <figure class="cell" style="margin:0"><div class="sl"><div class="in" style="grid-template-columns:1.1fr .9fr;gap:4cqw;align-items:center"><div><span style="font-family:var(--f-display);font-weight:700;font-size:24cqw;line-height:.85;letter-spacing:-.05em">20</span><p style="font-size:2.4cqw;font-weight:700;margin:1cqw 0 0">karaktärer i fyra element</p><p style="font-size:1.5cqw;color:#514E63;margin:1cqw 0 0;max-width:30ch;line-height:1.4">Fem per element: luft, eld, vatten och jord.</p></div><div class="ring2" style="width:100%"></div></div></div><figcaption><b>Nyckeltalsbild</b>Ett stort tal i Fraunces, cirkeln som ring. Max ett tal per bild.</figcaption></figure>
+  </div>
+  <div class="specbox two">
+    <div><h3>Raster och typografi</h3><dl class="dl"><dt>Format</dt><dd>16:9, 1920 × 1080 px</dd><dt>Marginal</dt><dd>96 px runt, 12 kolumner, 24 px mellanrum</dd><dt>Titel</dt><dd>Fraunces 700, 64–96 px, radavstånd 1,0</dd><dt>Underrubrik</dt><dd>Fraunces 650, 40 px</dd><dt>Brödtext</dt><dd>DM Sans 400, minst 28 px</dd><dt>Etikett</dt><dd>DM Sans 700, versaler, 20 px, +14 %</dd></dl></div>
+    <div><h3>Regler</h3><dl class="dl"><dt>Bakgrunder</dt><dd>Natt för öppning och avslut, Papper för innehåll, elementfärg för avsnitt.</dd><dt>Logotyp</dt><dd>Nere till vänster på alla bilder utom titelbilden, där den sitter nere till höger.</dd><dt>Text</dt><dd>Högst 40 ord per bild. Aldrig text direkt över collagets ansikten.</dd><dt>Bilder</dt><dd>Collage som helbild, Journeys-foto med mörk toning. Inga stockfoton.</dd><dt>Diagram</dt><dd>Kronbladsfärgerna i fast ordning. Skriv värdet på stapeln.</dd></dl></div>
+  </div>
+</section>
+<section id="bocker">
+  <div class="sec-head"><span class="tag">Tillämpning 2</span><h2>Böcker och manualer</h2>
+  <p class="lede" style="font-size:1rem">Boken är en lugn, mörk sak med blomman som omslag. Manualerna bildar en serie: en elementfärg per volym, samma layout. Insidan är ljus, med god luft och en tydlig marginal för anteckningar.</p></div>
+  <div class="covers">
+    <figure class="cell" style="margin:0"><div class="cv night"><svg viewBox="0 0 140 140" style="position:absolute;width:82%;left:9%;top:4%;--dot:#fff" aria-hidden="true"><use href="#mark"/></svg><div class="in" style="align-content:end;gap:6cqw"><div><span class="k" style="color:var(--glow)">Mattias Seger</span><h5 style="font-size:15cqw;margin-top:3cqw">Leda med karaktär</h5><p style="font-size:4.4cqw;margin:3cqw 0 0;color:#D9D4F2">Tjugo karaktärer och åtta arketyper</p></div><span class="lockup on-dark"><svg><use href="#mark"/></svg><span class="wm">Luminus</span></span></div></div><figcaption><b>Bokomslag, natt</b>Blomman i stor skala, beskuren. Titeln nere till vänster. A5.</figcaption></figure>
+    <figure class="cell" style="margin:0"><div class="cv paper"><div class="in" style="grid-template-rows:auto 1fr auto;gap:6cqw"><div><span class="k" style="color:#6A2BC9">Luminus Journeys</span><h5 style="font-size:12cqw;margin-top:3cqw">Bortom det uppenbara</h5></div><div class="art"></div><span class="lockup on-light"><svg><use href="#mark"/></svg><span class="wm">Luminus</span></span></div></div><figcaption><b>Bokomslag, ljus</b>Collaget som bild under titeln. För antologier och Journeys.</figcaption></figure>
+    <figure class="cell" style="margin:0"><div class="cv man" style="background:var(--eld)"><div class="in" style="align-content:space-between"><span class="k">Manual · del 3</span><div><h5 style="font-size:16cqw">Eld</h5><p style="font-size:4.4cqw;margin:3cqw 0 0">Fem karaktärer som driver framåt</p></div><div style="display:flex;justify-content:space-between;align-items:end"><span class="lockup on-dark"><svg><use href="#mark"/></svg><span class="wm">Luminus</span></span><svg viewBox="0 0 140 140" style="width:20cqw;height:20cqw;--dot:#fff"><use href="#mark-mono" style="color:#fff"/></svg></div></div></div><figcaption><b>Manual, Brasa</b>Elementets färg som omslag. A4.</figcaption></figure>
+    <figure class="cell" style="margin:0"><div style="display:grid;gap:10px"><div class="cv man" style="background:var(--luft);color:#06182E;aspect-ratio:3/1"><div class="in" style="padding:5cqw 7cqw;align-content:center"><span class="k">Del 1</span><h5 style="font-size:10cqw">Luft</h5></div></div><div class="cv man" style="background:var(--vatten);color:#04180F;aspect-ratio:3/1"><div class="in" style="padding:5cqw 7cqw;align-content:center"><span class="k">Del 2</span><h5 style="font-size:10cqw">Vatten</h5></div></div><div class="cv man" style="background:var(--jord);color:#2A1E00;aspect-ratio:3/1"><div class="in" style="padding:5cqw 7cqw;align-content:center"><span class="k">Del 4</span><h5 style="font-size:10cqw">Jord</h5></div></div></div><figcaption><b>Serien</b>Fyra volymer: Himmel, Brasa, Löv och Skörd. Ryggen bär ordet.</figcaption></figure>
+  </div>
+  <div class="deck" style="grid-template-columns:1fr 1fr;margin-top:28px">
+    <figure class="cell" style="margin:0"><div class="spread"><div class="pg l" style="background:var(--vatten);color:#04180F"><span class="k">Kapitel 2</span><h5 style="font-size:11cqw">Vatten</h5><p class="t" style="color:#04180F;max-width:30ch">Fem karaktärer som binder ihop: Princess, Empress, Uniter, Healer och Mother.</p></div><div class="pg"><div><span class="k" style="color:#514E63">Inledning</span><h5 style="font-size:3.4cqw;margin-top:1.2cqw">Det som håller ihop</h5></div><div class="t" style="columns:2;column-gap:2.4cqw"><p style="margin:0 0 1cqw">Vattnets karaktärer sätter relationen före resultatet. De frågar först vem som är med och sedan vad som ska göras.</p><p style="margin:0">Deras gåva är trygghet. Deras fälla är att allt blir för mjukt för att någon ska säga emot.</p></div><div class="run"><span>Luminus · Manual</span><span>41</span></div></div></div><figcaption><b>Kapitelöppning</b>Vänstersidan i elementfärg, högersidan ljus med två spalter.</figcaption></figure>
+    <figure class="cell" style="margin:0"><div class="spread"><div class="pg l"><div><span class="k" style="color:#C2201A">Karaktär · Eld</span><h5 style="font-size:6.2cqw;margin-top:1.4cqw">Commander</h5></div><p class="t" style="font-size:1.55cqw">Commander ser världen som obrukad mark. Hen bestämmer snabbt, delegerar detaljerna och flyttar fram positionerna med auktoritet.</p><div class="run"><span>Komplement: Uniter</span><span>44</span></div></div><div class="pg"><div class="tb"><b>Calling</b><span>Att expandera</span><b>Aktiveras av</b><span>Brist på riktning</span><b>Gåva</b><span>Målmedveten, drivande, resultatorienterad</span><b>Fälla</b><span>Dominans, despoti, överlägsenhet</span><b>Utmaning</b><span>Inkludering, samarbete, tillit</span><b>Allergi</b><span>Tvekan, tvivel, motstånd</span><b>Rädsla</b><span>Stagnation och tillbakagång</span></div><div class="run"><span>Luminus · Manual</span><span>45</span></div></div></div><figcaption><b>Karaktärsuppslag</b>Berättelse till vänster, sju fasta fält till höger. Samma ordning för alla tjugo.</figcaption></figure>
+  </div>
+  <div class="specbox two">
+    <div><h3>Format och uppslag</h3><dl class="dl"><dt>Bok</dt><dd>A5, 148 × 210 mm, inbunden eller pocket</dd><dt>Manual</dt><dd>A4, 210 × 297 mm, mjukt omslag med flik</dd><dt>Marginaler</dt><dd>Inre 22 mm, yttre 16 mm, topp 18 mm, botten 22 mm</dd><dt>Brödtext</dt><dd>DM Sans 9,5/14 pt, vänsterställd, högst 70 tecken per rad</dd><dt>Rubriker</dt><dd>Fraunces 650–700, kapitel 40 pt, avsnitt 18 pt</dd><dt>Löpande huvud</dt><dd>DM Sans 700, 7 pt, versaler, sidnummer yttre nederkant</dd></dl></div>
+    <div><h3>Färg och tryck</h3><dl class="dl"><dt>Kapitelfärg</dt><dd>Elementets färg på kapitelöppning och i sidhuvudets markör.</dd><dt>Omslag</dt><dd>Natt för böcker, elementfärg för manualer.</dd><dt>Papper</dt><dd>Ostruket, naturvitt, minst 90 g. Omslag 300 g med mattlaminat.</dd><dt>Färgprofil</dt><dd>Fogra39 för tryck. CMYK-värden tas fram vid provtryck, eftersom Glöd och Ametist ligger nära gamutgränsen.</dd><dt>Marginalanteckning</dt><dd>Sidokolumn 40 mm i Dis för övningar och reflektioner.</dd></dl></div>
+  </div>
+</section>
+<section id="profil">
+  <div class="sec-head"><span class="tag">Tillämpning 3</span><h2>Profilrapport för individ</h2>
+  <p class="lede" style="font-size:1rem">Rapporten är fyra A4-sidor: omslag, profilen på en sida, vad kombinationen betyder och en skarp återkoppling. Personens egen blomma ritas efter poängen: ju högre poäng, desto större kronblad.</p></div>
+  <div class="callout" style="background:var(--jord-tint);color:#2A1E00;padding:14px 18px;border-radius:6px;margin-bottom:22px;font-size:.92rem"><b>Exempelprofil.</b> Maja Lind är en påhittad person. Poängen är ritade för att visa layouten och kommer inte från ett mätinstrument. Texterna om Commander och Strategist bygger på Luminus karaktärsblad.</div>
+  <div class="reports">
+    <figure class="cell" style="margin:0"><div class="rp night"><div class="in"><div><span class="kk">Luminusprofilen · Personlig profil</span></div><div style="display:grid;align-content:center;gap:4cqw"><div style="width:62%;margin-inline:auto"><svg viewBox="-130 -130 260 260" role="img" aria-label="Personlig blomma: kronbladens storlek följer poängen"><use href="#np" fill="none" stroke="#C9C5DD" stroke-width=".7" stroke-dasharray="2 2" transform="rotate(0) scale(1.7)"/><use href="#np" fill="none" stroke="#C9C5DD" stroke-width=".7" stroke-dasharray="2 2" transform="rotate(45) scale(1.7)"/><use href="#np" fill="none" stroke="#C9C5DD" stroke-width=".7" stroke-dasharray="2 2" transform="rotate(90) scale(1.7)"/><use href="#np" fill="none" stroke="#C9C5DD" stroke-width=".7" stroke-dasharray="2 2" transform="rotate(135) scale(1.7)"/><use href="#np" fill="none" stroke="#C9C5DD" stroke-width=".7" stroke-dasharray="2 2" transform="rotate(180) scale(1.7)"/><use href="#np" fill="none" stroke="#C9C5DD" stroke-width=".7" stroke-dasharray="2 2" transform="rotate(225) scale(1.7)"/><use href="#np" fill="none" stroke="#C9C5DD" stroke-width=".7" stroke-dasharray="2 2" transform="rotate(270) scale(1.7)"/><use href="#np" fill="none" stroke="#C9C5DD" stroke-width=".7" stroke-dasharray="2 2" transform="rotate(315) scale(1.7)"/><use href="#np" fill="#A970FF" transform="rotate(0) scale(1.122)"/><use href="#np" fill="#D7263D" transform="rotate(45) scale(1.214)"/><use href="#np" fill="#8A1C2B" transform="rotate(90) scale(1.608)"/><use href="#np" fill="#A07F0C" transform="rotate(135) scale(1.527)"/><use href="#np" fill="#0B6B3A" transform="rotate(180) scale(1.261)"/><use href="#np" fill="#52C28A" transform="rotate(225) scale(0.937)"/><use href="#np" fill="#0E8A9B" transform="rotate(270) scale(0.798)"/><use href="#np" fill="#5CE1F2" transform="rotate(315) scale(0.868)"/><circle r="8" fill="#14121F"/></svg></div><div><h5 style="font-size:14cqw">Maja Lind</h5><p style="font-size:max(14px,4.2cqw);margin:2cqw 0 0;color:#D9D4F2;font-family:var(--f-display);font-style:italic;font-weight:500">Commander med Strategist i ryggen</p></div></div><div class="ft"><span class="lockup on-dark"><svg><use href="#mark"/></svg><span class="wm">Luminus</span></span><span>Exempelprofil · fiktiv person</span></div></div></div><figcaption><b>1. Omslag</b>Natt, personens egen blomma, namn och en rad som sammanfattar kombinationen.</figcaption></figure>
+    <figure class="cell" style="margin:0"><div class="rp"><div class="in"><div><span class="kk">Din profil på en sida</span><h5 style="font-size:7.4cqw;margin-top:1.6cqw">Utmanare och producent</h5></div><div class="body"><div style="display:grid;grid-template-columns:.9fr 1.1fr;gap:3cqw;align-items:center"><div><svg viewBox="-130 -130 260 260" role="img" aria-label="Personlig blomma: kronbladens storlek följer poängen"><use href="#np" fill="none" stroke="#C9C5DD" stroke-width=".7" stroke-dasharray="2 2" transform="rotate(0) scale(1.7)"/><use href="#np" fill="none" stroke="#C9C5DD" stroke-width=".7" stroke-dasharray="2 2" transform="rotate(45) scale(1.7)"/><use href="#np" fill="none" stroke="#C9C5DD" stroke-width=".7" stroke-dasharray="2 2" transform="rotate(90) scale(1.7)"/><use href="#np" fill="none" stroke="#C9C5DD" stroke-width=".7" stroke-dasharray="2 2" transform="rotate(135) scale(1.7)"/><use href="#np" fill="none" stroke="#C9C5DD" stroke-width=".7" stroke-dasharray="2 2" transform="rotate(180) scale(1.7)"/><use href="#np" fill="none" stroke="#C9C5DD" stroke-width=".7" stroke-dasharray="2 2" transform="rotate(225) scale(1.7)"/><use href="#np" fill="none" stroke="#C9C5DD" stroke-width=".7" stroke-dasharray="2 2" transform="rotate(270) scale(1.7)"/><use href="#np" fill="none" stroke="#C9C5DD" stroke-width=".7" stroke-dasharray="2 2" transform="rotate(315) scale(1.7)"/><use href="#np" fill="#A970FF" transform="rotate(0) scale(1.122)"/><use href="#np" fill="#D7263D" transform="rotate(45) scale(1.214)"/><use href="#np" fill="#8A1C2B" transform="rotate(90) scale(1.608)"/><use href="#np" fill="#A07F0C" transform="rotate(135) scale(1.527)"/><use href="#np" fill="#0B6B3A" transform="rotate(180) scale(1.261)"/><use href="#np" fill="#52C28A" transform="rotate(225) scale(0.937)"/><use href="#np" fill="#0E8A9B" transform="rotate(270) scale(0.798)"/><use href="#np" fill="#5CE1F2" transform="rotate(315) scale(0.868)"/><circle r="8" fill="#14121F"/></svg></div><div class="bars"><div class="bar"><span>Challenger</span><div class="tr"><div class="fl" style="width:92%;background:#8A1C2B"></div></div><b>92</b></div><div class="bar"><span>Producer</span><div class="tr"><div class="fl" style="width:85%;background:#A07F0C"></div></div><b>85</b></div><div class="bar"><span>Investor</span><div class="tr"><div class="fl" style="width:62%;background:#0B6B3A"></div></div><b>62</b></div><div class="bar"><span>Explorer</span><div class="tr"><div class="fl" style="width:58%;background:#D7263D"></div></div><b>58</b></div><div class="bar"><span>Visionizer</span><div class="tr"><div class="fl" style="width:50%;background:#A970FF"></div></div><b>50</b></div><div class="bar"><span>Protector</span><div class="tr"><div class="fl" style="width:34%;background:#52C28A"></div></div><b>34</b></div><div class="bar"><span>Reflector</span><div class="tr"><div class="fl" style="width:28%;background:#5CE1F2"></div></div><b>28</b></div><div class="bar"><span>Connector</span><div class="tr"><div class="fl" style="width:22%;background:#0E8A9B"></div></div><b>22</b></div></div></div><div style="display:flex;flex-wrap:wrap;gap:2cqw;align-items:center"><span class="badge" style="color:var(--eld-deep)">Primär · Commander · Eld</span><span class="badge" style="color:var(--jord-deep)">Sekundär · Strategist · Jord</span></div><p class="tx"><b>Dina två starkaste arketyper har allergi mot dina två svagaste.</b> Challenger (92) reagerar på Connectors konfliktundvikande (22). Producer (85) reagerar på Reflectors eftertanke (28). Det är där teamet saknar dig mest.</p><div class="mp"><span class="mph">Motpoler och avstånd</span><div class="row"><span><b>Challenger 92</b> mot <b>Connector 22</b></span><span>avstånd 70</span></div><div class="row"><span><b>Producer 85</b> mot <b>Reflector 28</b></span><span>avstånd 57</span></div></div></div><div class="ft"><span class="lockup on-light"><svg><use href="#mark"/></svg><span class="wm">Luminus</span></span><span>2</span></div></div></div><figcaption><b>2. Profilen på en sida</b>Blomma och staplar sida vid sida, två etiketter och ett påstående.</figcaption></figure>
+    <figure class="cell" style="margin:0"><div class="rp"><div class="in"><div><span class="kk">Så fungerar din kombination</span><h5 style="font-size:6cqw;margin-top:1.6cqw">Riktning och plan, samma risk</h5></div><div class="body"><div class="cmp"><div><h6 style="color:var(--eld-deep)">Commander</h6><div class="row"><small>Calling</small>Att expandera</div><div class="row"><small>Gåva</small>Målmedveten, drivande, resultatorienterad</div><div class="row"><small>Fälla</small>Dominans, despoti, överlägsenhet</div><div class="row"><small>Utmaning</small>Inkludering, samarbete, tillit</div><div class="row"><small>Allergi</small>Tvekan, tvivel, motstånd</div><div class="row"><small>Rädsla</small>Stagnation, tillbakagång</div></div><div><h6 style="color:var(--jord-deep)">Strategist</h6><div class="row"><small>Calling</small>Planera och styra mot resultat</div><div class="row"><small>Gåva</small>Strategisk, målinriktad, disciplinerad, ambitiös</div><div class="row"><small>Fälla</small>Suboptimering, mikrostyrning, rigiditet</div><div class="row"><small>Utmaning</small>Förståelse, acceptans, tolerans</div><div class="row"><small>Allergi</small>Oändlighet, ineffektivitet, otillräcklighet</div><div class="row"><small>Rädsla</small>Värdelösa mål, att styra åt fel håll</div></div></div><div class="callout"><b>Dubbel risk.</b> Båda karaktärerna har samma blinda fält: att ta in andra. Du beslutar snabbt och kontrollerar sedan detaljerna. Det kallas styrning, men teamet upplever det som tystnad.</div></div><div class="ft"><span class="lockup on-light"><svg><use href="#mark"/></svg><span class="wm">Luminus</span></span><span>3</span></div></div></div><figcaption><b>3. Kombinationen</b>Två kolumner med samma sex fält. En ruta i Skörd-ljus pekar ut risken.</figcaption></figure>
+    <figure class="cell" style="margin:0"><div class="rp"><div class="in"><div><span class="kk">Återkoppling</span><p class="big-sent" style="margin:1.6cqw 0 0">Du levererar tempo och riktning. <em>Du betalar med förtroende.</em></p></div><div class="body"><div class="sharp">
+      <div class="it"><i style="background:var(--p2)"></i><p><b>Det här ska du leverera</b>Beslut i tid och mål som går att mäta. Det är därför du fick rollen. Fortsätt med det.</p></div>
+      <div class="it"><i style="background:var(--p3)"></i><p><b>Det här kostar det</b>När du beslutar fort och sedan kontrollerar detaljerna slutar teamet föreslå och börjar vänta på dig. Du får snabbhet och förlorar idéerna.</p></div>
+      <div class="it"><i style="background:var(--p4)"></i><p><b>Det här triggar dig</b>Tvekan och ineffektivitet. Det du ser som slöseri är ofta någon som tänker. Fråga innan du avgör.</p></div>
+      <div class="it"><i style="background:var(--p7)"></i><p><b>Det här behöver du låna</b>Uniters tillit och Wises lyssnande. Du saknar dem inte, du ser dem inte som arbete.</p></div></div>
+      <div class="callout"><b>Gör detta i 30 dagar.</b> 1. Ställ en fråga innan varje beslut du själv kunde ha fattat. 2. Delegera målet och släpp metoden. 3. Möts du av motstånd: fråga vad det skyddar.</div></div><div class="ft"><span class="lockup on-light"><svg><use href="#mark"/></svg><span class="wm">Luminus</span></span><span>4</span></div></div></div><figcaption><b>4. Återkoppling</b>Fyra korta stycken med kronbladsmarkör, en skarp slutsats och en 30-dagarsregel.</figcaption></figure>
+  </div>
+  <div class="specbox two">
+    <div><h3>Så byggs en profil</h3><dl class="dl"><dt>Primär karaktär</dt><dd>Den som ger högst poäng. Elementets färg styr sidans accent.</dd><dt>Sekundär karaktär</dt><dd>Nummer två. Visas med sitt elements färg.</dd><dt>Arketyper</dt><dd>Åtta poäng 0–100. Blomman ritas från samma värden.</dd><dt>Motpol</dt><dd>Varje arketyps motpol visas när skillnaden mot den är större än 40 poäng.</dd><dt>Återkoppling</dt><dd>Byggs av karaktärsbladets Calling, Gåva, Fälla, Utmaning, Allergi och Rädsla.</dd></dl></div>
+    <div><h3>Så skrivs återkopplingen</h3><dl class="dl"><dt>Rubrik</dt><dd>En mening med två led: vad personen levererar och vad det kostar.</dd><dt>Du-form</dt><dd>Direkt och konkret. Inga omskrivningar för att vara snäll.</dd><dt>Fyra delar</dt><dd>Leverera, kostar, triggar, behöver låna. Högst tre meningar var.</dd><dt>Handling</dt><dd>Tre saker att göra i 30 dagar, med verb först.</dd><dt>Ton</dt><dd>Respekt för gåvan. Fällan beskrivs som gåvan i överkant, aldrig som ett fel.</dd></dl></div>
+  </div>
+</section>
+<section id="webb">
+  <div class="sec-head"><span class="tag">Tillämpning 4</span><h2>Identitetsspecifikation för webbplatsen</h2>
+  <p class="lede" style="font-size:1rem">Underlag för den som bygger luminus.se: principer, färg- och typsnittsvariabler, komponenter, tillgänglighet och prestanda. Alla färger och typsnitt är tokens, så att samma specifikation fungerar i Figma, CSS och Webflow.</p></div>
+  <div class="web-prev">
+    <div class="wp-nav"><span class="lockup on-light" style="font-size:1.5rem"><svg><use href="#mark"/></svg><span class="wm">Luminus</span></span><nav><span>Profilen</span><span>Karaktärer</span><span>Journeys</span><span>Om oss</span></nav><a class="btn p" href="#webb">Gör profilen</a></div>
+    <div class="wp-hero"><div><span class="tag" style="color:var(--glow)">Luminusprofilen</span><h4 style="margin-top:12px">Leda med hela din <em>karaktär</em></h4><p>Tjugo karaktärer och åtta arketyper ger dig och ditt team ett gemensamt språk för gåvor, fällor och utmaningar.</p><div class="cta"><a class="btn g" href="#webb">Gör profilen</a><a class="btn s" style="border-color:#fff;color:#fff" href="#webb">Se karaktärerna</a></div></div><div class="art" role="img" aria-label="Collage av målade ansikten"></div></div>
+    <div class="wp-cards"><div class="cc"><div class="top" style="background:var(--eld);color:#fff"><span class="tag" style="color:#fff">Eld</span><h6>Commander</h6><span class="meta">Att expandera</span></div><div class="bd">Målmedveten och resultatorienterad. Fällan är dominans.<a class="btn s" href="#webb">Läs mer</a></div></div><div class="cc"><div class="top" style="background:var(--jord);color:#2A1E00"><span class="tag" style="color:#2A1E00">Jord</span><h6>Strategist</h6><span class="meta">Att planera och styra</span></div><div class="bd">Strategisk och disciplinerad. Fällan är mikrostyrning.<a class="btn s" href="#webb">Läs mer</a></div></div><div class="cc"><div class="top" style="background:var(--vatten);color:#04180F"><span class="tag" style="color:#04180F">Vatten</span><h6>Uniter</h6><span class="meta">Att skapa gemenskap</span></div><div class="bd">Inkluderande och tillitsfull. Fällan är anpassning.<a class="btn s" href="#webb">Läs mer</a></div></div></div>
+  </div>
+  <p class="note" style="margin-top:10px">Förhandsvisning av startsida: sidhuvud, hjälte och karaktärskort. Texterna är exempel.</p>
+
+  <div class="two" style="margin-top:36px">
+    <div class="specbox" style="margin-top:0"><h3>Designprinciper</h3><dl class="dl"><dt>Ljus först</dt><dd>Ljusa sidor med mörka öppningar. Natt används för hjältar och avslut.</dd><dt>Ett element per sida</dt><dd>Karaktärssidor och artiklar tar elementets färg. Startsidan använder alla fyra.</dd><dt>Tyngd i rubriker</dt><dd>Fraunces 650–700, stora och korta.</dd><dt>Luft</dt><dd>Mellanrum följer en 8 px-skala. Inget är trångt.</dd><dt>Snabb och tillgänglig</dt><dd>WCAG 2.2 nivå AA. Sidan ska fungera utan JavaScript för innehåll.</dd></dl></div>
+    <div class="specbox" style="margin-top:0"><h3>Layout</h3><dl class="dl"><dt>Bredd</dt><dd>Innehåll max 1 180 px. Text max 68 tecken.</dd><dt>Kolumner</dt><dd>12 kolumner, 24 px mellanrum från 900 px. Under det en kolumn.</dd><dt>Brytpunkter</dt><dd>520, 900 och 1 280 px.</dd><dt>Sidmarginal</dt><dd>16 px på mobil, upp till 48 px på bred skärm.</dd><dt>Avstånd</dt><dd>8, 16, 24, 32, 48, 72 px. Sektioner har 72 px över.</dd></dl></div>
+  </div>
+
+  <div class="specbox"><h3>Variabler</h3>
+<pre class="code"><code>:root {
+  /* element */
+  --lum-himmel: #2B8CFF;  --lum-himmel-djup: #16457F;  --lum-himmel-ljus: #DCEBFF;
+  --lum-brasa:  #D93321;  --lum-brasa-djup:  #A8231A;  --lum-brasa-ljus:  #FFE0DB;
+  --lum-lov:    #2E9E6B;  --lum-lov-djup:    #145C3C;  --lum-lov-ljus:    #D8F1E4;
+  --lum-skord:  #F6B900;  --lum-skord-djup:  #8A6500;  --lum-skord-ljus:  #FFF0BF;
+  /* arketyper, medurs från toppen */
+  --lum-ametist: #A970FF;  --lum-ronn:   #D7263D;  --lum-granat: #8A1C2B;  --lum-massing: #A07F0C;
+  --lum-barr:    #0B6B3A;  --lum-salvia: #52C28A;  --lum-tjarn:  #0E8A9B;  --lum-dagg:    #5CE1F2;
+  /* natt och neutrala */
+  --lum-natt: #150B3A;  --lum-midnatt: #2A1470;  --lum-skog: #243B38;  --lum-pergament: #FFF4DC;
+  --lum-glod: #DFFB4E;  --lum-cerise: #FF3DCB;
+  --lum-black: #14121F;  --lum-skiffer: #514E63;  --lum-dis: #F0EFF8;  --lum-papper: #FBFAFF;
+
+  --font-display: "Fraunces", Georgia, serif;
+  --font-text: "DM Sans", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+
+  --space-1: 8px; --space-2: 16px; --space-3: 24px; --space-4: 32px; --space-5: 48px; --space-6: 72px;
+  --radius-s: 4px; --radius-m: 6px;
+  --ease: cubic-bezier(.2,.7,.2,1); --dur: 180ms;
+}</code></pre></div>
+
+  <div class="specbox"><h3>Typografisk skala</h3><div class="tbl"><table><thead><tr><th>Roll</th><th>Typsnitt</th><th>Mobil</th><th>Bred skärm</th><th>Radavstånd</th></tr></thead><tbody>
+    <tr><td>Display</td><td>Fraunces 700</td><td>40 px</td><td>88 px</td><td>0,98</td></tr>
+    <tr><td>H1</td><td>Fraunces 700</td><td>32 px</td><td>56 px</td><td>1,05</td></tr>
+    <tr><td>H2</td><td>Fraunces 650</td><td>26 px</td><td>40 px</td><td>1,1</td></tr>
+    <tr><td>H3</td><td>Fraunces 650</td><td>20 px</td><td>24 px</td><td>1,2</td></tr>
+    <tr><td>Ingress</td><td>DM Sans 400</td><td>18 px</td><td>20 px</td><td>1,55</td></tr>
+    <tr><td>Brödtext</td><td>DM Sans 400</td><td>16 px</td><td>17 px</td><td>1,6</td></tr>
+    <tr><td>Etikett</td><td>DM Sans 700, versaler, +14 %</td><td>12 px</td><td>12 px</td><td>1,3</td></tr>
+  </tbody></table></div></div>
+
+  <div class="specbox"><h3>Komponenter</h3><div class="tbl"><table><thead><tr><th>Komponent</th><th>Utseende</th><th>Beteende</th></tr></thead><tbody>
+    <tr><td>Sidhuvud</td><td>Logotyp till vänster, fyra länkar, en knapp. Papper med linje nedtill.</td><td>Fast överst. Under 900 px blir länkarna en meny.</td></tr>
+    <tr><td>Primär knapp</td><td>Bläck med vit text, 44 px hög, radie 6 px. Glöd på mörk bakgrund.</td><td>Fokus: 3 px Skörd-ring med 3 px avstånd.</td></tr>
+    <tr><td>Sekundär knapp</td><td>Ram 2 px i Bläck, genomskinlig.</td><td>Hover fyller med Dis.</td></tr>
+    <tr><td>Karaktärskort</td><td>Elementfärg överst med namn, vit yta under. Radie 6 px.</td><td>Hela kortet är en länk. Lyfter 2 px vid hover.</td></tr>
+    <tr><td>Flagga</td><td>Elementfärg, DM Sans 700, spets nedåt.</td><td>Länkar till karaktären.</td></tr>
+    <tr><td>Formulär</td><td>Etikett ovanför, fält 48 px, ram 1 px i Skiffer.</td><td>Fel visas i text och med Brasa-djup, aldrig bara med färg.</td></tr>
+    <tr><td>Profilblomma</td><td>Vektor, kronbladen skalas efter poäng.</td><td>Växer in på 600 ms. Av vid minskad rörelse.</td></tr>
+  </tbody></table></div></div>
+
+  <div class="two" style="margin-top:28px">
+    <div class="specbox" style="margin-top:0"><h3>Tillgänglighet</h3><dl class="dl"><dt>Kontrast</dt><dd>Text minst 4,5:1, stor text och ikoner minst 3:1.</dd><dt>Fokus</dt><dd>Synlig ring på alla interaktiva element.</dd><dt>Rörelse</dt><dd>Respekterar prefers-reduced-motion. Inget som blinkar.</dd><dt>Bilder</dt><dd>Alt-text på alla. Collaget beskrivs, dekor lämnas tom.</dd><dt>Färg</dt><dd>Elementfärg ersätter aldrig text: elementets namn står alltid med.</dd><dt>Språk</dt><dd>lang satt per sida. Svenska och engelska versioner.</dd></dl></div>
+    <div class="specbox" style="margin-top:0"><h3>Prestanda och teknik</h3><dl class="dl"><dt>Typsnitt</dt><dd>Fraunces och DM Sans från Google Fonts med display=swap, preconnect och latin-subset. Variabla filer: två förfrågningar.</dd><dt>Bilder</dt><dd>AVIF eller WebP, lazy loading, collage max 1 600 px bredd.</dd><dt>Ikon</dt><dd>Blomman som SVG, symbol inlagd i sidan.</dd><dt>Mål</dt><dd>LCP under 2,5 s, CLS under 0,1.</dd><dt>Webbläsare</dt><dd>De två senaste versionerna av Chrome, Safari, Firefox och Edge.</dd></dl></div>
+  </div>
+
+  <div class="specbox"><h3>Kontrastvärden</h3><div class="tbl"><table><thead><tr><th>Text och bakgrund</th><th>Förhållande</th><th>Användning</th></tr></thead><tbody>
+    <tr><td><span class="sw3" style="background:#14121F"></span>Bläck på Papper</td><td class="mono ok">17,8:1</td><td>All brödtext</td></tr>
+    <tr><td><span class="sw3" style="background:#514E63"></span>Skiffer på Papper</td><td class="mono ok">7,7:1</td><td>Stödtext</td></tr>
+    <tr><td><span class="sw3" style="background:#fff;box-shadow:inset 0 0 0 1px #D93321"></span>Vit på Brasa</td><td class="mono ok">4,7:1</td><td>Knappar och flaggor</td></tr>
+    <tr><td><span class="sw3" style="background:#06182E"></span>Mörk på Himmel</td><td class="mono ok">5,4:1</td><td>Flaggor och kort</td></tr>
+    <tr><td><span class="sw3" style="background:#04180F"></span>Mörk på Löv</td><td class="mono ok">5,4:1</td><td>Flaggor och kort</td></tr>
+    <tr><td><span class="sw3" style="background:#2A1E00"></span>Mörk på Skörd</td><td class="mono ok">9,2:1</td><td>Flaggor och kort</td></tr>
+    <tr><td><span class="sw3" style="background:#fff"></span>Vit på Natt</td><td class="mono ok">18,4:1</td><td>Hjältar och bildspel</td></tr>
+    <tr><td><span class="sw3" style="background:#DFFB4E"></span>Glöd på Natt</td><td class="mono ok">15,8:1</td><td>Accentord</td></tr>
+    <tr><td><span class="sw3" style="background:#fff;box-shadow:inset 0 0 0 1px #2B8CFF"></span>Vit på Himmel</td><td class="mono" style="font-weight:700;color:#A8231A">3,3:1</td><td>Använd inte till text. Endast ytor.</td></tr>
+  </tbody></table></div></div>
+
+  <div class="two" style="margin-top:28px">
+    <div class="specbox" style="margin-top:0"><h3>Sidmallar</h3><dl class="dl"><dt>Startsida</dt><dd>Hjälte i natt, fyra elementfält, karaktärsraster, profilen i tre steg, Journeys.</dd><dt>Karaktär</dt><dd>Elementfärg överst, sju fasta fält, komplementkaraktär, relaterade artiklar.</dd><dt>Gör profilen</dt><dd>En fråga per skärm, blomman växer fram. Resultat som sidan i rapporten.</dd><dt>Artikel</dt><dd>En kolumn på 68 tecken, elementets färg i rubrikmarkören.</dd><dt>Journeys</dt><dd>Mörk skogston, kort 16:9, Pergament för text.</dd></dl></div>
+    <div class="specbox" style="margin-top:0"><h3>Delning och metadata</h3><dl class="dl"><dt>Delningsbild</dt><dd>1 200 × 630 px. Natt-bakgrund, titel i Fraunces, logotyp nere till vänster.</dd><dt>Favicon</dt><dd>Märket i 32, 180 och 512 px. Mittpunkten är vit på mörk bakgrund.</dd><dt>Sidtitel</dt><dd>Sidans namn, sedan Luminus. Max 60 tecken.</dd><dt>Beskrivning</dt><dd>En mening, max 155 tecken, utan utropstecken.</dd><dt>Tonalitet</dt><dd>Rak, konkret och nyfiken. Vi beskriver gåvor först och fällor sist.</dd></dl></div>
+  </div>
+</section>
 <section id="regler">
   <div class="sec-head"><span class="tag">Regler</span><h2>Gör så här, undvik det här</h2></div>
   <div class="rules">
@@ -452,9 +740,9 @@ footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);display
     <ul>
       <li>Utgångsläget är avläst ur artikeln Luminus profile 20 characters (2024), Journeys-korten (2025) och logotypplattan. Hexvärdena för idag är uppmätta ur filerna, inte hämtade ur en källfil.</li>
       <li>Version 2 är ett designförslag. Logotypen är ritad som vektor här men saknar slutlig kontroll i ett ritprogram.</li>
-      <li>Att avgöra: om kronbladen ska kopplas till de åtta arketyperna, om elementnamnen ska vara Luft, Eld, Vatten och Jord, och om ordet ska skrivas med versal L som idag.</li>
+      <li>Att avgöra: vilken färg som hör till vilken arketyp (förslaget följer motpolerna), om elementnamnen Luft, Eld, Vatten och Jord ska användas, och om ordet ska skrivas med versal L som idag.</li>
     </ul></div>
 </section>
 
-<footer><span>Luminus designboard · version 2</span><span>www.luminus.se · ©Mattias Seger 2024 Luminus system</span></footer>
+<footer><span>Luminus designboard · version 3</span><span>www.luminus.se · ©Mattias Seger 2024 Luminus system</span></footer>
 </div>
