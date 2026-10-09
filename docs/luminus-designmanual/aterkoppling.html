@@ -1,0 +1,466 @@
+<title>Luminus Återkoppling</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..500&family=Fraunces:ital,opsz,wght@0,9..144,400..800;1,9..144,400..600&display=swap" rel="stylesheet">
+<style>
+/* Layout: en berättad rapport i kapitel. Varje kapitel öppnar med en mening att minnas, sedan en bild, sedan fördjupning. */
+:root{
+  --paper:#FBFAFF; --paper-2:#F0EFF8; --ink:#14121F; --ink-2:#514E63; --line:#DAD8E8; --card:#FFFFFF;
+  --luft:#2B8CFF; --eld:#D93321; --vatten:#2E9E6B; --jord:#F6B900;
+  --luft-d:#16457F; --eld-d:#A8231A; --vatten-d:#145C3C; --jord-d:#8A6500;
+  --natt:#150B3A; --midnatt:#2A1470; --glod:#DFFB4E; --perg:#FFF4DC; --acc:#6A2BC9;
+  --f-display:"Fraunces",Georgia,serif; --f-text:"DM Sans",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  --gutter:clamp(16px,4vw,48px);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--paper:#0E0C18;--paper-2:#191628;--ink:#F5F3FF;--ink-2:#B5B1CA;--line:#2F2B47;--card:#13111F;--acc:#B79AFF;--luft-d:#8EC3FF;--eld-d:#FF9B8E;--vatten-d:#7BD9A6;--jord-d:#F2CB5C;color-scheme:dark}}
+:root[data-theme="dark"]{--paper:#0E0C18;--paper-2:#191628;--ink:#F5F3FF;--ink-2:#B5B1CA;--line:#2F2B47;--card:#13111F;--acc:#B79AFF;--luft-d:#8EC3FF;--eld-d:#FF9B8E;--vatten-d:#7BD9A6;--jord-d:#F2CB5C;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-text);font-size:17px;line-height:1.65;padding-inline:var(--gutter);padding-block:0 80px}
+.wrap{max-width:1080px;margin-inline:auto}
+h1,h2,h3,h4{font-family:var(--f-display);margin:0;text-wrap:balance;font-variation-settings:"SOFT" 60,"WONK" 0}
+h1{font-weight:700;font-size:clamp(2.5rem,7vw,5rem);line-height:.98;letter-spacing:-.03em}
+h2{font-weight:650;font-size:clamp(1.8rem,4.2vw,2.9rem);line-height:1.04;letter-spacing:-.025em}
+h3{font-weight:650;font-size:1.2rem;line-height:1.2;letter-spacing:-.01em}
+p{margin:0}
+.mono{font-variant-numeric:tabular-nums}
+.tag{font-size:.72rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2)}
+.lede{font-size:1.14rem;color:var(--ink-2);max-width:58ch}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--jord);outline-offset:3px}
+.lockup{--dot:currentColor;display:inline-flex;align-items:center;gap:.3em;line-height:1;color:var(--ink)}
+.lockup svg{width:1.05em;height:1.05em}
+.lockup .wm{font-weight:700;letter-spacing:-.035em}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:color-mix(in srgb,var(--paper) 92%,transparent);backdrop-filter:blur(8px);display:flex;flex-wrap:wrap;gap:8px 22px;align-items:center;justify-content:space-between;padding-block:12px;border-bottom:1px solid var(--line)}
+.top nav{display:flex;flex-wrap:wrap;gap:4px 16px}
+.top nav a{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;text-decoration:none;color:var(--ink-2)}
+.top nav a:hover{color:var(--ink);text-decoration:underline;text-underline-offset:4px}
+section{padding-block:72px 0}
+.sec-head{display:grid;gap:12px;margin-bottom:30px;max-width:62ch}
+.say{font-family:var(--f-display);font-weight:600;font-size:clamp(1.3rem,2.6vw,1.75rem);line-height:1.25;letter-spacing:-.015em;max-width:34ch;margin-bottom:6px}
+.say em{font-style:italic;font-weight:500;color:var(--c,var(--acc))}
+
+/* hero */
+.hero{margin-top:24px;border-radius:8px;overflow:hidden;background:linear-gradient(150deg,#0D0526,#2A1470 62%,#5B2BC0);color:#fff;display:grid;grid-template-columns:1.1fr .9fr;gap:0;position:relative}
+.hero>div{padding:clamp(28px,5vw,56px)}
+.hero .tag{color:var(--glod)}
+.hero h1{margin-block:14px 18px}
+.hero h1 em{font-style:italic;font-weight:500;color:var(--glod)}
+.hero p{color:#D9D4F2;max-width:46ch}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.chip{font-size:.78rem;font-weight:700;padding:6px 12px;border:1.5px solid rgba(255,255,255,.6);border-radius:4px;display:inline-flex;gap:8px;align-items:center}
+.chip i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.hero .art{display:grid;place-items:center;background:radial-gradient(circle at 50% 45%,rgba(255,255,255,.16),transparent 62%)}
+.hero .art svg{width:min(100%,380px)}
+.hero .art text{fill:#fff}
+.hero .art line{stroke:#fff}
+.disc{margin-top:16px;padding:12px 16px;border-radius:6px;background:var(--jord);color:#2A1E00;font-size:.88rem}
+.disc b{font-weight:700}
+
+/* fem saker */
+.five{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.five>div{background:var(--paper-2);border-radius:6px;padding:18px 16px;display:grid;gap:8px;align-content:start;font-size:.92rem}
+.five .n{font-family:var(--f-display);font-weight:700;font-size:2rem;line-height:1;color:var(--acc)}
+.five p{color:var(--ink-2)}
+.five b{color:var(--ink)}
+
+/* principer */
+.prin{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.prin>div{border:1px solid var(--line);border-radius:6px;padding:20px;display:grid;gap:8px;align-content:start}
+.prin p{color:var(--ink-2);font-size:.96rem}
+.prin .ic{width:34px;height:34px;border-radius:50% 50% 50% 10%;display:block}
+
+/* element */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:36px;align-items:start}
+.eb{display:grid;grid-template-columns:70px 1fr 40px 90px;gap:12px;align-items:center;padding-block:10px;border-top:1px solid var(--line);font-size:.95rem}
+.eb .en{font-weight:700}
+.et{height:14px;background:var(--paper-2);border-radius:99px;overflow:hidden}
+.ef{height:100%;border-radius:99px}
+.eb b{text-align:right}
+.eg{font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--acc)}
+.prose{display:grid;gap:14px;color:var(--ink-2);max-width:60ch}
+.prose b{color:var(--ink)}
+.callout{padding:16px 18px;border-radius:6px;background:var(--paper-2);font-size:.95rem;color:var(--ink-2)}
+.callout b{color:var(--ink)}
+
+/* hjul */
+.wheelwrap{display:grid;grid-template-columns:minmax(0,560px) 1fr;gap:36px;align-items:center}
+.wheelwrap svg{width:100%;height:auto;display:block}
+.legend{display:grid;gap:10px;font-size:.92rem;color:var(--ink-2)}
+.legend .lg{display:flex;gap:10px;align-items:flex-start}
+.legend i{flex:none;width:14px;height:14px;border-radius:50%;margin-top:6px;display:block}
+
+/* ordförande */
+.chair{border-radius:8px;overflow:hidden;border:1px solid var(--line);background:var(--card)}
+.chair .hd{background:var(--luft);color:#06182E;padding:clamp(22px,4vw,36px);display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center}
+.chair .big{font-family:var(--f-display);font-weight:700;font-size:clamp(3rem,8vw,5rem);line-height:.9;letter-spacing:-.04em}
+.chair h3{font-size:clamp(1.8rem,4vw,2.6rem)}
+.chair .hd small{font-size:.72rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;display:block;margin-bottom:6px}
+.flds{display:grid;grid-template-columns:repeat(4,1fr);gap:0}
+.fld{padding:16px 20px;border-top:1px solid var(--line);border-right:1px solid var(--line)}
+.fld:nth-child(4n){border-right:0}
+.fld small{font-size:.68rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);display:block;margin-bottom:4px}
+.fld p{font-size:.95rem;line-height:1.45}
+.chair .st{padding:18px 22px;border-top:1px solid var(--line);font-size:.92rem;color:var(--ink-2)}
+.dial{margin-top:30px;display:grid;gap:12px}
+.dial .bar{height:14px;border-radius:99px;background:linear-gradient(90deg,var(--vatten),var(--jord) 55%,var(--eld));position:relative}
+.dial .stops{position:relative;height:0}
+.dial .lab{display:flex;justify-content:space-between;font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2)}
+.dial .ex{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.dial .ex>div{padding:16px 18px;border-radius:6px;background:var(--paper-2);font-size:.95rem}
+.dial .ex b{display:block;font-family:var(--f-display);font-size:1.05rem;margin-bottom:4px}
+.dial .ex .g b{color:var(--vatten-d)}.dial .ex .t b{color:var(--eld-d)}
+
+/* rådgivare */
+.advs{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.adv,.shd{border:1px solid var(--line);border-radius:8px;padding:20px;display:grid;gap:12px;align-content:start;background:var(--card)}
+.advh{display:flex;align-items:center;gap:14px}
+.rk{flex:none;width:44px;height:44px;border-radius:50% 50% 50% 10%;background:var(--c,var(--ink));color:#fff;font-family:var(--f-display);font-weight:700;font-size:1.3rem;display:grid;place-items:center}
+.rk.dk{background:var(--ink);color:var(--paper)}
+.adv[style*="#2B8CFF"] .rk,.adv[style*="#F6B900"] .rk{color:#06182E}
+.elt{font-size:.78rem;color:var(--ink-2);font-weight:600}
+.adv p,.shd p{font-size:.95rem;color:var(--ink-2)}
+.adv .rsk{padding-top:10px;border-top:1px solid var(--line);font-size:.9rem}
+.adv .rsk b{color:var(--ink)}
+.shds{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.shd{background:var(--natt);color:#fff;border-color:transparent}
+.shd .rk.dk{background:var(--glod);color:#14121F}
+.shd .elt{color:#B9B2DD}
+.shd h3{color:#fff}
+.shg{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px}
+.shg small{font-size:.66rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#B9B2DD;display:block}
+.shg p{color:#EDEAFB;font-size:.9rem;line-height:1.4}
+.shd .mir{padding-top:12px;border-top:1px solid rgba(255,255,255,.2);color:var(--glod);font-family:var(--f-display);font-style:italic;font-weight:500;font-size:1.02rem;line-height:1.35}
+
+/* polariteter */
+.pols{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 34px}
+.pol{padding-block:12px;border-top:1px solid var(--line);display:grid;gap:8px}
+.pol .pt{display:flex;align-items:center;gap:10px;font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700}
+.bpill{font-size:.62rem;padding:2px 8px;border-radius:99px;background:var(--vatten);color:#04180F;letter-spacing:.08em}
+.pr{display:grid;grid-template-columns:minmax(0,1fr) 38% minmax(0,1fr);gap:10px;align-items:center;font-size:.86rem}
+.pl{display:flex;align-items:center;gap:6px;min-width:0}.pl.r{justify-content:flex-end;text-align:right}
+.pl i{width:10px;height:10px;border-radius:50%;flex:none}
+.pl em{font-style:normal;color:var(--ink-2);font-size:.78rem}
+.trk{height:10px;border-radius:99px;background:linear-gradient(90deg,var(--a),var(--b));position:relative;opacity:.9}
+.trk::after{content:"";position:absolute;left:50%;top:-4px;bottom:-4px;width:1.5px;background:var(--ink);opacity:.35}
+.mk{position:absolute;top:50%;width:20px;height:20px;border-radius:50%;background:var(--paper);border:3px solid var(--ink);transform:translate(-50%,-50%);z-index:1}
+.pol.bal .mk{border-color:var(--vatten)}
+.hl{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:30px}
+.hl>div{padding:18px 20px;border-radius:6px;background:var(--paper-2);display:grid;gap:6px;align-content:start;font-size:.94rem;color:var(--ink-2)}
+.hl h3{color:var(--ink)}
+.hl .big{font-family:var(--f-display);font-weight:700;font-size:2.4rem;line-height:1;letter-spacing:-.03em;color:var(--acc)}
+
+/* skav */
+.scen{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.sc{border:1px solid var(--line);border-radius:8px;padding:20px;display:grid;gap:12px;align-content:start;background:var(--card)}
+.sc .pair{display:flex;align-items:center;gap:8px;font-weight:700;font-size:.9rem}
+.sc .pair i{width:12px;height:12px;border-radius:50%;display:inline-block}
+.sc .arr{color:var(--ink-2)}
+.sc .row{font-size:.92rem;color:var(--ink-2)}
+.sc .row b{display:block;font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink)}
+.sc .fix{padding:12px 14px;border-radius:6px;background:var(--paper-2);font-size:.9rem;color:var(--ink)}
+.sc .fix b{color:var(--acc)}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:20px}
+.steps>div{padding:16px 18px;border-radius:6px;background:var(--natt);color:#fff;font-size:.94rem}
+.steps b{display:block;color:var(--glod);font-family:var(--f-display);font-size:1.15rem;margin-bottom:4px}
+
+/* ledarstilar */
+.fams{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.fam{display:grid;gap:8px;align-content:start}
+.fam h3{font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;font-family:var(--f-text);font-weight:700;color:var(--ink-2);min-height:2.4em}
+.sr{display:grid;grid-template-columns:1fr 24px;gap:4px 8px;align-items:center;font-size:.92rem;font-weight:600}
+.sr .st{grid-column:1/-1;height:8px;border-radius:99px;background:var(--paper-2);overflow:hidden;order:3}
+.sf{height:100%;background:var(--acc);border-radius:99px}
+.sr.zero{color:var(--ink-2);font-weight:500}
+.sr b{text-align:right;order:2}
+.sr span{order:1}
+
+/* team */
+.tms{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.tm{border:1px solid var(--line);border-radius:8px;padding:16px;display:grid;gap:8px;align-content:start;background:var(--card);font-size:.9rem;color:var(--ink-2)}
+.tp{display:flex;align-items:center;flex-wrap:wrap;gap:6px 6px;color:var(--ink);font-size:.95rem}
+.tc{width:12px;height:12px;border-radius:50%;display:inline-block}
+.ar{color:var(--ink-2)}
+.tm .tg{font-size:.78rem;font-weight:700;color:var(--ink);letter-spacing:.02em}
+
+/* väg framåt */
+.exps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.ex3{border-radius:8px;padding:22px;background:var(--paper-2);display:grid;gap:10px;align-content:start}
+.ex3 .nm{font-family:var(--f-display);font-weight:700;font-size:2.4rem;line-height:1;color:var(--acc)}
+.ex3 p{font-size:.95rem;color:var(--ink-2)}
+.ex3 b{color:var(--ink)}
+.qs{margin:0;padding:0;list-style:none;display:grid;gap:0}
+.qs li{padding:14px 0;border-top:1px solid var(--line);font-family:var(--f-display);font-size:1.15rem;font-weight:550;line-height:1.3}
+.final{margin-top:44px;padding:clamp(28px,5vw,56px);border-radius:8px;background:linear-gradient(150deg,#0D0526,#2A1470 62%,#5B2BC0);color:#fff;display:grid;gap:14px}
+.final h2{color:#fff;max-width:20ch}
+.final h2 em{font-style:italic;font-weight:500;color:var(--glod)}
+.final p{color:#D9D4F2;max-width:56ch}
+
+/* bygge */
+.tbl{overflow-x:auto}
+.tbl table{border-collapse:collapse;width:100%;min-width:620px;font-size:.9rem}
+.tbl th,.tbl td{text-align:left;padding:10px 12px;border-top:1px solid var(--line);vertical-align:top}
+.tbl th{font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2)}
+.tbl td:first-child{font-weight:700;white-space:nowrap}
+.chk{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 28px;margin:0;padding:0;list-style:none}
+.chk li{padding:12px 0 12px 30px;border-top:1px solid var(--line);position:relative;font-size:.94rem;color:var(--ink-2)}
+.chk li::before{content:"";position:absolute;left:4px;top:18px;width:14px;height:14px;border-radius:50% 50% 50% 10%;background:var(--vatten)}
+.chk b{color:var(--ink)}
+footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:10px 30px;justify-content:space-between;font-size:.84rem;color:var(--ink-2)}
+@media(max-width:900px){
+ .hero,.two,.wheelwrap,.pols,.chk{grid-template-columns:1fr}
+ .five,.tms{grid-template-columns:repeat(2,1fr)}
+ .prin,.scen,.steps,.exps,.hl,.advs,.shds{grid-template-columns:1fr}
+ .fams{grid-template-columns:repeat(2,1fr)}
+ .flds{grid-template-columns:repeat(2,1fr)}.fld:nth-child(4n){border-right:1px solid var(--line)}.fld:nth-child(2n){border-right:0}
+ .dial .ex{grid-template-columns:1fr}
+}
+@media(max-width:520px){.five,.tms,.fams{grid-template-columns:1fr}.eb{grid-template-columns:60px 1fr 34px}.eb .eg{display:none}.shg{grid-template-columns:1fr}.chair .hd{grid-template-columns:1fr}}
+.hero .art polygon{fill:#fff;fill-opacity:.14;stroke:#fff}
+.hero .art circle[fill="none"]{stroke:#fff}
+.hero .art circle:not([fill="none"]){stroke-opacity:1}
+.hero .art tspan{fill:#fff}
+/* stilar */
+.mxw{overflow-x:auto;border-radius:8px;border:1px solid var(--line)}
+.mxt{min-width:860px}
+.mx{display:grid;grid-template-columns:190px repeat(4,1fr);gap:0}
+.mx>*{padding:12px 14px;border-top:1px solid var(--line);font-size:.86rem;line-height:1.35}
+.mx.hd>*{border-top:0;font-size:.74rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.mh{display:flex;align-items:center;gap:8px;color:var(--ink)}
+.mh i{width:12px;height:12px;border-radius:50%;background:var(--c);display:inline-block}
+.mh em{font-style:normal;color:var(--ink-2);letter-spacing:0}
+.mn b{display:block;font-family:var(--f-display);font-size:1.02rem;letter-spacing:-.01em}
+.mn small{display:block;font-size:.68rem;color:var(--ink-2);margin-top:2px;font-weight:600}
+.mn small.ny{color:var(--acc)}
+.mc{background:color-mix(in srgb,var(--c) var(--i),transparent);position:relative;color:var(--ink)}
+.mc.main{outline:2px solid var(--ink);outline-offset:-2px;font-weight:600;z-index:1}
+.mc.sec{outline:1.5px dashed var(--ink-2);outline-offset:-3px}
+.mkm{margin-right:6px;font-size:.8rem}.mkm.s{color:var(--ink-2)}
+.mleg{display:flex;flex-wrap:wrap;gap:6px 22px;margin-top:12px;font-size:.88rem;color:var(--ink-2)}
+.sks{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:34px}
+.sk{border:1px solid var(--line);border-radius:8px;padding:18px;display:grid;gap:8px;align-content:start;background:var(--card)}
+.skh{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.skh h3{font-size:1.1rem}
+.dots{display:flex;gap:5px;flex:none}
+.dots i{width:16px;height:16px;border-radius:50%;display:block}
+.dots i.s{border:2px solid}
+.sk .q{font-size:.76rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.sk .tx{font-size:.95rem;color:var(--ink)}
+.sk .w,.sk .l{font-size:.88rem;color:var(--ink-2);padding-top:8px;border-top:1px solid var(--line)}
+.sk b{display:block;font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);margin-bottom:2px}
+.sk .l b{color:var(--acc)}
+.newp{font-size:.66rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:var(--acc);color:var(--paper);padding:2px 8px;border-radius:99px}
+@media(max-width:900px){.sks{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.sks{grid-template-columns:1fr}}
+
+</style>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<path id="np" d="M0 -9 C-5 -18 -22 -27 -22 -43 A22 22 0 0 1 22 -43 C22 -27 5 -18 0 -9Z" transform="translate(0 -3)"/>
+<symbol id="mark" viewBox="-70 -70 140 140">
+<use href="#np" fill="#A970FF"/><use href="#np" fill="#D7263D" transform="rotate(45)"/><use href="#np" fill="#8A1C2B" transform="rotate(90)"/><use href="#np" fill="#A07F0C" transform="rotate(135)"/>
+<use href="#np" fill="#0B6B3A" transform="rotate(180)"/><use href="#np" fill="#52C28A" transform="rotate(225)"/><use href="#np" fill="#0E8A9B" transform="rotate(270)"/><use href="#np" fill="#5CE1F2" transform="rotate(315)"/>
+<circle r="6.5" fill="var(--dot,#14121F)"/></symbol></defs></svg>
+<div class="wrap">
+<header class="top"><span class="lockup" style="font-size:1.35rem"><svg><use href="#mark"/></svg><span class="wm">Luminus</span></span>
+<nav aria-label="Kapitel"><a href="#ljus">Element</a><a href="#form">Din form</a><a href="#ordforande">Ordförande</a><a href="#radgivare">Rådgivare</a><a href="#skuggor">Skuggor</a><a href="#polariteter">Polariteter</a><a href="#skav">Skav</a><a href="#ledarstil">Ledarstil</a><a href="#stilar">Stilar</a><a href="#team">Team</a><a href="#vag">Väg framåt</a><a href="#bygge">Så är den byggd</a></nav></header>
+
+<div class="hero">
+  <div>
+    <span class="tag">Din Luminusprofil · Återkoppling</span>
+    <h1>Elin, du ser det som <em>ännu inte finns</em></h1>
+    <p>Din profil visar en ledare som tänder idéer, rör sig snabbt och vågar pröva. Den visar också var nästa steg ligger: att göra framtiden så konkret att andra kan gå in i den.</p>
+    <div class="chips"><span class="chip"><i style="background:var(--luft)"></i>Ordförande · Visionary</span><span class="chip"><i style="background:var(--luft)"></i>Luft<i style="background:var(--eld)"></i>Eld</span><span class="chip">Skuggor · Trustee, Analyst</span></div>
+  </div>
+  <div class="art"><svg viewBox="-200 -196 400 392" role="img" aria-label="Elins form: tjugo karaktärer i fyra element, ju längre ut desto starkare"><path d="M0 0 L0.0 -106.0 A106 106 0 0 1 106.0 -0.0 Z" fill="#D93321" fill-opacity=".13"/><path d="M0 0 L106.0 -0.0 A106 106 0 0 1 0.0 106.0 Z" fill="#F6B900" fill-opacity=".13"/><path d="M0 0 L0.0 106.0 A106 106 0 0 1 -106.0 0.0 Z" fill="#2E9E6B" fill-opacity=".13"/><path d="M0 0 L-106.0 0.0 A106 106 0 0 1 -0.0 -106.0 Z" fill="#2B8CFF" fill-opacity=".13"/><circle r="35" fill="none" stroke="var(--ink)" stroke-opacity=".12" stroke-width=".6"/><circle r="68" fill="none" stroke="var(--ink)" stroke-opacity=".12" stroke-width=".6"/><circle r="100" fill="none" stroke="var(--ink)" stroke-opacity=".12" stroke-width=".6"/><line x1="-16.6" y1="-104.7" x2="16.6" y2="104.7" stroke="var(--ink)" stroke-opacity=".18" stroke-width=".7" stroke-dasharray="2 3"/><line x1="-75.0" y1="-75.0" x2="75.0" y2="75.0" stroke="var(--ink)" stroke-opacity=".18" stroke-width=".7" stroke-dasharray="2 3"/><line x1="-94.4" y1="-48.1" x2="94.4" y2="48.1" stroke="var(--ink)" stroke-opacity=".18" stroke-width=".7" stroke-dasharray="2 3"/><line x1="-48.1" y1="-94.4" x2="48.1" y2="94.4" stroke="var(--ink)" stroke-opacity=".18" stroke-width=".7" stroke-dasharray="2 3"/><line x1="-104.7" y1="-16.6" x2="104.7" y2="16.6" stroke="var(--ink)" stroke-opacity=".18" stroke-width=".7" stroke-dasharray="2 3"/><line x1="104.7" y1="-16.6" x2="-104.7" y2="16.6" stroke="var(--ink)" stroke-opacity=".18" stroke-width=".7" stroke-dasharray="2 3"/><line x1="75.0" y1="-75.0" x2="-75.0" y2="75.0" stroke="var(--ink)" stroke-opacity=".18" stroke-width=".7" stroke-dasharray="2 3"/><line x1="48.1" y1="-94.4" x2="-48.1" y2="94.4" stroke="var(--ink)" stroke-opacity=".18" stroke-width=".7" stroke-dasharray="2 3"/><line x1="16.6" y1="-104.7" x2="-16.6" y2="104.7" stroke="var(--ink)" stroke-opacity=".18" stroke-width=".7" stroke-dasharray="2 3"/><line x1="94.4" y1="-48.1" x2="-94.4" y2="48.1" stroke="var(--ink)" stroke-opacity=".18" stroke-width=".7" stroke-dasharray="2 3"/><polygon points="14.6,-92.1 20.9,-41.1 44.5,-44.5 77.1,-39.3 75.5,-12.0 55.5,8.8 35.1,17.9 25.5,25.5 19.4,38.1 8.3,52.2 -7.7,48.9 -31.6,62.1 -42.1,42.1 -65.1,33.2 -65.5,10.4 -88.8,-14.1 -74.1,-37.8 -70.7,-70.7 -43.9,-86.1 -12.5,-78.8" fill="var(--ink)" fill-opacity=".10" stroke="var(--ink)" stroke-width="1.4" stroke-linejoin="round"/><circle cx="14.6" cy="-92.1" r="6.5" fill="#D93321" stroke="#D93321" stroke-width="1"/><text x="14.6" y="-88.9" text-anchor="middle" font-family="DM Sans,Arial,sans-serif" font-size="8" font-weight="700" fill="#fff">3</text><circle cx="20.9" cy="-41.1" r="3.4" fill="#D93321" stroke="#D93321" stroke-width="1"/><circle cx="44.5" cy="-44.5" r="3.4" fill="#D93321" stroke="#D93321" stroke-width="1"/><circle cx="77.1" cy="-39.3" r="6.5" fill="#D93321" stroke="#D93321" stroke-width="1"/><text x="77.1" y="-36.1" text-anchor="middle" font-family="DM Sans,Arial,sans-serif" font-size="8" font-weight="700" fill="#fff">5</text><circle cx="75.5" cy="-12.0" r="3.4" fill="#D93321" stroke="#D93321" stroke-width="1"/><circle cx="55.5" cy="8.8" r="3.4" fill="#F6B900" stroke="#F6B900" stroke-width="1"/><circle cx="35.1" cy="17.9" r="5" fill="var(--paper)" stroke="#F6B900" stroke-width="2"/><circle cx="25.5" cy="25.5" r="5" fill="var(--paper)" stroke="#F6B900" stroke-width="2"/><circle cx="19.4" cy="38.1" r="3.4" fill="#F6B900" stroke="#F6B900" stroke-width="1"/><circle cx="8.3" cy="52.2" r="3.4" fill="#F6B900" stroke="#F6B900" stroke-width="1"/><circle cx="-7.7" cy="48.9" r="3.4" fill="#2E9E6B" stroke="#2E9E6B" stroke-width="1"/><circle cx="-31.6" cy="62.1" r="3.4" fill="#2E9E6B" stroke="#2E9E6B" stroke-width="1"/><circle cx="-42.1" cy="42.1" r="3.4" fill="#2E9E6B" stroke="#2E9E6B" stroke-width="1"/><circle cx="-65.1" cy="33.2" r="3.4" fill="#2E9E6B" stroke="#2E9E6B" stroke-width="1"/><circle cx="-65.5" cy="10.4" r="3.4" fill="#2E9E6B" stroke="#2E9E6B" stroke-width="1"/><circle cx="-88.8" cy="-14.1" r="6.5" fill="#2B8CFF" stroke="#2B8CFF" stroke-width="1"/><text x="-88.8" y="-10.9" text-anchor="middle" font-family="DM Sans,Arial,sans-serif" font-size="8" font-weight="700" fill="#fff">4</text><circle cx="-74.1" cy="-37.8" r="3.4" fill="#2B8CFF" stroke="#2B8CFF" stroke-width="1"/><circle cx="-70.7" cy="-70.7" r="6.5" fill="#2B8CFF" stroke="#2B8CFF" stroke-width="1"/><text x="-70.7" y="-67.5" text-anchor="middle" font-family="DM Sans,Arial,sans-serif" font-size="8" font-weight="700" fill="#fff">1</text><circle cx="-43.9" cy="-86.1" r="6.5" fill="#2B8CFF" stroke="#2B8CFF" stroke-width="1"/><text x="-43.9" y="-82.9" text-anchor="middle" font-family="DM Sans,Arial,sans-serif" font-size="8" font-weight="700" fill="#fff">2</text><circle cx="-12.5" cy="-78.8" r="3.4" fill="#2B8CFF" stroke="#2B8CFF" stroke-width="1"/><text x="19.4" y="-119.5" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="700" fill="var(--ink)">Adventurer <tspan fill-opacity=".6">3</tspan></text><text x="56.3" y="-107.5" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="400" fill="var(--ink)">Warrior <tspan fill-opacity=".6">17</tspan></text><text x="87.7" y="-84.7" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="400" fill="var(--ink)">Commander <tspan fill-opacity=".6">12</tspan></text><text x="110.5" y="-53.3" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="700" fill="var(--ink)">Rebel <tspan fill-opacity=".6">5</tspan></text><text x="122.5" y="-16.4" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="400" fill="var(--ink)">Artisan <tspan fill-opacity=".6">8</tspan></text><text x="122.5" y="22.4" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="400" fill="var(--ink)">Strategist <tspan fill-opacity=".6">14</tspan></text><text x="110.5" y="59.3" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="700" fill="var(--ink)">Trustee <tspan fill-opacity=".6">19</tspan></text><text x="87.7" y="90.7" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="700" fill="var(--ink)">Analyst <tspan fill-opacity=".6">20</tspan></text><text x="56.3" y="113.5" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="400" fill="var(--ink)">Scientist <tspan fill-opacity=".6">18</tspan></text><text x="19.4" y="125.5" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="400" fill="var(--ink)">Emperor <tspan fill-opacity=".6">15</tspan></text><text x="-19.4" y="125.5" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="400" fill="var(--ink)">Mother <tspan fill-opacity=".6">16</tspan></text><text x="-56.3" y="113.5" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="400" fill="var(--ink)">Healer <tspan fill-opacity=".6">10</tspan></text><text x="-87.7" y="90.7" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="400" fill="var(--ink)">Uniter <tspan fill-opacity=".6">13</tspan></text><text x="-110.5" y="59.3" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="400" fill="var(--ink)">Empress <tspan fill-opacity=".6">9</tspan></text><text x="-122.5" y="22.4" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="400" fill="var(--ink)">Princess <tspan fill-opacity=".6">11</tspan></text><text x="-122.5" y="-16.4" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="700" fill="var(--ink)">Wise <tspan fill-opacity=".6">4</tspan></text><text x="-110.5" y="-53.3" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="400" fill="var(--ink)">Prince <tspan fill-opacity=".6">6</tspan></text><text x="-87.7" y="-84.7" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="700" fill="var(--ink)">Visionary <tspan fill-opacity=".6">1</tspan></text><text x="-56.3" y="-107.5" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="700" fill="var(--ink)">Magician <tspan fill-opacity=".6">2</tspan></text><text x="-19.4" y="-119.5" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="400" fill="var(--ink)">Jester <tspan fill-opacity=".6">7</tspan></text><text x="-176" y="-150" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="11" font-weight="700" letter-spacing="1.6" fill="#2B8CFF">LUFT</text><text x="176" y="-150" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="11" font-weight="700" letter-spacing="1.6" fill="#D93321">ELD</text><text x="176" y="160" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="11" font-weight="700" letter-spacing="1.6" fill="#F6B900">JORD</text><text x="-176" y="160" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="11" font-weight="700" letter-spacing="1.6" fill="#2E9E6B">VATTEN</text></svg></div>
+</div>
+<div class="disc"><b>Exempel.</b> Elin Ahlström är en påhittad person och utfallet är ett exempel. Texterna bygger på karaktärsbladen i Luminusprofilen. Det som är specifikt för Elin är markerat i kapitlen.</div>
+
+<section id="fem" style="padding-top:48px">
+  <div class="sec-head"><span class="tag">Det viktigaste först</span><h2>Fem saker att ta med dig</h2></div>
+  <div class="five">
+    <div><span class="n">1</span><p><b>Du är en Visionary</b> med Magician, Adventurer, Wise och Rebel som rådgivare. Det är en stark framåtrörelse.</p></div>
+    <div><span class="n">2</span><p><b>Din gåva blir en fälla</b> när bilden är för abstrakt för att någon ska veta vad den ska göra på måndag.</p></div>
+    <div><span class="n">3</span><p><b>Dina skuggor, Trustee och Analyst,</b> sitter precis där idéerna ska landa. De är din utmaning och din chans.</p></div>
+    <div><span class="n">4</span><p><b>Du har en dold styrka:</b> riktning och gemenskap är i balans hos dig. Använd den medvetet.</p></div>
+    <div><span class="n">5</span><p><b>Du behöver inte bli en Analyst.</b> Du behöver en Analyst bredvid dig.</p></div>
+  </div>
+</section>
+
+<section id="lasguide" style="padding-top:56px">
+  <div class="sec-head"><span class="tag">Så läser du den</span><h2>Tre idéer bär hela profilen</h2></div>
+  <div class="prin">
+    <div><span class="ic" style="background:var(--luft)"></span><h3>Alla tjugo är gåvor</h3><p>Karaktärerna är verktyg för självkännedom, team och strategi. Ingen är bättre än någon annan, och ingen är du i sin helhet.</p></div>
+    <div><span class="ic" style="background:var(--jord)"></span><h3>Gåva blir fälla</h3><p>Använder du en gåva för att lösa allt blir den en fälla. Du ser det sällan själv, andra ser det först.</p></div>
+    <div><span class="ic" style="background:var(--vatten)"></span><h3>Motpolen är din partner</h3><p>Det du inte ser som ditt arbete är någon annans gåva. Styrkan ligger i både och, inte i antingen eller.</p></div>
+  </div>
+</section>
+
+<section id="ljus">
+  <div class="sec-head"><span class="tag" style="color:var(--luft-d)">Kapitel 1 · Dina element</span><p class="say" style="--c:var(--luft-d)">Du lever i <em>luften</em> och drivs av <em>elden</em>.</p><p class="lede">Elementen visar vilket slags energi du litar på. Luft är primärt hos dig och Eld sekundärt.</p></div>
+  <div class="two">
+    <div><div class="eb"><span class="en">Luft</span><div class="et"><div class="ef" style="width:84%;background:#2B8CFF"></div></div><b class="mono">84</b><span class="eg">Primärt</span></div><div class="eb"><span class="en">Eld</span><div class="et"><div class="ef" style="width:58%;background:#D93321"></div></div><b class="mono">58</b><span class="eg">Sekundärt</span></div><div class="eb"><span class="en">Vatten</span><div class="et"><div class="ef" style="width:43%;background:#2E9E6B"></div></div><b class="mono">43</b><span class="eg"></span></div><div class="eb"><span class="en">Jord</span><div class="et"><div class="ef" style="width:15%;background:#F6B900"></div></div><b class="mono">15</b><span class="eg"></span></div><p class="callout" style="margin-top:18px"><b>Så läser du staplarna.</b> Siffran visar hur nära elementet ligger dig, från 0 till 100. Det är en fördelning, inte ett betyg.</p></div>
+    <div class="prose">
+      <p><b>Luft är idéernas element.</b> Du söker nya perspektiv, kopplar ihop det som inte hör ihop och ser möjligheter innan andra ser problem. Du mår bra där det finns frihet, rörelse och plats att tänka stort.</p>
+      <p><b>Eld är drivet.</b> Det är Eld som får idéerna att röra sig. Du vill att något ska hända, tar initiativ och håller tempot uppe.</p>
+      <p><b>När Luft dominerar</b> kan de som är mer jordnära uppleva dig som svår att få fast. Planer byts när en bättre idé dyker upp, och detaljerna lämnas åt någon annan.</p>
+      <p><b>Jord är det element du lutar dig minst mot.</b> Det ger ordning, fakta och uthållighet, och det är där dina idéer får fotfäste.</p>
+    </div>
+  </div>
+</section>
+
+<section id="form">
+  <div class="sec-head"><span class="tag">Kapitel 2 · Din form</span><p class="say">Din profil har en tydlig <em>insvängning</em> i Jord.</p><p class="lede">Varje punkt är en av de tjugo karaktärerna. Ju längre ut, desto naturligare är den för dig. Formen är ditt fingeravtryck.</p></div>
+  <div class="wheelwrap">
+    <div><svg viewBox="-200 -196 400 392" role="img" aria-label="Elins form: tjugo karaktärer i fyra element, ju längre ut desto starkare"><path d="M0 0 L0.0 -106.0 A106 106 0 0 1 106.0 -0.0 Z" fill="#D93321" fill-opacity=".13"/><path d="M0 0 L106.0 -0.0 A106 106 0 0 1 0.0 106.0 Z" fill="#F6B900" fill-opacity=".13"/><path d="M0 0 L0.0 106.0 A106 106 0 0 1 -106.0 0.0 Z" fill="#2E9E6B" fill-opacity=".13"/><path d="M0 0 L-106.0 0.0 A106 106 0 0 1 -0.0 -106.0 Z" fill="#2B8CFF" fill-opacity=".13"/><circle r="35" fill="none" stroke="var(--ink)" stroke-opacity=".12" stroke-width=".6"/><circle r="68" fill="none" stroke="var(--ink)" stroke-opacity=".12" stroke-width=".6"/><circle r="100" fill="none" stroke="var(--ink)" stroke-opacity=".12" stroke-width=".6"/><line x1="-16.6" y1="-104.7" x2="16.6" y2="104.7" stroke="var(--ink)" stroke-opacity=".18" stroke-width=".7" stroke-dasharray="2 3"/><line x1="-75.0" y1="-75.0" x2="75.0" y2="75.0" stroke="var(--ink)" stroke-opacity=".18" stroke-width=".7" stroke-dasharray="2 3"/><line x1="-94.4" y1="-48.1" x2="94.4" y2="48.1" stroke="var(--ink)" stroke-opacity=".18" stroke-width=".7" stroke-dasharray="2 3"/><line x1="-48.1" y1="-94.4" x2="48.1" y2="94.4" stroke="var(--ink)" stroke-opacity=".18" stroke-width=".7" stroke-dasharray="2 3"/><line x1="-104.7" y1="-16.6" x2="104.7" y2="16.6" stroke="var(--ink)" stroke-opacity=".18" stroke-width=".7" stroke-dasharray="2 3"/><line x1="104.7" y1="-16.6" x2="-104.7" y2="16.6" stroke="var(--ink)" stroke-opacity=".18" stroke-width=".7" stroke-dasharray="2 3"/><line x1="75.0" y1="-75.0" x2="-75.0" y2="75.0" stroke="var(--ink)" stroke-opacity=".18" stroke-width=".7" stroke-dasharray="2 3"/><line x1="48.1" y1="-94.4" x2="-48.1" y2="94.4" stroke="var(--ink)" stroke-opacity=".18" stroke-width=".7" stroke-dasharray="2 3"/><line x1="16.6" y1="-104.7" x2="-16.6" y2="104.7" stroke="var(--ink)" stroke-opacity=".18" stroke-width=".7" stroke-dasharray="2 3"/><line x1="94.4" y1="-48.1" x2="-94.4" y2="48.1" stroke="var(--ink)" stroke-opacity=".18" stroke-width=".7" stroke-dasharray="2 3"/><polygon points="14.6,-92.1 20.9,-41.1 44.5,-44.5 77.1,-39.3 75.5,-12.0 55.5,8.8 35.1,17.9 25.5,25.5 19.4,38.1 8.3,52.2 -7.7,48.9 -31.6,62.1 -42.1,42.1 -65.1,33.2 -65.5,10.4 -88.8,-14.1 -74.1,-37.8 -70.7,-70.7 -43.9,-86.1 -12.5,-78.8" fill="var(--ink)" fill-opacity=".10" stroke="var(--ink)" stroke-width="1.4" stroke-linejoin="round"/><circle cx="14.6" cy="-92.1" r="6.5" fill="#D93321" stroke="#D93321" stroke-width="1"/><text x="14.6" y="-88.9" text-anchor="middle" font-family="DM Sans,Arial,sans-serif" font-size="8" font-weight="700" fill="#fff">3</text><circle cx="20.9" cy="-41.1" r="3.4" fill="#D93321" stroke="#D93321" stroke-width="1"/><circle cx="44.5" cy="-44.5" r="3.4" fill="#D93321" stroke="#D93321" stroke-width="1"/><circle cx="77.1" cy="-39.3" r="6.5" fill="#D93321" stroke="#D93321" stroke-width="1"/><text x="77.1" y="-36.1" text-anchor="middle" font-family="DM Sans,Arial,sans-serif" font-size="8" font-weight="700" fill="#fff">5</text><circle cx="75.5" cy="-12.0" r="3.4" fill="#D93321" stroke="#D93321" stroke-width="1"/><circle cx="55.5" cy="8.8" r="3.4" fill="#F6B900" stroke="#F6B900" stroke-width="1"/><circle cx="35.1" cy="17.9" r="5" fill="var(--paper)" stroke="#F6B900" stroke-width="2"/><circle cx="25.5" cy="25.5" r="5" fill="var(--paper)" stroke="#F6B900" stroke-width="2"/><circle cx="19.4" cy="38.1" r="3.4" fill="#F6B900" stroke="#F6B900" stroke-width="1"/><circle cx="8.3" cy="52.2" r="3.4" fill="#F6B900" stroke="#F6B900" stroke-width="1"/><circle cx="-7.7" cy="48.9" r="3.4" fill="#2E9E6B" stroke="#2E9E6B" stroke-width="1"/><circle cx="-31.6" cy="62.1" r="3.4" fill="#2E9E6B" stroke="#2E9E6B" stroke-width="1"/><circle cx="-42.1" cy="42.1" r="3.4" fill="#2E9E6B" stroke="#2E9E6B" stroke-width="1"/><circle cx="-65.1" cy="33.2" r="3.4" fill="#2E9E6B" stroke="#2E9E6B" stroke-width="1"/><circle cx="-65.5" cy="10.4" r="3.4" fill="#2E9E6B" stroke="#2E9E6B" stroke-width="1"/><circle cx="-88.8" cy="-14.1" r="6.5" fill="#2B8CFF" stroke="#2B8CFF" stroke-width="1"/><text x="-88.8" y="-10.9" text-anchor="middle" font-family="DM Sans,Arial,sans-serif" font-size="8" font-weight="700" fill="#fff">4</text><circle cx="-74.1" cy="-37.8" r="3.4" fill="#2B8CFF" stroke="#2B8CFF" stroke-width="1"/><circle cx="-70.7" cy="-70.7" r="6.5" fill="#2B8CFF" stroke="#2B8CFF" stroke-width="1"/><text x="-70.7" y="-67.5" text-anchor="middle" font-family="DM Sans,Arial,sans-serif" font-size="8" font-weight="700" fill="#fff">1</text><circle cx="-43.9" cy="-86.1" r="6.5" fill="#2B8CFF" stroke="#2B8CFF" stroke-width="1"/><text x="-43.9" y="-82.9" text-anchor="middle" font-family="DM Sans,Arial,sans-serif" font-size="8" font-weight="700" fill="#fff">2</text><circle cx="-12.5" cy="-78.8" r="3.4" fill="#2B8CFF" stroke="#2B8CFF" stroke-width="1"/><text x="19.4" y="-119.5" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="700" fill="var(--ink)">Adventurer <tspan fill-opacity=".6">3</tspan></text><text x="56.3" y="-107.5" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="400" fill="var(--ink)">Warrior <tspan fill-opacity=".6">17</tspan></text><text x="87.7" y="-84.7" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="400" fill="var(--ink)">Commander <tspan fill-opacity=".6">12</tspan></text><text x="110.5" y="-53.3" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="700" fill="var(--ink)">Rebel <tspan fill-opacity=".6">5</tspan></text><text x="122.5" y="-16.4" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="400" fill="var(--ink)">Artisan <tspan fill-opacity=".6">8</tspan></text><text x="122.5" y="22.4" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="400" fill="var(--ink)">Strategist <tspan fill-opacity=".6">14</tspan></text><text x="110.5" y="59.3" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="700" fill="var(--ink)">Trustee <tspan fill-opacity=".6">19</tspan></text><text x="87.7" y="90.7" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="700" fill="var(--ink)">Analyst <tspan fill-opacity=".6">20</tspan></text><text x="56.3" y="113.5" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="400" fill="var(--ink)">Scientist <tspan fill-opacity=".6">18</tspan></text><text x="19.4" y="125.5" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="400" fill="var(--ink)">Emperor <tspan fill-opacity=".6">15</tspan></text><text x="-19.4" y="125.5" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="400" fill="var(--ink)">Mother <tspan fill-opacity=".6">16</tspan></text><text x="-56.3" y="113.5" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="400" fill="var(--ink)">Healer <tspan fill-opacity=".6">10</tspan></text><text x="-87.7" y="90.7" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="400" fill="var(--ink)">Uniter <tspan fill-opacity=".6">13</tspan></text><text x="-110.5" y="59.3" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="400" fill="var(--ink)">Empress <tspan fill-opacity=".6">9</tspan></text><text x="-122.5" y="22.4" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="400" fill="var(--ink)">Princess <tspan fill-opacity=".6">11</tspan></text><text x="-122.5" y="-16.4" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="700" fill="var(--ink)">Wise <tspan fill-opacity=".6">4</tspan></text><text x="-110.5" y="-53.3" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="400" fill="var(--ink)">Prince <tspan fill-opacity=".6">6</tspan></text><text x="-87.7" y="-84.7" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="700" fill="var(--ink)">Visionary <tspan fill-opacity=".6">1</tspan></text><text x="-56.3" y="-107.5" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="700" fill="var(--ink)">Magician <tspan fill-opacity=".6">2</tspan></text><text x="-19.4" y="-119.5" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="10" font-weight="400" fill="var(--ink)">Jester <tspan fill-opacity=".6">7</tspan></text><text x="-176" y="-150" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="11" font-weight="700" letter-spacing="1.6" fill="#2B8CFF">LUFT</text><text x="176" y="-150" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="11" font-weight="700" letter-spacing="1.6" fill="#D93321">ELD</text><text x="176" y="160" text-anchor="end" font-family="DM Sans,Arial,sans-serif" font-size="11" font-weight="700" letter-spacing="1.6" fill="#F6B900">JORD</text><text x="-176" y="160" text-anchor="start" font-family="DM Sans,Arial,sans-serif" font-size="11" font-weight="700" letter-spacing="1.6" fill="#2E9E6B">VATTEN</text></svg></div>
+    <div class="legend">
+      <div class="lg"><i style="background:var(--luft)"></i><p><b>Störst utbredning i Luft och Eld.</b> Fem av dina sju främsta karaktärer sitter där.</p></div>
+      <div class="lg"><i style="background:var(--jord)"></i><p><b>Tydlig insvängning i Jord.</b> Skuggorna Trustee och Analyst ligger längst in, och Scientist är nära.</p></div>
+      <div class="lg"><i style="background:var(--vatten)"></i><p><b>Vatten i mitten.</b> Du har omtanke och gemenskap, men använder dem inte först.</p></div>
+      <div class="callout"><b>Så läser du hjulet.</b> De streckade linjerna binder ihop motpolerna: varje karaktär har en partner mitt emot. Siffran är karaktärens placering från 1 till 20.</div>
+    </div>
+  </div>
+</section>
+
+<section id="ordforande">
+  <div class="sec-head"><span class="tag" style="color:var(--luft-d)">Kapitel 3 · Ordföranden</span><p class="say" style="--c:var(--luft-d)">Du är mest dig själv när något <em>håller på att stelna</em>.</p><p class="lede">Din första karaktär är Visionary. Det är den som leder rummet när du är i flödet.</p></div>
+  <div class="chair">
+    <div class="hd"><span class="big">1</span><div><small>Ordförande · Luft</small><h3>Visionary</h3></div></div>
+    <div class="flds"><div class="fld"><small>Calling</small><p>Att beskriva framtiden</p></div><div class="fld"><small>Aktiveras av</small><p>Kaos och stagnation</p></div><div class="fld"><small>Gåva</small><p>Visionär, nyskapande tänkande, framförhållning, optimism</p></div><div class="fld"><small>Fälla</small><p>Abstrakt, orealistisk, snirklig, naiv</p></div><div class="fld"><small>Utmaning</small><p>Faktaanalys, faktainsamling, detaljfokus</p></div><div class="fld"><small>Allergi</small><p>Upprepning, pessimism, att vara enkel och förutsägbar</p></div><div class="fld"><small>Rädsla</small><p>Att bli fantasilös och föråldrad</p></div><div class="fld"><small>Ledarstilar</small><p>Aspiring, Coaching, Facilitating</p></div></div>
+    <div class="st"><b style="color:var(--ink)">Komplementär karaktär:</b> Analyst. Den som ser verkligheten som den är.</div>
+  </div>
+  <div class="dial">
+    <div class="sec-head" style="margin-bottom:0;margin-top:18px"><h3>Från gåva till fälla</h3><p class="lede" style="font-size:1rem">Det är samma egenskap hela vägen. Det som ändras är hur mycket av den du använder för att lösa allt.</p></div>
+    <div class="bar"></div>
+    <div class="lab"><span>Gåva</span><span>Fälla</span></div>
+    <div class="ex">
+      <div class="g"><b>Så märker du att du är i toppform</b>Du beskriver en framtid som människor vill vara med i. Andra frågar "hur gör vi?" och du har ett första steg. Rummet blir ljusare.</div>
+      <div class="t"><b>Så märker du att gåvan tippat</b>Du beskriver en framtid ingen vet hur man tar sig till. Folk nickar och gör sedan som förut. Du upplever det som motstånd, de upplever det som otydligt.</div>
+    </div>
+  </div>
+</section>
+
+<section id="radgivare">
+  <div class="sec-head"><span class="tag">Kapitel 4 · Rådgivarna</span><p class="say">Ett rum fullt av <em>gaspedal</em>.</p><p class="lede">Karaktärerna på plats två till fem färgar hur din Visionary uttrycker sig. Alla fyra ligger i Luft och Eld.</p></div>
+  <div class="advs"><article class="adv" style="--c:#2B8CFF"><div class="advh"><span class="rk">2</span><div><h3>Magician</h3><span class="elt">Luft · Förnyelse och innovation</span></div></div><p>Du ser vart. Magician ser hur det kan se ut. Magician gör dina visioner konstnärliga och tekniskt prövbara, och binder samman nutid och framtid.</p><p class="rsk"><b>Se upp:</b> Två tidsoptimister bakom samma idé. Deadlines blir önskemål.</p></article><article class="adv" style="--c:#D93321"><div class="advh"><span class="rk">3</span><div><h3>Adventurer</h3><span class="elt">Eld · Att göra upptäckter</span></div></div><p>Där du tänker vågar Adventurer pröva. Risktagande, oräddhet och självständighet får dina idéer att lämna papperet.</p><p class="rsk"><b>Se upp:</b> Adventurer drar vidare innan andra hunnit med. Det kallas distansering.</p></article><article class="adv" style="--c:#2B8CFF"><div class="advh"><span class="rk">4</span><div><h3>Wise</h3><span class="elt">Luft · Förståelse, helhetssyn, acceptans</span></div></div><p>Wise lyssnar, reflekterar och ser sammanhang. Det är din inbyggda eftertanke, och den gör att du inte bara sprider idéer utan förstår dem.</p><p class="rsk"><b>Se upp:</b> Wise kan bli abstrakt och komplex. Utmaningen är att förenkla, vara tydlig och slutföra.</p></article><article class="adv" style="--c:#D93321"><div class="advh"><span class="rk">5</span><div><h3>Rebel</h3><span class="elt">Eld · Att göra uppror mot det fastlåsta</span></div></div><p>Rebel ger din vision ett varför. Orättvisa och stagnation tänder både dig och Rebel, och det ger riktning och uthållighet.</p><p class="rsk"><b>Se upp:</b> Rebel kan bli intolerant och polarisera. Utmaningen är att acceptera olikheter och förlåta.</p></article></div>
+  <p class="callout" style="margin-top:14px"><b>Det betyder att</b> du har ett fantastiskt rum för att starta saker och ett svagt rum för att avsluta dem. Ingen av dina rådgivare har Jord som främsta språk. Det är Elins mönster. Hos någon annan kan rummet se helt annorlunda ut.</p>
+</section>
+
+<section id="skuggor">
+  <div class="sec-head"><span class="tag">Kapitel 5 · Skuggorna</span><p class="say">Det du <em>minst känner igen</em> dig i är där dina idéer landar.</p><p class="lede">Skuggorna är de två karaktärer som ligger längst från dig. De är inte det du är sämst på. De är det du ofta reagerar på hos andra.</p></div>
+  <div class="shds"><article class="shd"><div class="advh"><span class="rk dk">19</span><div><h3>Trustee</h3><span class="elt">Jord · Skapa ordning och struktur, förvalta det som finns</span></div></div><div class="shg"><div><small>Gåva</small><p>Ekonomisk, strukturerad, detaljorienterad</p></div><div><small>Fälla</small><p>Pedanteri, kontroll, snålhet, likgiltighet</p></div><div><small>Allergi</small><p>Slöseri, impulsivitet, överkonsumtion, slarv</p></div><div><small>Rädsla</small><p>Fattigdom</p></div></div><p class="mir">Trustee vill veta att det räcker. Du vill att det ska bli stort. Det är samma ambition, sedd från två håll.</p></article><article class="shd"><div class="advh"><span class="rk dk">20</span><div><h3>Analyst</h3><span class="elt">Jord · Beskriva verkligheten som den är, förutse framtiden</span></div></div><div class="shg"><div><small>Gåva</small><p>Rationell, grundlig, objektiv, integritet</p></div><div><small>Fälla</small><p>Enspårig, snäv, sanningsägare, dekonstruktion</p></div><div><small>Allergi</small><p>Svammel, ogrundade och känslostyrda beslut, påståenden, hörsägen</p></div><div><small>Rädsla</small><p>Manipulation, att tappa greppet om verkligheten</p></div></div><p class="mir">Analyst vill veta att det håller. Din utmaning, faktaanalys och detaljfokus, är exakt Analystens gåva.</p></article></div>
+</section>
+
+<section id="polariteter">
+  <div class="sec-head"><span class="tag">Kapitel 6 · Polariteter</span><p class="say">Tio axlar, och på en av dem står du <em>precis i mitten</em>.</p><p class="lede">I Luminus är motsatser par och inte fiender. Där markören ligger mitt emellan har du båda sidor. Där den lutar har du en stark sida och en partner att låna av.</p></div>
+  <div class="pols"><div class="pol"><div class="pt"><b>Makt</b></div><div class="pr"><span class="pl"><i style="background:#2B8CFF"></i>Jester <em class="mono">7</em></span><div class="trk" style="--a:#2B8CFF;--b:#F6B900"><span class="mk" style="left:30.6%"></span></div><span class="pl r">Emperor <em class="mono">15</em><i style="background:#F6B900"></i></span></div></div><div class="pol"><div class="pt"><b>Verklighet</b></div><div class="pr"><span class="pl"><i style="background:#2B8CFF"></i>Visionary <em class="mono">1</em></span><div class="trk" style="--a:#2B8CFF;--b:#F6B900"><span class="mk" style="left:4.0%"></span></div><span class="pl r">Analyst <em class="mono">20</em><i style="background:#F6B900"></i></span></div></div><div class="pol"><div class="pt"><b>Tillgångar</b></div><div class="pr"><span class="pl"><i style="background:#2B8CFF"></i>Prince <em class="mono">6</em></span><div class="trk" style="--a:#2B8CFF;--b:#F6B900"><span class="mk" style="left:18.5%"></span></div><span class="pl r">Trustee <em class="mono">19</em><i style="background:#F6B900"></i></span></div></div><div class="pol"><div class="pt"><b>Förnyelse</b></div><div class="pr"><span class="pl"><i style="background:#2B8CFF"></i>Magician <em class="mono">2</em></span><div class="trk" style="--a:#2B8CFF;--b:#F6B900"><span class="mk" style="left:11.3%"></span></div><span class="pl r">Scientist <em class="mono">18</em><i style="background:#F6B900"></i></span></div></div><div class="pol"><div class="pt"><b>Insikt</b></div><div class="pr"><span class="pl"><i style="background:#2B8CFF"></i>Wise <em class="mono">4</em></span><div class="trk" style="--a:#2B8CFF;--b:#F6B900"><span class="mk" style="left:25.8%"></span></div><span class="pl r">Strategist <em class="mono">14</em><i style="background:#F6B900"></i></span></div></div><div class="pol bal"><div class="pt"><b>Estetik</b><span class="bpill">i balans</span></div><div class="pr"><span class="pl"><i style="background:#D93321"></i>Artisan <em class="mono">8</em></span><div class="trk" style="--a:#D93321;--b:#2E9E6B"><span class="mk" style="left:42.7%"></span></div><span class="pl r">Princess <em class="mono">11</em><i style="background:#2E9E6B"></i></span></div></div><div class="pol bal"><div class="pt"><b>Riktning</b><span class="bpill">i balans</span></div><div class="pr"><span class="pl"><i style="background:#D93321"></i>Commander <em class="mono">12</em></span><div class="trk" style="--a:#D93321;--b:#2E9E6B"><span class="mk" style="left:47.6%"></span></div><span class="pl r">Uniter <em class="mono">13</em><i style="background:#2E9E6B"></i></span></div></div><div class="pol"><div class="pt"><b>Bärkraft</b></div><div class="pr"><span class="pl"><i style="background:#D93321"></i>Warrior <em class="mono">17</em></span><div class="trk" style="--a:#D93321;--b:#2E9E6B"><span class="mk" style="left:66.9%"></span></div><span class="pl r">Healer <em class="mono">10</em><i style="background:#2E9E6B"></i></span></div></div><div class="pol"><div class="pt"><b>Samhörighet</b></div><div class="pr"><span class="pl"><i style="background:#D93321"></i>Adventurer <em class="mono">3</em></span><div class="trk" style="--a:#D93321;--b:#2E9E6B"><span class="mk" style="left:18.5%"></span></div><span class="pl r">Mother <em class="mono">16</em><i style="background:#2E9E6B"></i></span></div></div><div class="pol"><div class="pt"><b>Rättvisa</b></div><div class="pr"><span class="pl"><i style="background:#D93321"></i>Rebel <em class="mono">5</em></span><div class="trk" style="--a:#D93321;--b:#2E9E6B"><span class="mk" style="left:40.3%"></span></div><span class="pl r">Empress <em class="mono">9</em><i style="background:#2E9E6B"></i></span></div></div></div>
+  <div class="hl">
+    <div><span class="big">19</span><h3>Verklighet</h3><p>Visionary 1, Analyst 20. Största avståndet i din profil. Du lever helt i möjligheterna, och därför är verkligheten din största utvecklingsyta.</p></div>
+    <div><span class="big">16</span><h3>Förnyelse</h3><p>Magician 2, Scientist 18. Du uppfinner gärna och prövar sällan systematiskt. Det är där många idéer faller bort.</p></div>
+    <div><span class="big" style="color:var(--vatten-d)">1</span><h3>Riktning, i balans</h3><p>Commander 12, Uniter 13. Din dolda styrka. Du kan både peka ut vägen och ta med dig människor. Använd det när något ska landa.</p></div>
+  </div>
+</section>
+
+<section id="skav">
+  <div class="sec-head"><span class="tag">Kapitel 7 · När det skaver</span><p class="say">Din fälla väcker <em>andras allergi</em>, och tvärtom.</p><p class="lede">Fällor och allergier leder till motsättningar. Det går att förutse var det blir friktion, och det går att göra något åt det.</p></div>
+  <div class="scen">
+    <div class="sc"><div class="pair"><i style="background:var(--luft)"></i>Du<span class="arr">→</span><i style="background:var(--jord)"></i>Analyst-lika</div>
+      <p class="row"><b>Det som händer</b>Du presenterar en framtidsbild med säker röst. Analysten hör ogrundade påståenden. Svammel är Analystens allergi.</p>
+      <p class="row"><b>Det du upplever</b>Att någon är pessimistisk. Pessimism är din allergi.</p>
+      <p class="fix"><b>Gör så:</b> ta med en uppgift du litar på och en antagande du inte vet. Säg vilket som är vilket.</p></div>
+    <div class="sc"><div class="pair"><i style="background:var(--luft)"></i>Du<span class="arr">→</span><i style="background:var(--jord)"></i>Trustee-lika</div>
+      <p class="row"><b>Det som händer</b>Du vill pröva tre idéer samtidigt. Trustee ser impulsivitet och slöseri. Det är Trustees allergi.</p>
+      <p class="row"><b>Det du upplever</b>Förutsägbarhet och snålhet. Att vara enkel och förutsägbar är din allergi.</p>
+      <p class="fix"><b>Gör så:</b> sätt ramen först. Tid, pengar och vad som får misslyckas. Ramen frigör Trustee.</p></div>
+    <div class="sc"><div class="pair"><i style="background:var(--eld)"></i>Adventurer i dig<span class="arr">→</span><i style="background:var(--vatten)"></i>Mother-lika</div>
+      <p class="row"><b>Det som händer</b>Du drar vidare till nästa upptäckt. Adventurers fälla är distansering. Mothers allergi är avskiljande och att bli avprioriterad.</p>
+      <p class="row"><b>Det du upplever</b>Att någon klänger. Band och beroenden är Adventurers allergi.</p>
+      <p class="fix"><b>Gör så:</b> säg vart du är på väg och vem som följer med. Det tar en minut.</p></div>
+  </div>
+  <div class="steps">
+    <div><b>1. Stanna</b>När du blir irriterad, fråga vilken av dina allergier som just tändes.</div>
+    <div><b>2. Byt sida</b>Fråga vad den andras gåva är i just det här läget.</div>
+    <div><b>3. Fråga</b>Säg "vad skyddar du?" i stället för att försvara din idé.</div>
+  </div>
+</section>
+
+<section id="ledarstil">
+  <div class="sec-head"><span class="tag">Kapitel 8 · Ledarstilar</span><p class="say">Du leder genom att <em>inspirera, coacha och utmana</em>.</p><p class="lede">Luminus har tio ledarstilar i fyra familjer. Staplarna visar hur många av dina fem främsta karaktärer som använder stilen.</p></div>
+  <div class="fams"><div class="fam"><h3>Förnyelse och förändring</h3><div class="sr"><span>Aspiring</span><div class="st"><div class="sf" style="width:100%"></div></div><b class="mono">4</b></div><div class="sr"><span>Challenging</span><div class="st"><div class="sf" style="width:50%"></div></div><b class="mono">2</b></div><div class="sr"><span>Coaching</span><div class="st"><div class="sf" style="width:100%"></div></div><b class="mono">4</b></div></div><div class="fam"><h3>Stabilitet och tradition</h3><div class="sr zero"><span>Managing</span><div class="st"><div class="sf" style="width:0%"></div></div><b class="mono">0</b></div><div class="sr"><span>Mentoring</span><div class="st"><div class="sf" style="width:50%"></div></div><b class="mono">2</b></div><div class="sr zero"><span>Protecting</span><div class="st"><div class="sf" style="width:0%"></div></div><b class="mono">0</b></div></div><div class="fam"><h3>Genomförande och resultat</h3><div class="sr zero"><span>Producing</span><div class="st"><div class="sf" style="width:0%"></div></div><b class="mono">0</b></div><div class="sr zero"><span>Instructing</span><div class="st"><div class="sf" style="width:0%"></div></div><b class="mono">0</b></div></div><div class="fam"><h3>Vägledning och balans</h3><div class="sr"><span>Advising</span><div class="st"><div class="sf" style="width:25%"></div></div><b class="mono">1</b></div><div class="sr"><span>Facilitating</span><div class="st"><div class="sf" style="width:50%"></div></div><b class="mono">2</b></div></div></div>
+  <p class="callout" style="margin-top:18px"><b>Fyra stilar når du inte för:</b> Managing, Protecting, Producing och Instructing. Det är styrning, skydd, leverans och instruktion, alltså de stilar som gör idéer till leveranser. Analyst, Trustee och Scientist har dem som sina främsta.</p>
+</section>
+
+<section id="stilar">
+  <div class="sec-head"><span class="tag">Kapitel 9 · Dina stilar</span><p class="say">Tolv sätt att vara <em>du</em>, samlade på ett ställe.</p><p class="lede">Hur du kommunicerar, hanterar konflikter, beslutar, samarbetar, löser problem och genomför har beskrivits i bitar i karaktärernas berättelser. Här läggs de samman. Varje stil har fyra uttryck, ett per element, och tabellen visar var du står.</p></div>
+  <div id="mx"><div class="mxw"><div class="mxt"><div class="mx hd"><span></span><span class="mh" style="--c:var(--luft)"><i></i>Luft <em class="mono">84</em></span><span class="mh" style="--c:var(--eld)"><i></i>Eld <em class="mono">58</em></span><span class="mh" style="--c:var(--vatten)"><i></i>Vatten <em class="mono">43</em></span><span class="mh" style="--c:var(--jord)"><i></i>Jord <em class="mono">15</em></span></div><div class="mx"><span class="mn"><b>Kommunikationsstil</b><small class="">Finns i karaktärsbladen</small></span><span class="mc main" style="--c:var(--luft);--i:30%"><b class="mkm">●</b>Berättar i bilder, bjuder in till idéer</span><span class="mc sec" style="--c:var(--eld);--i:20%"><b class="mkm s">○</b>Kort, rakt, resultatinriktat</span><span class="mc" style="--c:var(--vatten);--i:13%">Lyssnar, bekräftar, läser känslan</span><span class="mc" style="--c:var(--jord);--i:7%">Fakta, struktur, exakthet</span></div><div class="mx"><span class="mn"><b>Konfliktstil</b><small class="">Finns i karaktärsbladen</small></span><span class="mc sec" style="--c:var(--luft);--i:30%"><b class="mkm s">○</b>Lyfter blicken, byter vinkel</span><span class="mc main" style="--c:var(--eld);--i:20%"><b class="mkm">●</b>Tar striden direkt, löser och går vidare</span><span class="mc" style="--c:var(--vatten);--i:13%">Söker harmoni, tar det personligt</span><span class="mc" style="--c:var(--jord);--i:7%">Håller sig till regler och underlag</span></div><div class="mx"><span class="mn"><b>Beslutsstil</b><small class="">Finns i berättelserna</small></span><span class="mc main" style="--c:var(--luft);--i:30%"><b class="mkm">●</b>Intuition och helhetsbild</span><span class="mc" style="--c:var(--eld);--i:20%">Snabbt mot målet</span><span class="mc sec" style="--c:var(--vatten);--i:13%"><b class="mkm s">○</b>Värderingar och människor först</span><span class="mc" style="--c:var(--jord);--i:7%">Fakta, risk och ordning</span></div><div class="mx"><span class="mn"><b>Samarbetsstil</b><small class="">Finns i berättelserna</small></span><span class="mc main" style="--c:var(--luft);--i:30%"><b class="mkm">●</b>Samskapar och byter idéer</span><span class="mc" style="--c:var(--eld);--i:20%">Tydliga roller och tempo</span><span class="mc sec" style="--c:var(--vatten);--i:13%"><b class="mkm s">○</b>Bygger tillit och trygghet</span><span class="mc" style="--c:var(--jord);--i:7%">Processer och pålitliga leveranser</span></div><div class="mx"><span class="mn"><b>Problemlösningsstil</b><small class="">Finns i berättelserna</small></span><span class="mc main" style="--c:var(--luft);--i:30%"><b class="mkm">●</b>Byter perspektiv, ser mönster</span><span class="mc sec" style="--c:var(--eld);--i:20%"><b class="mkm s">○</b>Prövar snabbt, justerar</span><span class="mc" style="--c:var(--vatten);--i:13%">Frågar vem det berör</span><span class="mc" style="--c:var(--jord);--i:7%">Söker orsaker, mäter, går metodiskt</span></div><div class="mx"><span class="mn"><b>Genomförandestil</b><small class="">Finns i berättelserna</small></span><span class="mc sec" style="--c:var(--luft);--i:30%"><b class="mkm s">○</b>Startar mycket, inspirerar andra</span><span class="mc main" style="--c:var(--eld);--i:20%"><b class="mkm">●</b>Driver på tills det är gjort</span><span class="mc" style="--c:var(--vatten);--i:13%">Håller ihop gruppen genom arbetet</span><span class="mc" style="--c:var(--jord);--i:7%">Planerar, följer upp, slutför</span></div><div class="mx"><span class="mn"><b>Förändringsstil</b><small class="">Finns i karaktärsbladen</small></span><span class="mc main" style="--c:var(--luft);--i:30%"><b class="mkm">●</b>Ser möjligheten, tar initiativ</span><span class="mc sec" style="--c:var(--eld);--i:20%"><b class="mkm s">○</b>Driver igenom beslutsamt</span><span class="mc" style="--c:var(--vatten);--i:13%">Skyddar människor genom övergången</span><span class="mc" style="--c:var(--jord);--i:7%">Steg för steg, bevarar det som fungerar</span></div><div class="mx"><span class="mn"><b>Stressstil</b><small class="">Delvis i karaktärsbladen</small></span><span class="mc main" style="--c:var(--luft);--i:30%"><b class="mkm">●</b>Spretar, flyr in i nya idéer</span><span class="mc sec" style="--c:var(--eld);--i:20%"><b class="mkm s">○</b>Ökar tempot, mikrostyr</span><span class="mc" style="--c:var(--vatten);--i:13%">Tar på sig andras oro</span><span class="mc" style="--c:var(--jord);--i:7%">Kontrollerar och detaljstyr</span></div><div class="mx"><span class="mn"><b>Drivkraftsstil</b><small class="">Finns i Calling och aktiveras av</small></span><span class="mc main" style="--c:var(--luft);--i:30%"><b class="mkm">●</b>Nyfikenhet och frihet</span><span class="mc sec" style="--c:var(--eld);--i:20%"><b class="mkm s">○</b>Utmaning och resultat</span><span class="mc" style="--c:var(--vatten);--i:13%">Mening och relationer</span><span class="mc" style="--c:var(--jord);--i:7%">Ordning och kvalitet</span></div><div class="mx"><span class="mn"><b>Lärstil</b><small class="">Finns i berättelserna</small></span><span class="mc main" style="--c:var(--luft);--i:30%"><b class="mkm">●</b>Samtal och läsning över gränser</span><span class="mc sec" style="--c:var(--eld);--i:20%"><b class="mkm s">○</b>Genom att göra och pröva</span><span class="mc" style="--c:var(--vatten);--i:13%">Genom människor och berättelser</span><span class="mc" style="--c:var(--jord);--i:7%">Steg för steg med fakta</span></div><div class="mx"><span class="mn"><b>Riskstil</b><small class="ny">Ny stil</small></span><span class="mc sec" style="--c:var(--luft);--i:30%"><b class="mkm s">○</b>Ser möjligheten före risken</span><span class="mc main" style="--c:var(--eld);--i:20%"><b class="mkm">●</b>Tar risken medvetet och snabbt</span><span class="mc" style="--c:var(--vatten);--i:13%">Väger det mänskliga priset</span><span class="mc" style="--c:var(--jord);--i:7%">Kalkylerar och minimerar</span></div><div class="mx"><span class="mn"><b>Återkopplingsstil</b><small class="ny">Ny stil</small></span><span class="mc main" style="--c:var(--luft);--i:30%"><b class="mkm">●</b>Framåtriktad: så kan det bli</span><span class="mc" style="--c:var(--eld);--i:20%">Rak och kort</span><span class="mc sec" style="--c:var(--vatten);--i:13%"><b class="mkm s">○</b>Varsam, bygger relation</span><span class="mc" style="--c:var(--jord);--i:7%">Konkret, med exempel och data</span></div></div></div></div>
+  <div class="mleg"><span><b>●</b> Ditt huvuduttryck</span><span><b style="color:var(--ink-2)">○</b> Ditt näst vanligaste</span><span>Färgstyrkan följer dina elementvärden: Luft 84, Eld 58, Vatten 43, Jord 15</span></div>
+  <p class="callout" style="margin-top:16px"><b>Vatten finns i dig genom Wise och Rebel.</b> Wise är Luft med Vattnets djup och Rebel är Eld med Vattnets värderingar. Därför får du Vatten i beslut, samarbete och återkoppling, trots att elementet totalt är lågt.</p>
+  <div class="sks"><article class="sk"><div class="skh"><h3>Kommunikationsstil</h3><span class="dots"><i style="background:var(--luft)"></i><i class="s" style="border-color:var(--eld);background:color-mix(in srgb,var(--eld) 35%,transparent)"></i></span></div><p class="q">Hur når du fram?</p><p class="tx">Du berättar i bilder och bjuder in till idéer, och blir kort och rak när något ska hända. Andra går med i det du beskriver.</p><p class="w"><b>Se upp</b>Den som vill ha en siffra först tappar tråden. Din bild är tydlig för dig men kan vara abstrakt för dem.</p><p class="l"><b>Låna</b>Analyst: börja med en uppgift de kan kontrollera, fortsätt sedan med bilden.</p></article><article class="sk"><div class="skh"><h3>Konfliktstil</h3><span class="dots"><i style="background:var(--eld)"></i><i class="s" style="border-color:var(--luft);background:color-mix(in srgb,var(--luft) 35%,transparent)"></i></span></div><p class="q">Vad gör du när det skaver?</p><p class="tx">När något är orättvist går du rakt på sak. I vardagskonflikter lyfter du blicken och föreslår en ny väg.</p><p class="w"><b>Se upp</b>Du går vidare innan alla känner sig hörda. Rebels fälla är polarisering, Adventurers är distansering.</p><p class="l"><b>Låna</b>Uniter och Empress: stanna kvar tills båda sidor har sagt sitt.</p></article><article class="sk"><div class="skh"><h3>Beslutsstil</h3><span class="dots"><i style="background:var(--luft)"></i><i class="s" style="border-color:var(--vatten);background:color-mix(in srgb,var(--vatten) 35%,transparent)"></i></span></div><p class="q">Hur kommer du fram till ett beslut?</p><p class="tx">Du beslutar på intuition och helhetsbild. När det gäller människor eller rättvisa avgör värderingarna, och du ändrar dig när ny insikt kommer.</p><p class="w"><b>Se upp</b>Andra hinner inte med när ett beslut ändras utan att någon får veta det.</p><p class="l"><b>Låna</b>Strategist: skriv ner beslutet, skälet och vad som skulle få dig att ändra dig.</p></article><article class="sk"><div class="skh"><h3>Samarbetsstil</h3><span class="dots"><i style="background:var(--luft)"></i><i class="s" style="border-color:var(--vatten);background:color-mix(in srgb,var(--vatten) 35%,transparent)"></i></span></div><p class="q">Hur arbetar du med andra?</p><p class="tx">Du lever upp i rum med likasinnade och delar generöst. Du vill samskapa och ger andra frihet.</p><p class="w"><b>Se upp</b>Roller och ansvar blir luddiga. De som vill ha ett tydligt mandat blir osäkra.</p><p class="l"><b>Låna</b>Mother och Empress: ta in de tysta rösterna. Strategist: gör ansvarsfördelningen synlig.</p></article><article class="sk"><div class="skh"><h3>Problemlösningsstil</h3><span class="dots"><i style="background:var(--luft)"></i><i class="s" style="border-color:var(--eld);background:color-mix(in srgb,var(--eld) 35%,transparent)"></i></span></div><p class="q">Hur angriper du ett problem?</p><p class="tx">Du löser problem genom att byta perspektiv och pröva snabbt. Du ser det andra har missat.</p><p class="w"><b>Se upp</b>Du går till nästa problem innan det förra är bevisat löst.</p><p class="l"><b>Låna</b>Scientist: formulera en hypotes först, gör ett experiment och välj ett mått.</p></article><article class="sk"><div class="skh"><h3>Genomförandestil</h3><span class="dots"><i style="background:var(--eld)"></i><i class="s" style="border-color:var(--luft);background:color-mix(in srgb,var(--luft) 35%,transparent)"></i></span></div><p class="q">Hur får du saker gjorda?</p><p class="tx">Du startar starkt, håller tempot uppe och drar med andra. Detaljer och uppföljning lämnar du gärna åt någon annan.</p><p class="w"><b>Se upp</b>Wise och Magician gör att praktiska detaljer och tider glider. Magicians fälla är att vara tidsoptimist.</p><p class="l"><b>Låna</b>Strategist och Trustee: en veckorytm, milstolpar och en ram för tid och pengar.</p></article><article class="sk"><div class="skh"><h3>Förändringsstil</h3><span class="dots"><i style="background:var(--luft)"></i><i class="s" style="border-color:var(--eld);background:color-mix(in srgb,var(--eld) 35%,transparent)"></i></span></div><p class="q">Hur möter du förändring?</p><p class="tx">Du är förändringens initiativtagare. Luft ser möjligheten och Eld driver på. Wise ger idéerna tid att rota sig.</p><p class="w"><b>Se upp</b>Takten kan kännas hög för dem som behöver stabilitet.</p><p class="l"><b>Låna</b>Emperor och Trustee: säg tydligt vad som ska bestå.</p></article><article class="sk"><div class="skh"><h3>Stressstil</h3><span class="dots"><i style="background:var(--luft)"></i><i class="s" style="border-color:var(--eld);background:color-mix(in srgb,var(--eld) 35%,transparent)"></i></span></div><p class="q">Vad händer under press?</p><p class="tx">Under press blir du snabbare och mer abstrakt. Du byter spår för att undvika stagnation och blir skarpare i tonen.</p><p class="w"><b>Se upp</b>Tidiga tecken: fler nya idéer, färre avslut, kortare svar.</p><p class="l"><b>Låna</b>Be en Mother-lik kollega säga till. Andra kan hjälpa dig genom att be dig välja ett spår.</p></article><article class="sk"><div class="skh"><h3>Drivkraftsstil</h3><span class="dots"><i style="background:var(--luft)"></i><i class="s" style="border-color:var(--eld);background:color-mix(in srgb,var(--eld) 35%,transparent)"></i></span></div><p class="q">Vad ger dig energi?</p><p class="tx">Du drivs av det som kan bli och av det som är fel. Kaos och stagnation tänder dig, upprepning släcker dig.</p><p class="w"><b>Se upp</b>Rutinuppgifter tar mer energi än du tror.</p><p class="l"><b>Låna</b>Koppla rutinen till ett syfte och till en kollega som gillar den.</p></article><article class="sk"><div class="skh"><h3>Lärstil</h3><span class="dots"><i style="background:var(--luft)"></i><i class="s" style="border-color:var(--eld);background:color-mix(in srgb,var(--eld) 35%,transparent)"></i></span></div><p class="q">Hur lär du dig?</p><p class="tx">Du lär genom samtal, läsning över gränser och genom att pröva. Du samlar intryck och kopplar ihop dem.</p><p class="w"><b>Se upp</b>Du samlar mer än du fördjupar. Upprepning är din allergi.</p><p class="l"><b>Låna</b>Scientist: gå på djupet i en sak i trettio dagar.</p></article><article class="sk"><div class="skh"><h3>Riskstil</h3><span class="dots"><i style="background:var(--eld)"></i><i class="s" style="border-color:var(--luft);background:color-mix(in srgb,var(--luft) 35%,transparent)"></i></span></div><p class="q">Hur ser du på risk?</p><p class="tx">Du ser möjligheten före risken och vågar pröva. Adventurer gör dig modig.</p><p class="w"><b>Se upp</b>Riskerna ligger i detaljer och beroenden som du inte har tittat på.</p><p class="l"><b>Låna</b>Trustee och Analyst: gör en förhandsanalys. Anta att det har misslyckats och fråga varför.</p></article><article class="sk"><div class="skh"><h3>Återkopplingsstil</h3><span class="dots"><i style="background:var(--luft)"></i><i class="s" style="border-color:var(--vatten);background:color-mix(in srgb,var(--vatten) 35%,transparent)"></i></span></div><p class="q">Hur ger och tar du emot feedback?</p><p class="tx">Du ger återkoppling som riktning: så här kan det bli. Du tar bäst emot den när den är konkret och kopplad till syftet.</p><p class="w"><b>Se upp</b>Pessimism är din allergi. Kritik som låter som att det är omöjligt går inte in.</p><p class="l"><b>Låna</b>Be om ja-och: vad fungerar och vad skulle göra det bättre.</p></article></div>
+</section>
+
+<section id="team">
+  <div class="sec-head"><span class="tag">Kapitel 10 · Ditt kompletta rum</span><p class="say">Varje rådgivare har en <em>partner</em> att låna av.</p><p class="lede">Din gåva kompletterar någon annans utmaning, och någon annans gåva kompletterar din. Bjud in dem tidigt och inte som granskare i slutet.</p></div>
+  <div class="tms"><div class="tm"><div class="tp"><span class="tc" style="background:#2B8CFF"></span><b>Visionary</b><span class="ar">+</span><span class="tc" style="background:#F6B900"></span><b>Analyst</b></div><p class="tg">Rationell, grundlig, objektiv</p><p>Be Analyst pröva bärigheten innan du lovar något.</p></div><div class="tm"><div class="tp"><span class="tc" style="background:#2B8CFF"></span><b>Magician</b><span class="ar">+</span><span class="tc" style="background:#F6B900"></span><b>Scientist</b></div><p class="tg">Vetenskaplig, metodisk, noggrann</p><p>Låt Scientist göra experimentet av din idé.</p></div><div class="tm"><div class="tp"><span class="tc" style="background:#D93321"></span><b>Adventurer</b><span class="ar">+</span><span class="tc" style="background:#2E9E6B"></span><b>Mother</b></div><p class="tg">Kärleksfull, hjälpsam, varm, tålmodig, förbindande</p><p>Låt Mother se till att alla följer med.</p></div><div class="tm"><div class="tp"><span class="tc" style="background:#2B8CFF"></span><b>Wise</b><span class="ar">+</span><span class="tc" style="background:#F6B900"></span><b>Strategist</b></div><p class="tg">Strategisk, målinriktad, disciplinerad, ambitiös</p><p>Låt Strategist sätta mål och väg.</p></div><div class="tm"><div class="tp"><span class="tc" style="background:#D93321"></span><b>Rebel</b><span class="ar">+</span><span class="tc" style="background:#2E9E6B"></span><b>Empress</b></div><p class="tg">Lojal, pålitlig, moralisk, inbjudande, ansvarstagande</p><p>Låt Empress ge uppropet en bas att stå på.</p></div></div>
+</section>
+
+<section id="vag">
+  <div class="sec-head"><span class="tag">Kapitel 11 · Väg framåt</span><p class="say">Beskriv framtiden på ett sätt som <em>andra kan gå in i</em>.</p><p class="lede">Det är Visionarys uppdrag, och det är vad profilen ska hjälpa dig att leverera. Tre experiment under trettio dagar.</p></div>
+  <div class="exps">
+    <div class="ex3"><span class="nm">1</span><h3>Veckans bevis</h3><p><b>Varje idé får ett litet bevis inom sju dagar.</b> En mätpunkt, en testperson, en siffra. Du lånar Analystens blick utan att bli Analyst.</p></div>
+    <div class="ex3"><span class="nm">2</span><h3>Tre rader först</h3><p><b>Skriv visionen på tre rader innan du berättar den:</b> vad, för vem, första steget. Det är Wises utmaning, att förenkla och vara tydlig.</p></div>
+    <div class="ex3"><span class="nm">3</span><h3>Ett ja till ramen</h3><p><b>Be en Trustee-lik kollega sätta tid och pengar för ett av dina projekt.</b> Följ ramen. Du lånar strukturen och ser vad den frigör.</p></div>
+  </div>
+  <div class="sec-head" style="margin-top:44px;margin-bottom:12px"><h3>Fem frågor att fundera på</h3></div>
+  <ol class="qs">
+    <li>När blev din senaste vision en fälla för någon annan?</li>
+    <li>Vem fick leverera det du beskrev, och fick den det den behövde?</li>
+    <li>Vilken av dina allergier låg bakom din senaste irritation?</li>
+    <li>Vem i Jord har du underskattat?</li>
+    <li>Vad vill du kunna säga om tre månader som du inte kan säga idag?</li>
+  </ol>
+  <div class="final"><span class="tag" style="color:var(--glod)">Till sist</span><h2>Du behöver inte bli en Analyst. Du behöver <em>en Analyst</em>.</h2><p>Din profil visar en ledare som ser långt. Den starkaste versionen av dig är inte den som ser mindre. Det är den som ser långt och bjuder in dem som ser nära.</p></div>
+</section>
+
+<section id="bygge">
+  <div class="sec-head"><span class="tag">För dig som bygger profilverktyget</span><h2>Så är återkopplingen byggd</h2>
+  <p class="lede" style="font-size:1rem">Elva områden täcker allt som profilens utfall innehåller. Varje kapitel hämtar sina data ur ett bestämt fält och följer samma tre principer. Det som växlar mellan personer är fälten i högra kolumnen.</p></div>
+  <div class="tbl"><table><thead><tr><th>Område</th><th>Vad det svarar på</th><th>Hämtas ur profilen</th><th>Byts ut per person</th></tr></thead><tbody>
+    <tr><td>Det viktigaste</td><td>Vad ska jag minnas?</td><td>Sammanfattar kapitel 3–7</td><td>Fem meningar</td></tr>
+    <tr><td>1. Element</td><td>Vilken energi litar jag på?</td><td>Elementcirkel och staplar</td><td>Primärt och sekundärt element, fyra värden</td></tr>
+    <tr><td>2. Din form</td><td>Hur ser helheten ut?</td><td>Wheel of Characters</td><td>Rangordning 1–20</td></tr>
+    <tr><td>3. Ordförande</td><td>Vem leder när jag är i flödet?</td><td>Character Board, plats 1, karaktärsblad</td><td>Karaktär och sju fält</td></tr>
+    <tr><td>4. Rådgivare</td><td>Vilka färgar mig?</td><td>Character Board, plats 2–5</td><td>Fyra karaktärer</td></tr>
+    <tr><td>5. Skuggor</td><td>Vad ligger utanför mig?</td><td>Character Board, skuggor 1–2</td><td>Karaktär 19 och 20</td></tr>
+    <tr><td>6. Polariteter</td><td>Var har jag båda sidor?</td><td>Binary Couples, tio par</td><td>Tio markörer</td></tr>
+    <tr><td>7. Skav</td><td>Var blir det friktion?</td><td>Fälla och allergi på karaktärsbladen</td><td>Tre scenarier</td></tr>
+    <tr><td>8. Ledarstilar</td><td>Hur leder jag?</td><td>Ledarstilar per karaktär</td><td>Antal per stil</td></tr>
+    <tr><td>9. Stilar</td><td>Hur uppträder jag i olika lägen?</td><td>Karaktärsbladens beskrivningar, samlade i tolv stilar</td><td>Huvud- och sekundärt uttryck per stil, tolv texter</td></tr>
+    <tr><td>10. Kompletta rummet</td><td>Vem behöver jag bredvid mig?</td><td>Komplementär karaktär</td><td>Fem par</td></tr>
+    <tr><td>11. Väg framåt</td><td>Vad gör jag på trettio dagar?</td><td>Calling, utmaning, komplement</td><td>Tre experiment, fem frågor</td></tr>
+  </tbody></table></div>
+  <div class="sec-head" style="margin-top:40px"><h3>Stilbiblioteket: vad som finns och vad som är nytt</h3><p class="lede" style="font-size:1rem">Stilarna finns idag utspridda i karaktärsbladen och berättelserna. Biblioteket samlar dem och ger varje stil samma fyra uttryck, ett per element. Det gör att alla tjugo karaktärer kan beskrivas på samma sätt.</p></div>
+  <div class="tbl"><table><thead><tr><th>Stil</th><th>Frågan den svarar på</th><th>Status</th></tr></thead><tbody><tr><td>Ledarstil</td><td>Hur leder du?</td><td>Finns i karaktärsbladen (kapitel 8)</td></tr><tr><td>Kommunikationsstil</td><td>Hur når du fram?</td><td>Finns i karaktärsbladen</td></tr><tr><td>Konfliktstil</td><td>Vad gör du när det skaver?</td><td>Finns i karaktärsbladen</td></tr><tr><td>Beslutsstil</td><td>Hur kommer du fram till ett beslut?</td><td>Finns i berättelserna</td></tr><tr><td>Samarbetsstil</td><td>Hur arbetar du med andra?</td><td>Finns i berättelserna</td></tr><tr><td>Problemlösningsstil</td><td>Hur angriper du ett problem?</td><td>Finns i berättelserna</td></tr><tr><td>Genomförandestil</td><td>Hur får du saker gjorda?</td><td>Finns i berättelserna</td></tr><tr><td>Förändringsstil</td><td>Hur möter du förändring?</td><td>Finns i karaktärsbladen</td></tr><tr><td>Stressstil</td><td>Vad händer under press?</td><td>Delvis i karaktärsbladen</td></tr><tr><td>Drivkraftsstil</td><td>Vad ger dig energi?</td><td>Finns i Calling och aktiveras av</td></tr><tr><td>Lärstil</td><td>Hur lär du dig?</td><td>Finns i berättelserna</td></tr><tr><td>Riskstil</td><td>Hur ser du på risk?</td><td><span class="newp">Ny</span></td></tr><tr><td>Återkopplingsstil</td><td>Hur ger och tar du emot feedback?</td><td><span class="newp">Ny</span></td></tr></tbody></table></div>
+  <p class="callout" style="margin-top:14px"><b>Kontrollerat mot:</b> Commander-häftet (ledarstil, kommunikation, konflikt, förändring, under press) och berättelserna för Visionary, Magician, Adventurer, Wise och Rebel. De övriga femton karaktärerna har jag inte läst i samma djup, så deras stiltexter behöver granskas av dig innan de används.</p>
+  <p class="callout" style="margin-top:10px"><b>Två nya stilar:</b> Riskstil och Återkopplingsstil. De bygger på Commanders avsnitt om riskhantering och "så närmar du dig en Commander". <b>Övervägda men inte tillagda:</b> tidsstil (Magicians fälla som tidsoptimist), relationsstil (finns delvis som extraversion i Binary Couples) och värdestil.</p>
+  <div class="sec-head" style="margin-top:40px"><h3>Principer som återkopplingen följer</h3></div>
+  <ul class="chk">
+    <li><b>Inga bra eller dåliga karaktärer.</b> Alla tjugo beskrivs som gåvor. Skuggor är inte brister.</li>
+    <li><b>Gåva blir fälla.</b> Varje fälla beskrivs som gåvan i överkant och visas med ett konkret tecken.</li>
+    <li><b>Motpoler, inte motsatser.</b> Polariteterna visar partner att låna av. Ordet "antingen eller" används inte.</li>
+    <li><b>Allergier hör ihop med andras fällor.</b> Skav förklaras som ett möte mellan två mönster.</li>
+    <li><b>Dynamiska verktyg.</b> Profilen beskriver ett läge. Varje kapitel slutar i något att pröva.</li>
+    <li><b>Samma fyra uttryck för varje stil.</b> Luft, Eld, Vatten och Jord, så att karaktärer går att jämföra.</li>
+    <li><b>Samma fält för alla.</b> Calling, aktiveras av, gåva, fälla, utmaning, allergi och rädsla i samma ordning.</li>
+  </ul>
+  <div class="sec-head" style="margin-top:32px"><h3>Så skriver du den</h3></div>
+  <ul class="chk">
+    <li><b>Börja med en mening att minnas.</b> Varje kapitel öppnar med en rad i Fraunces.</li>
+    <li><b>Du-form och verb.</b> Konkret, respektfull och utan omskrivningar för att vara snäll.</li>
+    <li><b>Visa före förklara.</b> En bild per kapitel innan texten.</li>
+    <li><b>Ett tecken som går att känna igen.</b> Beskriv hur gåvan och fällan märks i vardagen.</li>
+    <li><b>Ett experiment i slutet.</b> Högst tre, med verb först och en tidsgräns.</li>
+    <li><b>Skiljer fält från tolkning.</b> Fälten är profilens. Tolkningen markeras som återkoppling.</li>
+  </ul>
+  <p class="callout" style="margin-top:22px"><b>Källa.</b> Kapitlens struktur följer ett verkligt profilutfall: elementcirkel, Character Board med ordförande, fyra rådgivare och två skuggor, samt Binary Couples. Texterna om karaktärerna bygger på "Characters in the Luminus system" (2024).</p>
+</section>
+
+<footer><span>Exempelåterkoppling · fiktiv person</span><span>www.luminus.se · ©Mattias Seger 2024 Luminus system</span></footer>
+</div>
